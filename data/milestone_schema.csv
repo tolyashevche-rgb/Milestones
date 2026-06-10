@@ -1,0 +1,18 @@
+field;type;required;example;notes
+id;text;yes;ms_006_social_001;Unique milestone ID
+age_months;number;yes;6;CDC anchor age
+age_window;text;yes;5-7 months;EU-friendly observation window
+domain;enum;yes;social_emotional;social_emotional, language_communication, cognitive, movement_physical
+source_title;text;yes;CDC milestone paraphrased;Internal source wording reference
+parent_title;text;yes;Recognizes familiar people;Parent-friendly title
+parent_friendly_description;text;yes;Baby responds differently to familiar caregivers.;Use original wording carefully, prefer paraphrase
+observable_examples;text;yes;Looks, smiles, settles, or reaches toward familiar caregiver.;Semicolon-separated examples
+response_options;text;yes;yes|not_yet|not_sure;Do not use pass/fail
+typical_window_note;text;no;Development varies, observe during everyday routines.;Safety language
+discuss_if;text;yes;If not observed and you have concerns, discuss with a healthcare professional.;Professional referral language
+source_ids;text;yes;cdc_ltsae_6_months|aap_zubler_2022;Pipe-separated source IDs
+evidence_level;enum;yes;gold;gold for milestones
+related_activity_ids;text;no;act_006_social_001|act_006_language_001;Pipe-separated activity IDs
+clinician_summary_text;text;yes;Caregiver has not yet observed recognition of familiar people.;Used in PDF/professional summary
+ui_label;text;no;Guideline-based;Evidence label for card
+notes;text;no;Paraphrased from CDC 6 months page.;Internal note

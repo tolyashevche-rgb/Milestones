@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Карта розвитку — guided UA</title>
+  <link rel="stylesheet" href="styles5.css">
+</head>
+<body>
+  <header class="appbar">
+    <button type="button" class="appbar-back" data-go="home" aria-label="На головну">
+      <span class="brand-mark" aria-hidden="true"></span>
+    </button>
+    <strong>Карта розвитку</strong>
+    <span class="appbar-tag">0–12 міс</span>
+  </header>
+
+  <main id="screen" aria-live="polite"></main>
+
+  <nav id="bottomNav" class="bottom-nav" aria-label="Основна навігація"></nav>
+
+  <!-- Reuse the canonical data + engine — no logic/data is duplicated here. -->
+  <script src="../prototype_stage4_ua/data_ua.js"></script>
+  <script src="../prototype_stage4_ua/engine.js"></script>
+  <script src="questions_ua.js"></script>
+  <script src="illustrations.js"></script>
+  <script src="authors_ua.js"></script>
+  <script src="app5.js"></script>
+</body>
+</html>

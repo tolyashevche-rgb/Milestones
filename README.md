@@ -1,0 +1,177 @@
+# Milestones — personalized child-development assistant
+
+**One line:** a calm, evidence-first guide for parents (0–12 months) that turns a
+milestone check into a personalized focus + a weekly play plan, while never diagnosing,
+scoring, or replacing a professional.
+
+> Method: **Watch → Play → Ask.** Frameworks: CDC / AAP (surveillance), WHO nurturing
+> care, Harvard serve-and-return. Personalization model: **Profile-of-focus (option A)** —
+> no scores, no risk labels.
+
+---
+
+## Folder structure
+
+```
+Milestones/
+├── README.md                  ← this file: plan, structure, sequence
+├── AGENT.md                   ← guide for AI agents: rules, architecture, decisions
+├── prototype_stage4/          ← WORKING web prototype (EN). Self-contained — do not move
+│   ├── index.html  styles.css
+│   ├── data.js                ← all milestones + activities (5 ages)
+│   ├── engine.js              ← personalization engine (buildProfile, buildProgram)
+│   └── app.js                 ← UI wiring
+├── prototype_stage4_ua/       ← WORKING web prototype (UA, testing artifact)
+│   └── data_ua.js  engine.js  app.js  index.html  (now also DISCUSS_BY_ID)
+├── prototype_stage5_ua/       ← NEW guided UA app (bottom-nav shell, redesign)
+│   └── index.html app5.js styles5.css questions_ua.js illustrations.js authors_ua.js (reuses stage4 data+engine)
+├── docs/                      ← project documentation
+│   ├── safety_rules.md        ← SINGLE SOURCE OF TRUTH for claims/guardrails
+│   ├── router_logic.md        ← how the engine turns answers into a plan
+│   ├── research_foundation.md ← evidence hierarchy, sources, disclaimers
+│   ├── developmental_memory_plan.md  action_plan.md
+│   ├── expert_review_checklist.md    parent_test_script.md
+│   ├── landing_structure.md   mobile_access_plan.md  product_data_model.md
+│   ├── ui_redesign_plan.md    ← guided-flow IA, screens, UX, build order
+│   └── 6_months_sample_page.md  6_months_review_ready_page.md  free_starter_pack_draft.md
+├── data/                      ← content + schemas (source of truth, not read at runtime)
+│   ├── mvp_0_12_months_map.csv        milestone_schema.csv
+│   ├── activity_library_0_12_months.csv  activity_schema.csv
+│   └── evidence_sources.csv  adapted_meaning_matrix_cdc_europe.csv
+├── knowledge_base/            ← author / recommendation base
+│   ├── author_base_README.md          ← governance + workflow
+│   ├── author_research_inventory.md   ← CANONICAL author inventory
+│   ├── authors_registry.csv           ← machine companion (caution, maps_to_mechanism)
+│   ├── problem_to_author_map.csv      recommendation_author_map.csv
+│   └── author_source_cards/           ← atomic paraphrased cards
+├── sources/                   ← raw research materials (PDFs, book, images, xlsx)
+└── archive/                   ← stale exports of an older prototype
+```
+
+---
+
+## Logical sequence — how we got here
+
+1. **Stages 1–4 (earlier):** evidence foundation → data model → review-ready content →
+   first clickable prototype + landing/test docs. (See `docs/action_plan.md`.)
+2. **Prototype completed to 5 ages:** wired `data.js` so the age switcher (2/4/6/9/12 mo)
+   actually works across the whole first year.
+3. **Product pivot → personalized assistant:** chose **option A (Profile-of-focus)** over
+   clinical scoring. Built `engine.js` (profile + weekly program). Added `supports` links
+   so focus → activities works.
+4. **Content floor:** grew to **40 activities**, ≥2 per (age × domain), each with a visible
+   evidence level + source. Programs stopped repeating.
+5. **Safety + governance:** extracted `docs/safety_rules.md` (single source of truth) and
+   `docs/router_logic.md` (documents the engine). Extended the activity schema.
+6. **Author base:** built the scaffold + `authors_registry.csv` (21 authors by role,
+   with caution + verification), reconciled with the canonical inventory, verified names
+   (removed Donna Sasse Wittmer; confirmed Sassé/Luria/Marks/Poon), and extracted the
+   first atomic cards (Glascoe, Hirsh-Pasek & Golinkoff, Lieberman, Pikler).
+7. **Organized** everything into folders + this plan.
+8. **Product direction set (2026-06-08):** confirmed the app as a per-milestone survey →
+   focus/"vision" → weekly play program → personal cabinet with re-tests over time. Locked
+   three decisions (see below). Fixed the `allClear` maintenance bug (added `partialClear`),
+   surfaced `discuss_if` as a calm "when to discuss" layer in the UA prototype, and added
+   [AGENT.md](AGENT.md) as the agent-facing guide.
+
+---
+
+## Product direction & locked decisions (2026-06-08)
+
+The app: parent registers a child → runs a short, **randomly-selected** survey per age
+milestone → gets a focus **"vision"** (what to notice, calm "when to discuss") + a
+**1–2 week daily play program** (game-like) → results shown as **descriptive charts** →
+re-tests over time build a **comparison timeline** → a **personal cabinet** serves a daily
+task. Even a clear result still invites the parent to keep playing (maintenance mode).
+
+Decisions that gate the build:
+
+- **Platform:** stay a **web prototype** for now (native/hybrid deferred).
+- **Survey questions:** **curated, reviewed pool** — random *selection*, never LLM
+  *generation* (keeps traceability + the review gate).
+- **Data:** **local-first**, no account for MVP; stored object designed so an **optional
+  account** for sync can be added later. Child data is sensitive (GDPR).
+
+Guardrail reminders that constrain these features (see [docs/safety_rules.md](docs/safety_rules.md)):
+charts stay **descriptive** ("what you observed"), never a developmental score/percentile;
+"focus areas" never "weak sides to train"; illustrations must be original/licensed, not
+copied from books or competitor apps.
+
+---
+
+## Current state (works today)
+
+- EN + UA prototypes: survey → **focus profile** → **weekly play plan** → progress charts
+  by domain → re-assessment prompt. Open `prototype_stage4_ua/index.html` to try.
+- Engine is pure, traceable, **never generates content at runtime** — it only selects from
+  the curated, sourced activity set.
+- **`allClear` fixed:** maintenance/celebration now triggers only when every milestone is
+  marked; a new `partialClear` state handles "nothing flagged but not all marked yet".
+- **`discuss_if` surfaced (UA):** `DISCUSS_BY_ID` in `data_ua.js` drives a contextual
+  "when to discuss" block in the Ask tab, shown only for items marked *not sure / not yet*.
+- **Author "approach" layer (stage5):** `authors_ua.js` surfaces a Bronze/inspiration
+  "Підхід" note on activities (Pikler, Hirsh-Pasek & Golinkoff, Lieberman, Harvard).
+  Seeded from `recommendation_author_map.csv`, then broadened to **all 40 activities** by
+  mechanism (each activity rests on one Silver mechanism). A "Підхід" badge marks days that
+  carry one. Framed as inspiration, never a guarantee. **Draft — pending expert review.**
+- **Multi-domain days:** each program day keeps a **primary** focus activity plus up to
+  `bonusPerDay` (2) **optional cross-domain** "bonus" ideas (`day.bonus`), so a day can touch
+  several developmental areas — framed as optional ("якщо є настрій"), never a dose. Engine
+  change mirrored to both `engine.js` copies; documented in `router_logic.md`.
+- **Activity library grown 40 → 60:** a 3rd activity per (age × domain), appended as
+  `ACTIVITIES_EXTRA` in `data_ua.js` (originals untouched), each with an author note. A
+  focus domain now cycles ~4 distinct activities over a week instead of repeating 2.
+- Author base scaffold with 4 cards and a verified 21-author registry.
+
+## Key principles (must always hold — see `docs/safety_rules.md`)
+
+1. **No score / level / risk** ever leaves the engine (internal `weight` only orders focus).
+2. The plan = **opportunities for play**, never a treatment dose.
+3. **Two clocks:** milestone re-check follows CDC age windows; the weekly cycle is engagement.
+4. **Author bridge:** an author idea is usable only if it `maps_to_mechanism` (Silver) or a
+   guideline (Gold). "Author says so" is never enough. High-caution authors = inspiration only.
+
+---
+
+## Open gaps
+
+- Expert review of content (gate before real users) — not done.
+- Parent test with 5 parents — not done.
+- Author cards: **8 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
+  serve-return, Harvard brain-building-play, Mooney, Marks). Remaining are mostly
+  moderate/high-caution authors (Montessori, Doman, Sears, Maté…) needing careful framing.
+- `discuss_if` surfaced in **UA only** — EN parity (add `DISCUSS_BY_ID` to `data.js` +
+  Ask-tab render) still pending.
+- Author base anticipates concerns beyond 0–12 mo (tantrums, screens, separation) — the
+  current engine covers 0–12 mo only. Scope decision pending.
+- **Canonical CSV drift:** `data/activity_library_0_12_months.csv` (33 rows) is behind the
+  runtime `data_ua.js` (now 60). Runtime is the working source; CSV needs a back-sync.
+
+## Next steps
+
+| # | Step | Status |
+|---|---|---|
+| A | Integrate inventory + verify author names | **done** |
+| B | Surface "when to discuss" in the UI (reuse `discuss_if`) | **done (UA)**, EN parity pending |
+| B2 | Fix `allClear` maintenance bug (+ `partialClear`) | **done** |
+| C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (8/26; no-caution authors done) |
+| D | Expert review + parent test (validation gates) | pending |
+
+### Product roadmap (from the 2026-06-08 direction)
+
+| # | Step | Notes |
+|---|---|---|
+| 1 | Curated **question pool** — multiple phrasings per milestone, random selection | **done** in `prototype_stage5_ua/questions_ua.js` (54 milestones, **3 phrasings each** = text + 2 alternates; re-test reshuffles wording, keeps milestone ids for comparison) |
+| 2 | Extend program to **14 days**, allow multiple sessions/day | `ENGINE_CONFIG` tweak |
+| 3 | **IndexedDB** + child profile (DOB → age window), multi-child | readies optional account |
+| 4 | **`.ics` notifications** for "today's task" | calendar without a server |
+| 5 | **Guided interface redesign** (onboarding → survey → results → program → cabinet) | **scaffolded** in `prototype_stage5_ua/` (bottom-nav shell) |
+| 6 | Exercise **illustrations** (original/licensed) | **interim done**: original inline-SVG per domain (`illustrations.js`); designer-made art still a later upgrade |
+| 7 | Consent / age-gate screen + data-erasure control | **done** in stage5 (consent + "erase all") |
+
+Stage5 status: working guided flow (welcome → consent → child profile → home/cabinet →
+survey → results+vision → program → progress → ask), local-first single-object storage,
+per-age question selection that a re-test reuses, a **curated question pool** (multiple
+phrasings per milestone, reshuffled on re-test), descriptive charts, `.ics` daily-task
+export. Open: IndexedDB upgrade, exercise illustrations, EN parity, expert review gate.
+Decisions for the redesign live in [docs/ui_redesign_plan.md](docs/ui_redesign_plan.md).

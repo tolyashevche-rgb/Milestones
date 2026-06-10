@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Карта розвитку: український прототип</title>
+  <link rel="stylesheet" href="../prototype_stage4/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <strong>Карта розвитку</strong>
+        <span>український мобільний прототип</span>
+      </div>
+    </div>
+    <nav class="topnav" aria-label="Основна навігація">
+      <a href="#watch">Спостерігати</a>
+      <a href="#play">Грати</a>
+      <a href="#ask">Запитати</a>
+      <a href="#history">Історія</a>
+      <a href="#summary">Підсумок</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Прототип 0-12 місяців</p>
+        <h1>Перший рік дитини без паніки через milestones.</h1>
+        <p class="lead">Спокійна evidence-informed карта для батьків: що спостерігати, у що грати і коли варто поставити питання фахівцю.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#demo">Відкрити демо 6 місяців</a>
+          <a class="button secondary" href="#starter">Отримати starter pack</a>
+        </div>
+        <p class="trust">Логіка узгоджена з CDC developmental monitoring, принципами AAP surveillance, WHO nurturing care і Harvard serve-and-return.</p>
+      </div>
+
+      <aside class="phone-preview" aria-label="Попередній перегляд продукту">
+        <div class="preview-screen">
+          <div class="preview-header">
+            <span>6 місяців</span>
+            <strong>Спостерігати / Грати / Запитати</strong>
+          </div>
+          <div class="preview-visual" aria-hidden="true">
+            <div class="baby-shape">
+              <span class="head"></span>
+              <span class="body"></span>
+              <span class="toy"></span>
+            </div>
+          </div>
+          <div class="mini-card">
+            <span class="mini-label">Сьогодні</span>
+            <strong>Діалог звуками</strong>
+            <p>2-5 хв, без матеріалів</p>
+          </div>
+          <div class="mini-progress">
+            <span style="width: 62%"></span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="method" aria-labelledby="method-title">
+      <h2 id="method-title">Спостерігати, грати, запитати</h2>
+      <div class="method-grid">
+        <article>
+          <span class="step-number">1</span>
+          <h3>Спостерігати</h3>
+          <p>Зрозумілі ознаки розвитку за віком і напрямком. Це не іспит для дитини.</p>
+        </article>
+        <article>
+          <span class="step-number">2</span>
+          <h3>Грати</h3>
+          <p>Короткі вправи з кроками, правилами зупинки і поясненням, чому це має сенс.</p>
+        </article>
+        <article>
+          <span class="step-number">3</span>
+          <h3>Запитати</h3>
+          <p>Спокійні нотатки й питання, які можна показати педіатру або іншому фахівцю.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="demo" class="demo-shell">
+      <div class="demo-header">
+        <div>
+          <p class="eyebrow">Клікабельне демо</p>
+          <h2 id="demoAgeTitle">Сторінка 6 місяців</h2>
+          <p>Це демонстрація основної логіки: спостереження, гра, питання, історія і підсумок.</p>
+        </div>
+        <div class="age-switcher" aria-label="Вибір віку">
+          <button type="button" data-age="2">2м</button>
+          <button type="button" data-age="4">4м</button>
+          <button type="button" data-age="6" class="active">6м</button>
+          <button type="button" data-age="9">9м</button>
+          <button type="button" data-age="12">12м</button>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Розділи демо">
+        <button type="button" class="tab active" data-tab="watch">Спостерігати</button>
+        <button type="button" class="tab" data-tab="play">Грати</button>
+        <button type="button" class="tab" data-tab="ask">Запитати</button>
+        <button type="button" class="tab" data-tab="history">Історія</button>
+        <button type="button" class="tab" data-tab="summary">Підсумок</button>
+      </div>
+
+      <section id="watch" class="tab-panel active">
+        <div class="panel-layout">
+          <div>
+            <h3>Що спостерігати</h3>
+            <p class="panel-note">Розвиток варіюється. Позначайте це як спостереження, не як оцінку дитини.</p>
+          </div>
+          <div class="progress-box">
+            <span id="progressText">0 з 11 позначено</span>
+            <div class="progress-track"><span id="progressBar"></span></div>
+          </div>
+        </div>
+        <div class="milestone-list" id="milestoneList"></div>
+      </section>
+
+      <section id="play" class="tab-panel">
+        <div class="panel-layout">
+          <div>
+            <h3>Ваш персональний план</h3>
+            <p class="panel-note">Побудовано з того, що ви позначили у «Спостерігати». Навіть одна коротка активність на день — це вже чудово.</p>
+          </div>
+        </div>
+
+        <div class="profile-box" id="profileBox"></div>
+
+        <h4 class="plan-subhead">Гра на цей тиждень</h4>
+        <div class="program-list" id="programList"></div>
+
+        <h4 class="plan-subhead">Деталі активності</h4>
+        <div class="activity-feature" id="activityFeature"></div>
+      </section>
+
+      <section id="ask" class="tab-panel">
+        <h3>Коли варто обговорити з фахівцем</h3>
+        <p class="panel-note">Якщо щось турбує, це не привід панікувати. Це привід записати спостереження і поставити питання.</p>
+
+        <h4 class="plan-subhead">На що звернути увагу за вашими позначками</h4>
+        <div class="discuss-list" id="discussList"></div>
+
+        <h4 class="plan-subhead">Загальні орієнтири</h4>
+        <div class="ask-list">
+          <label><input type="checkbox"> Дитина втратила навичку, яка вже була.</label>
+          <label><input type="checkbox"> Є питання щодо слуху, зору, годування, руху або взаємодії.</label>
+          <label><input type="checkbox"> Одна сторона тіла здається значно слабшою або менш активною.</label>
+          <label><input type="checkbox"> Дитина майже не видає звуків, не реагує на знайомих людей або не тягнеться до предметів, і це мене турбує.</label>
+        </div>
+        <label class="notes-label" for="parentNotes">Нотатки для візиту</label>
+        <textarea id="parentNotes" rows="6" placeholder="Що ви помітили, що пробували, що хочете запитати?"></textarea>
+      </section>
+
+      <section id="history" class="tab-panel">
+        <div class="panel-layout">
+          <div>
+            <h3>Історія спостережень</h3>
+            <p class="panel-note">Локальний timeline спостережень. Зберігається лише в цьому браузері й не є медичною картою.</p>
+          </div>
+          <div class="history-actions">
+            <button type="button" class="button secondary compact" id="saveSnapshot">Зберегти snapshot</button>
+            <button type="button" class="button secondary compact" id="clearHistory">Очистити історію</button>
+          </div>
+        </div>
+        <div class="history-insight" id="historyInsight"></div>
+        <div class="history-list" id="historyList"></div>
+      </section>
+
+      <section id="summary" class="tab-panel">
+        <h3>Підсумок для фахівця</h3>
+        <p class="panel-note">Це допоміжні нотатки для розмови. Це не діагностика і не скринінг.</p>
+        <div class="summary-box" id="summaryBox"></div>
+        <button type="button" class="button primary compact" id="copySummary">Скопіювати підсумок</button>
+        <p class="copy-status" id="copyStatus" role="status"></p>
+      </section>
+    </section>
+
+    <section id="starter" class="starter">
+      <div>
+        <p class="eyebrow">Безкоштовний матеріал</p>
+        <h2>Starter pack 0-12 місяців</h2>
+        <p>5 вікових snapshot-сторінок, короткі ідеї для гри, спокійні питання до фахівця і шаблон нотаток для візиту.</p>
+      </div>
+      <form class="starter-form">
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="parent@example.com">
+        <label for="age">Вік дитини</label>
+        <select id="age">
+          <option>0-3 місяці</option>
+          <option>4-6 місяців</option>
+          <option>7-9 місяців</option>
+          <option>10-12 місяців</option>
+        </select>
+        <button type="button" class="button primary">Надіслати starter pack</button>
+      </form>
+    </section>
+
+    <section class="safety">
+      <strong>Важливо</strong>
+      <p>Цей прототип допомагає спостерігати розвиток і підтримувати навички через гру. Він не є діагностичним або скринінговим інструментом і не замінює консультацію педіатра чи іншого фахівця.</p>
+    </section>
+  </main>
+
+  <script src="data_ua.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

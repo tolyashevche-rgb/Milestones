@@ -1,0 +1,22 @@
+field;type;required;example;notes
+id;text;yes;act_006_language_001;Unique activity ID
+age_range;text;yes;5-7 months;Can be broader than exact CDC age
+domain;enum;yes;language_communication;Primary developmental domain
+title;text;yes;Sound Turn-Taking;Parent-facing title
+supports_milestone_ids;text;yes;ms_006_language_001;Pipe-separated milestone IDs
+duration;text;yes;2-5 minutes;Keep short and realistic
+materials;text;yes;none;Use no-prep options whenever possible
+setup;text;yes;Hold baby where they can see your face.;One-line setup
+steps;text;yes;Wait for a sound, copy it, pause.;Comma-separated steps
+what_to_watch;text;yes;Baby looks, smiles, pauses, vocalizes.;Observation cues
+why_it_works;text;yes;Back-and-forth interaction supports early communication.;Mechanism-based explanation
+evidence_bucket;enum;yes;silver;gold, silver, bronze
+evidence_label;text;yes;Mechanism-based;UI label
+source_ids;text;yes;harvard_serve_return_guide|who_nurturing_care;Pipe-separated source IDs
+claim_limit;text;yes;Supports prerequisites, does not treat or diagnose delays.;Safety boundary
+stop_rules;text;yes;Stop if baby is tired, distressed, hungry, or uncomfortable.;Safety instructions
+low_energy_option;text;no;Do it for 30 seconds during diapering.;For exhausted-parent segment
+adaptations;text;no;Use side-lying or supported sitting if appropriate.;Optional
+notes;text;no;Needs expert review.;Internal note
+what_not_to_do;text;yes;Do not turn it into a test, do not force, do not compare to other babies.;Claim-level donts. Activity-specific donts already live in stop_rules; claim boundary in claim_limit.
+when_to_discuss;text;derived;If baby is not making sounds or responding and you are concerned, discuss it.;DERIVED from the linked milestones discuss_if (mvp_0_12_months_map.csv). Not re-authored per activity.

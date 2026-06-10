@@ -1,0 +1,18 @@
+# Local-only research inputs & third-party material — never committed.
+# Reason: copyright + repo bloat. The product ships only paraphrased knowledge_base
+# cards, never these source books, PDFs, spreadsheets, or competitor screenshots.
+# Keep these on disk / private storage, not in git.
+/Book and Articals/
+/sources/
+/Apps/
+/archive/
+
+# Temp previews extracted from copyrighted books
+/_tmp_*/
+
+# Stray binary blobs anywhere in the tree
+*.zip
+*.pdf
+*.doc
+*.docx
+*.xlsx
