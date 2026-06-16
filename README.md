@@ -135,7 +135,9 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Open gaps
 
-- Expert review of content (gate before real users) — not done.
+- Expert review of content (gate before real users) — **not done**, but the package is now
+  ready: tracker scaffolded ([docs/expert_review_tracker.md](docs/expert_review_tracker.md))
+  and the checklist's "Files for Review" points at current UA content. Needs a live reviewer.
 - Parent test with 5 parents — not done.
 - Author cards: **8 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
   serve-return, Harvard brain-building-play, Mooney, Marks). Remaining are mostly
@@ -144,8 +146,12 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   Ask-tab render) still pending.
 - Author base anticipates concerns beyond 0–12 mo (tantrums, screens, separation) — the
   current engine covers 0–12 mo only. Scope decision pending.
-- **Canonical CSV drift:** `data/activity_library_0_12_months.csv` (33 rows) is behind the
-  runtime `data_ua.js` (now 60). Runtime is the working source; CSV needs a back-sync.
+- **Canonical CSV drift (partly resolved):** runtime `data_ua.js` (60) is now mirrored 1:1
+  into `data/activity_library_0_12_months_ua.csv` (60 rows, UA). The EN
+  `data/activity_library_0_12_months.csv` still sits at 33 (it carries richer authored fields
+  — `setup`, `what_to_watch`, `claim_limit`, etc.) and needs reconciliation. In the UA mirror
+  those authored-safety fields are marked `NEEDS_REVIEW` (not invented), and `source_ids`
+  holds the runtime's coarse framework label (e.g. "CDC + WHO"), not precise card IDs.
 
 ## Next steps
 

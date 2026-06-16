@@ -155,10 +155,19 @@ Yes / No / Yes after revisions
 
 ## Files for Review
 
-- `research_foundation.md`
-- `product_data_model.md`
-- `mvp_0_12_months_map.csv`
-- `activity_library_0_12_months.csv`
-- `6_months_review_ready_page.md`
-- `free_starter_pack_draft.md`
+Record findings in [expert_review_tracker.md](expert_review_tracker.md). Review the
+**current UA content the parent actually sees** (not the older English pack):
+
+- `prototype_stage4_ua/data_ua.js` — milestones (54) + activities (60), the live content
+- `data/activity_library_0_12_months_ua.csv` — readable 1:1 mirror of the 60 activities
+  (`NEEDS_REVIEW` marks fields not authored yet — see tracker §5)
+- `prototype_stage5_ua/questions_ua.js` — alternate survey phrasings (draft)
+- `prototype_stage5_ua/authors_ua.js` — Bronze "approach" notes (draft)
+- `data/mvp_0_12_months_map.csv` — milestone map incl. `discuss_if`
+- `docs/safety_rules.md` — claim/guardrail rules every item must pass
+- `docs/6_months_review_ready_page.md` — worked single-age example (reference)
+
+Background (not current content): `research_foundation.md`, `product_data_model.md`,
+`free_starter_pack_draft.md`. The English `activity_library_0_12_months.csv` (33 rows) is
+stale — do not review it as current.
 
