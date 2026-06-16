@@ -1,7 +1,7 @@
 # Safety Rules — single source of truth
 
 Version: Stage 5
-Date: 2026-06-01
+Date: 2026-06-16
 
 This file is the **single source of truth** for what the product may and may not say.
 It consolidates the claim-safety rules previously embedded in `research_foundation.md`
@@ -138,3 +138,44 @@ detected deficit. Therefore:
 No author-derived content and no "when to discuss" wording reaches real users before
 expert review (see `expert_review_checklist.md`). Mechanism-based (Silver) activities
 are evidence-informed but **not yet expert-validated** until that review is done.
+
+---
+
+## 10. Visual assets (illustrations, images, icons)
+
+Visuals are parent-facing content and carry the same legal and tone duties as text.
+
+**Origin — original or licensed only:**
+
+- Every shipped illustration, image, or icon must be **original work or properly
+  licensed** for this use (with the license recorded).
+- **Never copy, trace, redraw, or closely imitate** artwork from copyrighted books
+  (`Book and Articals/`, `sources/`) or from competitor apps (Baby Sparks, CDC,
+  Kinedu, screenshots in `Apps/` and `sources/_analysis_*`).
+- Reference material — book illustrations, competitor screenshots, and our own photos
+  in `sources/pictures/` — may be used **only as style/composition inspiration**. The
+  output must be independently original. "Inspired by" is allowed; "derived from" is not.
+- Current interim assets are the original inline-SVG in
+  `prototype_stage5_ua/illustrations.js` (decorative, `aria-hidden`, no copyrighted
+  assets). Designer art is a later upgrade — **commission or a licensed library**, never
+  scraped images.
+
+**Tone — visuals must obey the same claims rules (§1–§3):**
+
+- Illustrations are **decorative/supportive**, never diagnostic. No imagery that implies
+  a verdict — no "behind/advanced" depictions, no charts that look like a score,
+  percentile, or pass/fail.
+- Keep them calm, warm, and inclusive; never alarming or clinical (no medical-test or
+  deficit imagery). A child shown playing is fine; a child shown "failing a test" is not.
+
+**Photos of real children:**
+
+- A real child's photo requires explicit consent and a license; default to illustration.
+  Child data and likeness are sensitive (GDPR) — see the local-first data rules.
+
+**Repo hygiene (keeps origin provable):**
+
+- Source books, competitor screenshots, and raw research images stay **gitignored and
+  out of the product** (`.gitignore` already excludes `Book and Articals/`, `sources/`,
+  `Apps/`, `archive/`, and binary blobs). Never `git add -f` them or bundle those folders
+  for sharing — that would expose copyrighted third-party material.

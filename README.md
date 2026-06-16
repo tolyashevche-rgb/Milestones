@@ -95,7 +95,7 @@ Decisions that gate the build:
 Guardrail reminders that constrain these features (see [docs/safety_rules.md](docs/safety_rules.md)):
 charts stay **descriptive** ("what you observed"), never a developmental score/percentile;
 "focus areas" never "weak sides to train"; illustrations must be original/licensed, not
-copied from books or competitor apps.
+copied from books or competitor apps (codified in [safety_rules.md](docs/safety_rules.md) §10).
 
 ---
 
