@@ -170,7 +170,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | # | Step | Notes |
 |---|---|---|
 | 1 | Curated **question pool** — multiple phrasings per milestone, random selection | **done** in `prototype_stage5_ua/questions_ua.js` (54 milestones, **3 phrasings each** = text + 2 alternates; re-test reshuffles wording, keeps milestone ids for comparison) |
-| 2 | Extend program to **14 days**, allow multiple sessions/day | `ENGINE_CONFIG` tweak |
+| 2 | Extend program to **14 days**, allow multiple sessions/day | **done** — `cycleDays` 7→14 in both engines + "week" copy updated; multiple-sessions/day still pending |
 | 3 | **IndexedDB** + child profile (DOB → age window), multi-child | readies optional account |
 | 4 | **`.ics` notifications** for "today's task" | calendar without a server |
 | 5 | **Guided interface redesign** (onboarding → survey → results → program → cabinet) | **scaffolded** in `prototype_stage5_ua/` (bottom-nav shell) |

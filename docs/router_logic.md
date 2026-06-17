@@ -52,7 +52,7 @@ Produces a day-by-day list: `[{ day, domain, options: [activityId, ...] }]`.
 
 1. **Maintenance mode** (`allClear`): light rotation through all activities of the age,
    flagged `maintenance: true`, no pressure framing.
-2. Otherwise, `allocateDays(focus, cycleDays)` spreads `cycleDays` (7) across the focus
+2. Otherwise, `allocateDays(focus, cycleDays)` spreads `cycleDays` (14) across the focus
    domains **proportional to weight**, with a minimum of 1 day each (largest-remainder
    method). A domain with more "not yet / not sure" therefore appears on more days —
    this is the adaptivity, expressed as *more chances to play*, not a higher dose.
@@ -72,7 +72,7 @@ Produces a day-by-day list: `[{ day, domain, options: [activityId, ...] }]`.
 
 | Param | Default | Meaning |
 |---|---|---|
-| `cycleDays` | 7 | Length of the weekly play cycle (engagement clock) |
+| `cycleDays` | 14 | Length of the play cycle, ~1–2 weeks (engagement clock) |
 | `maxFocus` | 2 | Max primary focus domains shown |
 | `optionsPerDay` | 2 | Primary same-domain activity options offered per day |
 | `bonusPerDay` | 2 | Optional cross-domain "bonus" ideas added per day (breadth, not a dose) |
