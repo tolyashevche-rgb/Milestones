@@ -90,17 +90,16 @@ Severity: 🔴 safety-blocking · 🟠 needs revision before parents · 🟡 opt
 ## 5. NEEDS_REVIEW backlog (authoring gaps before/with review)
 
 The runtime carries only: `title, domain, supports, duration, materials, steps, why,
-stop, evidence`. The following CSV/schema fields are **not authored** in the runtime and are
-marked `NEEDS_REVIEW` in the UA mirror — they must be authored, then reviewed:
+stop, evidence`. The authored fields below (`setup`, `what_to_watch`, `claim_limit`,
+`low_energy_option`, `adaptations`, `source_ids`) do not exist in the runtime. Status by tier:
 
-- `setup` · `what_to_watch` · **`claim_limit`** · `low_energy_option` · `adaptations`
-- `source_ids` — currently a coarse framework label (e.g. "CDC + WHO"), not precise card IDs.
-
-Two tiers:
-
-- **Back-fillable (33 activities):** authored values already exist in the English
-  `activity_library_0_12_months.csv` — translate + verify, then review.
-- **Net-new (27 activities):** no authored safety fields anywhere — must be written from
+- **Back-filled (33 activities):** these fields were translated from the EN
+  `activity_library_0_12_months.csv` into the UA mirror, and `source_ids` now carries precise
+  card IDs (e.g. `cdc_ltsae_6_months|who_motor_milestones`). **Translated drafts — still
+  pending this review**, not yet expert-validated. Reviewers should verify wording, esp.
+  `claim_limit` and `what_to_watch`.
+- **Net-new (27 activities):** still `NEEDS_REVIEW` — no authored safety fields anywhere, and
+  `source_ids` is only a coarse framework label (e.g. "CDC + WHO"). Must be written from
   scratch (esp. `claim_limit`, `what_not_to_do`, `what_to_watch`), then reviewed:
 
   ```

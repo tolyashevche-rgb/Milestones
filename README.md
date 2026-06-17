@@ -146,12 +146,14 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   Ask-tab render) still pending.
 - Author base anticipates concerns beyond 0–12 mo (tantrums, screens, separation) — the
   current engine covers 0–12 mo only. Scope decision pending.
-- **Canonical CSV drift (partly resolved):** runtime `data_ua.js` (60) is now mirrored 1:1
-  into `data/activity_library_0_12_months_ua.csv` (60 rows, UA). The EN
-  `data/activity_library_0_12_months.csv` still sits at 33 (it carries richer authored fields
-  — `setup`, `what_to_watch`, `claim_limit`, etc.) and needs reconciliation. In the UA mirror
-  those authored-safety fields are marked `NEEDS_REVIEW` (not invented), and `source_ids`
-  holds the runtime's coarse framework label (e.g. "CDC + WHO"), not precise card IDs.
+- **Canonical CSV drift (largely resolved):** runtime `data_ua.js` (60) is mirrored 1:1 into
+  `data/activity_library_0_12_months_ua.csv` (60 rows, UA). For the **33** activities that the
+  EN `data/activity_library_0_12_months.csv` also covers, the authored fields (`setup`,
+  `what_to_watch`, `claim_limit`, `low_energy_option`, `adaptations`) are now **back-filled**
+  (translated from EN; `source_ids` carries precise card IDs) — translated drafts pending the
+  expert gate. The remaining **27 net-new** activities keep `NEEDS_REVIEW` (no authored safety
+  fields anywhere) with a coarse `source_ids` label. See
+  [docs/expert_review_tracker.md](docs/expert_review_tracker.md) §5.
 
 ## Next steps
 
