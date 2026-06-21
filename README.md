@@ -142,8 +142,9 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 - Author cards: **8 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
   serve-return, Harvard brain-building-play, Mooney, Marks). Remaining are mostly
   moderate/high-caution authors (Montessori, Doman, Sears, Maté…) needing careful framing.
-- `discuss_if` surfaced in **UA only** — EN parity (add `DISCUSS_BY_ID` to `data.js` +
-  Ask-tab render) still pending.
+- `discuss_if` surfaced in **both UA and EN** — `DISCUSS_BY_ID` (54 entries, pulled from the
+  canonical `mvp_0_12_months_map.csv`) now in `prototype_stage4/data.js`, with `#discussList`
+  + `renderDiscuss()` in the EN Ask tab, mirroring the UA prototype.
 - Author base anticipates concerns beyond 0–12 mo (tantrums, screens, separation) — the
   current engine covers 0–12 mo only. Scope decision pending.
 - **Canonical CSV drift (largely resolved):** runtime `data_ua.js` (60) is mirrored 1:1 into
@@ -160,7 +161,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | # | Step | Status |
 |---|---|---|
 | A | Integrate inventory + verify author names | **done** |
-| B | Surface "when to discuss" in the UI (reuse `discuss_if`) | **done (UA)**, EN parity pending |
+| B | Surface "when to discuss" in the UI (reuse `discuss_if`) | **done (UA + EN)** |
 | B2 | Fix `allClear` maintenance bug (+ `partialClear`) | **done** |
 | C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (8/26; no-caution authors done) |
 | D | Expert review + parent test (validation gates) | pending |
@@ -181,5 +182,5 @@ Stage5 status: working guided flow (welcome → consent → child profile → ho
 survey → results+vision → program → progress → ask), local-first single-object storage,
 per-age question selection that a re-test reuses, a **curated question pool** (multiple
 phrasings per milestone, reshuffled on re-test), descriptive charts, `.ics` daily-task
-export. Open: IndexedDB upgrade, exercise illustrations, EN parity, expert review gate.
+export. Open: IndexedDB upgrade, exercise illustrations, expert review gate.
 Decisions for the redesign live in [docs/ui_redesign_plan.md](docs/ui_redesign_plan.md).

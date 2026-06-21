@@ -67,6 +67,7 @@ function updateProgress() {
   progressText.textContent = `${observed} of ${milestones.length} observed`;
   progressBar.style.width = `${(observed / milestones.length) * 100}%`;
   renderPlan();
+  renderDiscuss();
   renderSummary();
   renderHistory();
 }
@@ -161,6 +162,31 @@ function renderPlan() {
   const firstId = program[0] && program[0].options[0];
   if (firstId) renderActivityById(firstId);
   else if (feature) feature.innerHTML = "";
+}
+
+// "When to discuss with a professional" — contextual notes only for items the parent
+// marked "Not sure" or "Not yet". An observation layer, never a diagnosis.
+function renderDiscuss() {
+  const box = document.getElementById("discussList");
+  if (!box) return;
+  const flagged = milestones.filter((item) => {
+    const s = state[item.id];
+    return (s === "not_yet" || s === "not_sure") && (typeof DISCUSS_BY_ID !== "undefined") && DISCUSS_BY_ID[item.id];
+  });
+  if (!flagged.length) {
+    box.innerHTML = `<p class="panel-note">Nothing marked “Not sure” or “Not yet” yet. If something comes up, calm pointers will appear here.</p>`;
+    return;
+  }
+  box.innerHTML = flagged.map((item) => `
+    <article class="discuss-card">
+      <div class="milestone-meta">
+        <span>${item.domain}</span>
+        <span>${state[item.id] === "not_yet" ? "Not yet" : "Not sure"}</span>
+      </div>
+      <h4>${item.title}</h4>
+      <p>${DISCUSS_BY_ID[item.id]}</p>
+    </article>
+  `).join("");
 }
 
 function renderSummary() {
