@@ -172,15 +172,16 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 |---|---|---|
 | 1 | Curated **question pool** — multiple phrasings per milestone, random selection | **done** in `prototype_stage5_ua/questions_ua.js` (54 milestones, **3 phrasings each** = text + 2 alternates; re-test reshuffles wording, keeps milestone ids for comparison) |
 | 2 | Extend program to **14 days**, allow multiple sessions/day | **done** — `cycleDays` 7→14 in both engines + "week" copy updated; multiple-sessions/day still pending |
-| 3 | **IndexedDB** + child profile (DOB → age window), multi-child | readies optional account |
+| 3 | **IndexedDB** + child profile (DOB → age window), multi-child | **multi-child done** (localStorage `children[]` + appbar switcher + add/delete, lossless migration from the old single-child shape); **DOB→age window** already done (`monthsSince`/`ageWindowFor`, now derived live); **IndexedDB deferred** (low-value async backend swap — store is already per-child, sync-ready) |
 | 4 | **`.ics` notifications** for "today's task" | calendar without a server |
 | 5 | **Guided interface redesign** (onboarding → survey → results → program → cabinet) | **scaffolded** in `prototype_stage5_ua/` (bottom-nav shell) |
 | 6 | Exercise **illustrations** (original/licensed) | **interim done**: original inline-SVG per domain (`illustrations.js`); designer-made art still a later upgrade |
 | 7 | Consent / age-gate screen + data-erasure control | **done** in stage5 (consent + "erase all") |
 
 Stage5 status: working guided flow (welcome → consent → child profile → home/cabinet →
-survey → results+vision → program → progress → ask), local-first single-object storage,
-per-age question selection that a re-test reuses, a **curated question pool** (multiple
-phrasings per milestone, reshuffled on re-test), descriptive charts, `.ics` daily-task
-export. Open: IndexedDB upgrade, exercise illustrations, expert review gate.
+survey → results+vision → program → progress → ask), local-first storage with **multi-child**
+(`children[]`, appbar switcher, add/delete, lossless migration), per-age question selection
+that a re-test reuses, a **curated question pool** (multiple phrasings per milestone,
+reshuffled on re-test), descriptive charts, `.ics` daily-task export. Open: IndexedDB
+backend (deferred), exercise illustrations, expert review gate.
 Decisions for the redesign live in [docs/ui_redesign_plan.md](docs/ui_redesign_plan.md).

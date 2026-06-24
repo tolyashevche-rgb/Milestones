@@ -40,6 +40,9 @@ h1, h2, h3, h4 { line-height: 1.25; }
 .appbar strong { flex: 1; font-size: 16px; }
 .appbar-tag { color: var(--muted); font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
 .appbar-back { border: 0; background: transparent; padding: 0; cursor: pointer; }
+.appbar-child { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.appbar-select { flex: 1; min-width: 0; font: inherit; font-weight: 600; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; cursor: pointer; }
+.home-danger { display: flex; flex-wrap: wrap; gap: 18px; }
 .brand-mark { display: block; width: 28px; height: 28px; border-radius: 9px; background: linear-gradient(135deg, var(--teal), var(--teal-dark)); }
 
 main {

@@ -21,15 +21,31 @@ const DOMAIN_LABELS_SHORT = {
 const QUESTIONS_PER_DOMAIN = 3; // interim: each milestone is one question; pool comes later
 const STORAGE_KEY = "milestonesMap.stage5.ua";
 
-// ---- storage (single object, shaped so an optional sync account can be added later) ----
-function freshStore() {
-  return { consent: null, child: null, surveys: {}, snapshots: [], triedActivities: [], notes: "" };
+// ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
+function freshChild(name, dob) {
+  return { id: "child_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+           name: name || "", dob: dob || "",
+           surveys: {}, snapshots: [], triedActivities: [], notes: "" };
 }
-function load() {
-  try { return Object.assign(freshStore(), JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}); }
-  catch { return freshStore(); }
+function freshStore() { return { consent: null, children: [], activeChildId: null }; }
+// Migrate the old single-child shape ({consent, child, surveys, ...}) into children[]. Idempotent.
+function migrate(s) {
+  if (!s || typeof s !== "object") return freshStore();
+  if (Array.isArray(s.children)) return Object.assign(freshStore(), s);
+  const st = freshStore();
+  st.consent = s.consent || null;
+  if (s.child) {
+    const c = freshChild(s.child.name, s.child.dob);
+    c.surveys = s.surveys || {}; c.snapshots = s.snapshots || [];
+    c.triedActivities = s.triedActivities || []; c.notes = s.notes || "";
+    st.children.push(c); st.activeChildId = c.id;
+  }
+  return st;
 }
+function load() { try { return migrate(JSON.parse(localStorage.getItem(STORAGE_KEY))); } catch { return freshStore(); } }
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
+// Active child — per-child data lives here. Null only before the first child exists.
+function cc() { return store.children.find((c) => c.id === store.activeChildId) || store.children[0] || null; }
 let store = load();
 
 // ---- helpers ----
@@ -53,8 +69,8 @@ function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 // Pick the survey questions for an age. Persist the selection so a re-test reuses the SAME
 // questions (like-for-like comparison over time).
 function questionIdsFor(age) {
-  if (store.surveys[age] && store.surveys[age].questionIds && store.surveys[age].questionIds.length) {
-    return store.surveys[age].questionIds;
+  if (cc().surveys[age] && cc().surveys[age].questionIds && cc().surveys[age].questionIds.length) {
+    return cc().surveys[age].questionIds;
   }
   const byDomain = {};
   for (const m of MILESTONES_BY_AGE[age] || []) {
@@ -67,8 +83,8 @@ function questionIdsFor(age) {
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
     picked.push(...pool.slice(0, QUESTIONS_PER_DOMAIN));
   }
-  store.surveys[age] = store.surveys[age] || { states: {}, date: null };
-  store.surveys[age].questionIds = picked;
+  cc().surveys[age] = cc().surveys[age] || { states: {}, date: null };
+  cc().surveys[age].questionIds = picked;
   save();
   return picked;
 }
@@ -85,25 +101,25 @@ function variantPoolFor(age, id) {
 // Re-test: keep the same milestone ids (for comparison) but reshuffle phrasings + clear
 // the working answers, while history snapshots are preserved.
 function restartSurvey(age) {
-  const s = store.surveys[age] || { questionIds: questionIdsFor(age) };
+  const s = cc().surveys[age] || { questionIds: questionIdsFor(age) };
   s.states = {};
   s.variants = {};
   s.date = null;
-  store.surveys[age] = s;
+  cc().surveys[age] = s;
   save();
 }
 
 // Descriptive per-domain counts over ONLY the asked questions (not all milestones).
 function askedStats(age) {
-  const ids = (store.surveys[age] && store.surveys[age].questionIds) || [];
-  const states = (store.surveys[age] && store.surveys[age].states) || {};
+  const ids = (cc().surveys[age] && cc().surveys[age].questionIds) || [];
+  const states = (cc().surveys[age] && cc().surveys[age].states) || {};
   const stats = {};
   for (const k of DOMAIN_KEYS) stats[k] = { yes: 0, total: 0 };
   for (const id of ids) { const d = domainOf(id); if (!stats[d]) continue; stats[d].total++; if (states[id] === "yes") stats[d].yes++; }
   return stats;
 }
 
-function currentAge() { return (store.child && store.child.ageMonths) || 6; }
+function currentAge() { const c = cc(); return c && c.dob ? ageWindowFor(monthsSince(c.dob)) : 6; }
 
 // ---- routing ----
 const NAV = [
@@ -120,7 +136,7 @@ function route() {
   const r = currentRoute();
   // Onboarding gate: welcome first, then consent, then child profile.
   if (!store.consent || !store.consent.accepted) return show(r === "consent" ? "consent" : "welcome");
-  if (!store.child) return show("profile");
+  if (!store.children.length) return show("profile");
   const known = ["home", "survey", "results", "program", "progress", "ask", "profile", "consent", "welcome"];
   show(known.includes(r) ? r : "home");
 }
@@ -134,6 +150,7 @@ function show(screen) {
   };
   root.innerHTML = (renderers[screen] || renderHome)();
   renderNav(screen);
+  renderAppbar(screen);
   if (screen === "program") afterProgramRender();
 }
 
@@ -145,6 +162,23 @@ function renderNav(active) {
     <button type="button" class="nav-btn ${active === n.route || (active === "results" && n.route === "survey") ? "active" : ""}" data-go="${n.route}">
       <span class="nav-ico" aria-hidden="true">${n.icon}</span><span>${n.label}</span>
     </button>`).join("");
+}
+
+// Active-child switcher in the appbar (global, hidden during onboarding).
+function renderAppbar(screen) {
+  const slot = document.getElementById("appbarChild");
+  if (!slot) return;
+  const onboarding = ["welcome", "consent", "profile"].includes(screen);
+  if (onboarding || !store.children.length) {
+    slot.innerHTML = `<strong>Карта розвитку</strong><span class="appbar-tag">0–12 міс</span>`;
+    return;
+  }
+  const active = cc();
+  const opts = store.children.map((c, i) =>
+    `<option value="${c.id}"${c.id === active.id ? " selected" : ""}>${esc(c.name || ("Дитина " + (i + 1)))}</option>`).join("");
+  slot.innerHTML =
+    `<select id="childSwitch" class="appbar-select" aria-label="Активна дитина">${opts}<option value="__add">+ Додати дитину</option></select>` +
+    `<span class="appbar-tag">${AGE_LABELS[currentAge()]}</span>`;
 }
 
 // ---- onboarding screens ----
@@ -172,7 +206,7 @@ function renderConsent() {
 }
 
 function renderProfile() {
-  const c = store.child || {};
+  const c = {}; // always a blank form — used both for the first child and for "add another"
   return `
     <section class="screen-pad">
       <h2>Профіль дитини</h2>
@@ -186,7 +220,7 @@ function renderProfile() {
 
 // ---- home / cabinet ----
 function todaysTask(age) {
-  const survey = store.surveys[age];
+  const survey = cc().surveys[age];
   if (!survey || !survey.date) return null;
   const profile = buildProfile(survey.states || {}, age);
   if (profile.notStarted) return null;
@@ -200,8 +234,8 @@ function todaysTask(age) {
 
 function renderHome() {
   const age = currentAge();
-  const childName = (store.child && store.child.name) ? esc(store.child.name) : "";
-  const survey = store.surveys[age];
+  const c = cc(); const childName = (c && c.name) ? esc(c.name) : "";
+  const survey = cc().surveys[age];
   const task = todaysTask(age);
   const next = nextCheckAge(age);
   const tested = survey && survey.date;
@@ -236,7 +270,10 @@ function renderHome() {
       </div>
 
       ${next ? `<p class="note">Наступна перевірка milestones — близько ${next} місяців. Це окремий «годинник» від щоденної гри.</p>` : ""}
-      <button type="button" id="eraseAll" class="linklike danger">Стерти всі мої дані</button>
+      <div class="home-danger">
+        <button type="button" id="deleteChild" class="linklike danger">Видалити цю дитину</button>
+        <button type="button" id="eraseAll" class="linklike danger">Стерти всі мої дані</button>
+      </div>
     </section>`;
 }
 
@@ -244,7 +281,7 @@ function renderHome() {
 function renderSurvey() {
   const age = currentAge();
   const ids = questionIdsFor(age);
-  const survey = store.surveys[age];
+  const survey = cc().surveys[age];
   survey.variants = survey.variants || {};
   // Freeze a random phrasing per question for this round (stable while answering).
   let changed = false;
@@ -288,12 +325,12 @@ function renderSurvey() {
 const COMPARE_COLORS = ["#0f766e", "#2563eb", "#d97706", "#7c3aed", "#0891b2", "#be185d"];
 const MAX_COMPARE = 5; // how many recent tests to place side by side
 
-function snapshotsForAge(age) { return store.snapshots.filter((s) => s.age === age); } // chronological
+function snapshotsForAge(age) { return cc().snapshots.filter((s) => s.age === age); } // chronological
 
 // Per-domain "yes" counts for one snapshot, over the SAME asked question ids (stable across
 // re-tests), so every test's bar uses the same denominator and is comparable.
 function snapshotAskedStats(snap, age) {
-  const ids = (store.surveys[age] && store.surveys[age].questionIds) || [];
+  const ids = (cc().surveys[age] && cc().surveys[age].questionIds) || [];
   const st = (snap && snap.states) || {};
   const stats = {};
   for (const k of DOMAIN_KEYS) stats[k] = { yes: 0, total: 0 };
@@ -339,14 +376,14 @@ function domainChart(age) {
 
 function renderResults() {
   const age = currentAge();
-  const survey = store.surveys[age] || { states: {} };
+  const survey = cc().surveys[age] || { states: {} };
   const profile = buildProfile(survey.states, age);
 
   // Comparison with the previous snapshot at this age (descriptive, never a score).
-  const prev = store.snapshots.filter((s) => s.age === age).slice(0, -1).slice(-1)[0];
+  const prev = cc().snapshots.filter((s) => s.age === age).slice(0, -1).slice(-1)[0];
   let compare = "";
   if (prev) {
-    const cur = store.snapshots.filter((s) => s.age === age).slice(-1)[0];
+    const cur = cc().snapshots.filter((s) => s.age === age).slice(-1)[0];
     const diff = (cur ? cur.counts.observed : 0) - prev.counts.observed;
     compare = `<p class="note">Порівняно з минулим разом: ${diff > 0 ? "+" + diff + " нових «бачу»" : diff === 0 ? "без змін у кількості «бачу»" : diff + " «бачу»"}. Це timeline ваших спостережень, не оцінка.</p>`;
   }
@@ -390,7 +427,7 @@ let programState = { age: null, program: null, openDay: null, selected: {} };
 
 function renderProgram() {
   const age = currentAge();
-  const survey = store.surveys[age];
+  const survey = cc().surveys[age];
   if (!survey || !survey.date) {
     return `<section class="screen-pad"><h2>Програма гри</h2><p class="muted">Спершу пройдіть короткий тест, щоб скласти персональний план.</p><button type="button" class="btn primary block" data-go="survey">Пройти тест</button></section>`;
   }
@@ -455,7 +492,7 @@ function evidenceFriendly(ev) {
 function activityDetailHtml(age, id) {
   const a = activityById(age, id);
   if (!a) return "";
-  if (!store.triedActivities.includes(id)) { store.triedActivities.push(id); save(); }
+  if (!cc().triedActivities.includes(id)) { cc().triedActivities.push(id); save(); }
   const note = (typeof authorNoteFor === "function") ? authorNoteFor(a.id) : null;
   // Plain-language note: keep author + the actionable idea; the internal mechanism mapping
   // stays in data for traceability but is not shown as jargon to parents.
@@ -477,7 +514,7 @@ function activityDetailHtml(age, id) {
 // ---- progress ----
 function renderProgress() {
   const age = currentAge();
-  const snaps = store.snapshots.slice().reverse();
+  const snaps = cc().snapshots.slice().reverse();
   const list = snaps.length ? snaps.map((s) => {
     const date = new Date(s.date).toLocaleString("uk-UA", { dateStyle: "medium", timeStyle: "short" });
     return `<article class="history-item"><h4>${AGE_LABELS[s.age]} · ${date}</h4><dl><dt>Бачу</dt><dd>${s.counts.observed}</dd><dt>Не впевнена</dt><dd>${s.counts.notSure}</dd><dt>Ще ні</dt><dd>${s.counts.notYet}</dd></dl></article>`;
@@ -494,9 +531,9 @@ function renderProgress() {
 // ---- ask ----
 function renderAsk() {
   const age = currentAge();
-  const survey = store.surveys[age] || { states: {}, questionIds: [] };
+  const survey = cc().surveys[age] || { states: {}, questionIds: [] };
   const flagged = (survey.questionIds || []).map((id) => milestoneById(age, id)).filter((m) => m && (survey.states[m.id] === "not_yet" || survey.states[m.id] === "not_sure") && DISCUSS_BY_ID[m.id]);
-  const notes = store.notes || "";
+  const notes = cc().notes || "";
   const observed = (MILESTONES_BY_AGE[age] || []).filter((m) => survey.states[m.id] === "yes").map((m) => "- " + m.title).join("\n") || "- поки нічого";
   return `
     <section class="screen-pad">
@@ -512,15 +549,15 @@ function renderAsk() {
 
 function summaryText() {
   const age = currentAge();
-  const survey = store.surveys[age] || { states: {} };
+  const survey = cc().surveys[age] || { states: {} };
   const pick = (st) => (MILESTONES_BY_AGE[age] || []).filter((m) => survey.states[m.id] === st).map((m) => "- " + m.title).join("\n") || "- поки нічого";
-  return `Вік: ${AGE_LABELS[age]}\nМета: нотатки для розмови про розвиток, не діагностика і не скринінг\n\nБачу:\n${pick("yes")}\n\nНе впевнена:\n${pick("not_sure")}\n\nЩе ні:\n${pick("not_yet")}\n\nНотатки:\n${store.notes || "- немає"}\n\nПитання до фахівця:\n1.\n2.\n3.`;
+  return `Вік: ${AGE_LABELS[age]}\nМета: нотатки для розмови про розвиток, не діагностика і не скринінг\n\nБачу:\n${pick("yes")}\n\nНе впевнена:\n${pick("not_sure")}\n\nЩе ні:\n${pick("not_yet")}\n\nНотатки:\n${cc().notes || "- немає"}\n\nПитання до фахівця:\n1.\n2.\n3.`;
 }
 
 // ---- snapshot on finishing a survey ----
 function finishSurvey() {
   const age = currentAge();
-  const survey = store.surveys[age] || { states: {}, questionIds: [] };
+  const survey = cc().surveys[age] || { states: {}, questionIds: [] };
   const profile = buildProfile(survey.states, age);
   const ids = survey.questionIds || [];
   const counts = {
@@ -531,8 +568,8 @@ function finishSurvey() {
   const domainYes = {};
   for (const k of DOMAIN_KEYS) domainYes[k] = { yes: profile.stats[k].yes, total: profile.stats[k].total };
   survey.date = new Date().toISOString();
-  store.surveys[age] = survey;
-  store.snapshots.push({ id: "snap_" + Date.now(), date: survey.date, age, states: { ...survey.states }, counts, domainYes });
+  cc().surveys[age] = survey;
+  cc().snapshots.push({ id: "snap_" + Date.now(), date: survey.date, age, states: { ...survey.states }, counts, domainYes });
   save();
   setHash("results");
 }
@@ -564,7 +601,18 @@ document.addEventListener("click", (e) => {
   if (e.target.id === "profileSave") {
     const name = document.getElementById("childName").value.trim();
     const dob = document.getElementById("childDob").value;
-    store.child = { name, dob, ageMonths: ageWindowFor(monthsSince(dob)) }; save(); setHash("home"); return;
+    const child = freshChild(name, dob); store.children.push(child); store.activeChildId = child.id; save(); setHash("home"); return;
+  }
+  if (e.target.id === "deleteChild") {
+    const c = cc(); if (!c) return;
+    if (confirm(`Видалити профіль «${c.name || "дитина"}» і всі його дані?`)) {
+      store.children = store.children.filter((x) => x.id !== c.id);
+      store.activeChildId = (store.children[0] && store.children[0].id) || null;
+      save();
+      if (!store.children.length) setHash("profile");
+      route();
+    }
+    return;
   }
   if (e.target.id === "eraseAll") {
     if (confirm("Стерти всі локальні дані цього застосунку?")) { localStorage.removeItem(STORAGE_KEY); store = freshStore(); setHash("welcome"); route(); }
@@ -582,14 +630,14 @@ document.addEventListener("click", (e) => {
   if (stateBtn) {
     const wrap = stateBtn.closest(".state-controls");
     const age = currentAge();
-    store.surveys[age] = store.surveys[age] || { states: {}, questionIds: questionIdsFor(age) };
-    store.surveys[age].states[wrap.dataset.id] = stateBtn.dataset.state;
+    cc().surveys[age] = cc().surveys[age] || { states: {}, questionIds: questionIdsFor(age) };
+    cc().surveys[age].states[wrap.dataset.id] = stateBtn.dataset.state;
     save();
     wrap.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
     stateBtn.classList.add("active");
     // live progress update
-    const ids = store.surveys[age].questionIds || [];
-    const answered = ids.filter((id) => store.surveys[age].states[id]).length;
+    const ids = cc().surveys[age].questionIds || [];
+    const answered = ids.filter((id) => cc().surveys[age].states[id]).length;
     const bar = document.querySelector(".progress-mini span"); if (bar) bar.style.width = (ids.length ? (answered / ids.length) * 100 : 0) + "%";
     const fin = document.getElementById("finishSurvey"); if (fin) fin.disabled = answered === 0;
     const cnt = document.querySelector(".small"); if (cnt && cnt.textContent.includes("відповід")) cnt.textContent = `${answered} з ${ids.length} відповідей`;
@@ -621,12 +669,18 @@ document.addEventListener("click", (e) => {
 });
 
 document.addEventListener("input", (e) => {
+  if (e.target.id === "childSwitch") {
+    const v = e.target.value;
+    if (v === "__add") { setHash("profile"); return; }
+    store.activeChildId = v; save(); route();
+    return;
+  }
   if (e.target.id === "childDob") {
     const hint = document.getElementById("ageHint");
     const m = monthsSince(e.target.value);
     if (hint) hint.textContent = m == null ? "" : `Вік: ~${m} міс. → вікове вікно ${AGE_LABELS[ageWindowFor(m)]}`;
   }
-  if (e.target.id === "askNotes") { store.notes = e.target.value; save(); }
+  if (e.target.id === "askNotes") { cc().notes = e.target.value; save(); }
 });
 
 window.addEventListener("hashchange", route);
