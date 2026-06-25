@@ -35,7 +35,11 @@ Status legend: ☐ not started · ◐ in progress · ✅ approved · ⚠ approve
 
 ## 2. Files for review (CURRENT — UA-first)
 
-Review these, in this order. **Bold** = what the parent actually sees at runtime.
+**Start here →** [expert_review_packet_ua.md](expert_review_packet_ua.md) — one human-readable
+document, per age: every milestone (text + alternate phrasings + "when to discuss" + WHO
+window) and every activity (setup/steps/what-to-watch/why/claim-limit/stop/adaptations +
+author approach). Generated from the live content (`node tools/build_review_packet.js`); review
+this instead of reading code. The files below are the underlying sources.
 
 - **`prototype_stage4_ua/data_ua.js`** — milestones (54) + activities (60): the live content.
 - **`data/activity_library_0_12_months_ua.csv`** — readable 1:1 mirror of the 60 activities

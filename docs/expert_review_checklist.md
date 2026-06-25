@@ -155,8 +155,11 @@ Yes / No / Yes after revisions
 
 ## Files for Review
 
-Record findings in [expert_review_tracker.md](expert_review_tracker.md). Review the
-**current UA content the parent actually sees** (not the older English pack):
+Record findings in [expert_review_tracker.md](expert_review_tracker.md). **Start with the
+generated packet** — [expert_review_packet_ua.md](expert_review_packet_ua.md) — which lays out
+all milestones and activities per age in plain language (no code). The files below are the
+underlying sources of that packet (the **current UA content the parent actually sees**, not
+the older English pack):
 
 - `prototype_stage4_ua/data_ua.js` — milestones (54) + activities (60), the live content
 - `data/activity_library_0_12_months_ua.csv` — readable 1:1 mirror of the 60 activities

@@ -139,8 +139,11 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 ## Open gaps
 
 - Expert review of content (gate before real users) — **not done**, but the package is now
-  ready: tracker scaffolded ([docs/expert_review_tracker.md](docs/expert_review_tracker.md))
-  and the checklist's "Files for Review" points at current UA content. Needs a live reviewer.
+  ready: a generated, plain-language **review packet**
+  ([docs/expert_review_packet_ua.md](docs/expert_review_packet_ua.md) — all 54 milestones + 60
+  activities per age, no code; rebuild with `node tools/build_review_packet.js`), a tracker
+  ([docs/expert_review_tracker.md](docs/expert_review_tracker.md)), and the checklist. Needs a
+  live reviewer.
 - Parent test with 5 parents — not done.
 - Author cards: **8 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
   serve-return, Harvard brain-building-play, Mooney, Marks). Remaining are mostly
