@@ -18,7 +18,6 @@ const DOMAIN_LABELS_SHORT = {
   movement: "Рух"
 };
 
-const QUESTIONS_PER_DOMAIN = 3; // interim: each milestone is one question; pool comes later
 const STORAGE_KEY = "milestonesMap.stage5.ua";
 
 // ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
@@ -72,17 +71,11 @@ function questionIdsFor(age) {
   if (cc().surveys[age] && cc().surveys[age].questionIds && cc().surveys[age].questionIds.length) {
     return cc().surveys[age].questionIds;
   }
-  const byDomain = {};
-  for (const m of MILESTONES_BY_AGE[age] || []) {
-    const d = domainOf(m.id);
-    (byDomain[d] = byDomain[d] || []).push(m.id);
-  }
-  const picked = [];
-  for (const d of Object.keys(byDomain)) {
-    const pool = byDomain[d].slice();
-    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-    picked.push(...pool.slice(0, QUESTIONS_PER_DOMAIN));
-  }
+  // Ask EVERY milestone for the age (authored order) — nothing is silently dropped, and this
+  // matches the full CDC age checklist. Re-test variety comes from phrasing (variantPoolFor),
+  // not from sampling which milestones are asked. (Replaces the old "up to 3 per domain" cap,
+  // which both skipped milestones and made allClear unreachable at richer ages like 9 mo.)
+  const picked = (MILESTONES_BY_AGE[age] || []).map((m) => m.id);
   cc().surveys[age] = cc().surveys[age] || { states: {}, date: null };
   cc().surveys[age].questionIds = picked;
   save();
@@ -302,6 +295,7 @@ function renderSurvey() {
         <div class="q-meta"><span>${esc(m.domain)}</span><span>${esc(m.source)}</span></div>
         <h4>${esc(m.title)}</h4>
         <p class="muted">${esc(prompt)}</p>
+        ${(typeof whoWindowFor === "function" && whoWindowFor(id)) ? `<p class="who-window">${esc(whoWindowFor(id))}</p>` : ""}
         <div class="state-controls" data-id="${id}">
           <button type="button" data-state="yes" class="${s === "yes" ? "active" : ""}">Бачу</button>
           <button type="button" data-state="not_sure" class="${s === "not_sure" ? "active" : ""}">Не впевнена</button>

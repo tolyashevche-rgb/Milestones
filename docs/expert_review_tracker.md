@@ -74,6 +74,9 @@ Cross-cutting (review once, not per cell):
 | Survey phrasings (`questions_ua.js`) inherit milestone meaning |  |  |  |
 | Author "approach" notes (`authors_ua.js`) stay inspiration-only |  |  |  |
 | Charts stay descriptive (no score/percentile) |  |  |  |
+| WHO motor-window mappings accurate? (esp. `ms_012_movement_001` ≈ "standing with assistance" — approximate; `who_windows.js` / `data/who_motor_windows_0_12.csv`) |  |  |  |
+| WHO "typical range" wording stays reassurance, never a deadline |  |  |  |
+| **Milestone priority** — CDC deliberately does NOT rank age milestones (act-early = any unmet). Should any be flagged higher-priority for an age, or stay uniform? (parent-raised) |  |  |  |
 
 ---
 

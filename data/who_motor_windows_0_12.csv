@@ -1,0 +1,7 @@
+who_milestone;window_low_months;window_high_months;mapped_milestone_id;mapping_confidence;source;notes
+Sitting without support;3.8;9.2;ms_009_movement_004;exact;WHO Motor Development Study 2006 (Acta Paediatr Suppl 450:86-95);maps to "Сидить без підтримки". Window = 1st-99th percentile.
+Standing with assistance;4.8;11.4;ms_012_movement_001;approximate;WHO Motor Development Study 2006 (Acta Paediatr Suppl 450:86-95);our "Підтягується, щоб встати" (pull-to-stand) is adjacent to WHO "standing with assistance" - VERIFY at expert review.
+Hands-and-knees crawling;5.2;13.5;;none;WHO Motor Development Study 2006 (Acta Paediatr Suppl 450:86-95);no dedicated crawling milestone in our 0-12 set.
+Walking with assistance;5.9;13.7;ms_012_movement_002;good;WHO Motor Development Study 2006 (Acta Paediatr Suppl 450:86-95);maps to "Пересувається вздовж опори" (cruising).
+Standing alone;6.9;16.9;;none;WHO Motor Development Study 2006 (Acta Paediatr Suppl 450:86-95);beyond our 0-12 month milestone set.
+Walking alone;8.2;17.6;;none;WHO Motor Development Study 2006 (Acta Paediatr Suppl 450:86-95);beyond our 0-12 month milestone set.

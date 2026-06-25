@@ -43,6 +43,7 @@ h1, h2, h3, h4 { line-height: 1.25; }
 .appbar-child { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .appbar-select { flex: 1; min-width: 0; font: inherit; font-weight: 600; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; cursor: pointer; }
 .home-danger { display: flex; flex-wrap: wrap; gap: 18px; }
+.who-window { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--muted); border-left: 2px solid var(--teal); padding-left: 8px; }
 .brand-mark { display: block; width: 28px; height: 28px; border-radius: 9px; background: linear-gradient(135deg, var(--teal), var(--teal-dark)); }
 
 main {

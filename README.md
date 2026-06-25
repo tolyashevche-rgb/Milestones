@@ -78,8 +78,9 @@ Milestones/
 
 ## Product direction & locked decisions (2026-06-08)
 
-The app: parent registers a child → runs a short, **randomly-selected** survey per age
-milestone → gets a focus **"vision"** (what to notice, calm "when to discuss") + a
+The app: parent registers a child → runs a short survey covering **every milestone for the
+age** (CDC-aligned; wording varies per re-test, nothing is sampled out) → gets a focus
+**"vision"** (what to notice, calm "when to discuss") + a
 **1–2 week daily play program** (game-like) → results shown as **descriptive charts** →
 re-tests over time build a **comparison timeline** → a **personal cabinet** serves a daily
 task. Even a clear result still invites the parent to keep playing (maintenance mode).
@@ -87,8 +88,10 @@ task. Even a clear result still invites the parent to keep playing (maintenance 
 Decisions that gate the build:
 
 - **Platform:** stay a **web prototype** for now (native/hybrid deferred).
-- **Survey questions:** **curated, reviewed pool** — random *selection*, never LLM
-  *generation* (keeps traceability + the review gate).
+- **Survey questions:** **curated, reviewed pool** — the survey asks **all** milestones for
+  the age (none sampled out — CDC treats the whole age checklist as worth reviewing); the only
+  randomness is *which phrasing* of a milestone is shown, never LLM *generation* (keeps
+  traceability + the review gate).
 - **Data:** **local-first**, no account for MVP; stored object designed so an **optional
   account** for sync can be added later. Child data is sensitive (GDPR).
 
@@ -170,7 +173,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 | # | Step | Notes |
 |---|---|---|
-| 1 | Curated **question pool** — multiple phrasings per milestone, random selection | **done** in `prototype_stage5_ua/questions_ua.js` (54 milestones, **3 phrasings each** = text + 2 alternates; re-test reshuffles wording, keeps milestone ids for comparison) |
+| 1 | Curated **question pool** — multiple phrasings per milestone | **done** in `prototype_stage5_ua/questions_ua.js` (54 milestones, **3 phrasings each** = text + 2 alternates; survey asks **all** milestones for the age, re-test reshuffles only the wording, keeps milestone ids for comparison) |
 | 2 | Extend program to **14 days**, allow multiple sessions/day | **done** — `cycleDays` 7→14 in both engines + "week" copy updated; multiple-sessions/day still pending |
 | 3 | **IndexedDB** + child profile (DOB → age window), multi-child | **multi-child done** (localStorage `children[]` + appbar switcher + add/delete, lossless migration from the old single-child shape); **DOB→age window** already done (`monthsSince`/`ageWindowFor`, now derived live); **IndexedDB deferred** (low-value async backend swap — store is already per-child, sync-ready) |
 | 4 | **`.ics` notifications** for "today's task" | calendar without a server |
@@ -180,8 +183,8 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 Stage5 status: working guided flow (welcome → consent → child profile → home/cabinet →
 survey → results+vision → program → progress → ask), local-first storage with **multi-child**
-(`children[]`, appbar switcher, add/delete, lossless migration), per-age question selection
-that a re-test reuses, a **curated question pool** (multiple phrasings per milestone,
-reshuffled on re-test), descriptive charts, `.ics` daily-task export. Open: IndexedDB
-backend (deferred), exercise illustrations, expert review gate.
+(`children[]`, appbar switcher, add/delete, lossless migration), a per-age survey that asks
+**all** milestones for the age (fixed set a re-test reuses), a **curated question pool**
+(multiple phrasings per milestone, reshuffled on re-test), descriptive charts, `.ics`
+daily-task export. Open: IndexedDB backend (deferred), exercise illustrations, expert review gate.
 Decisions for the redesign live in [docs/ui_redesign_plan.md](docs/ui_redesign_plan.md).
