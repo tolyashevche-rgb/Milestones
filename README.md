@@ -8,6 +8,9 @@ scoring, or replacing a professional.
 > care, Harvard serve-and-return. Personalization model: **Profile-of-focus (option A)** —
 > no scores, no risk labels.
 
+> **Resuming work or switching assistants?** Start with [HANDOFF.md](HANDOFF.md) — current
+> state, decisions, what's next, and how to run/verify, in one place.
+
 ---
 
 ## Folder structure
