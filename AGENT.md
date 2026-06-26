@@ -111,6 +111,11 @@ rather than silently diverging.
 5. Update [README.md](README.md) "Current state" / "Next steps" so the plan stays truthful.
 6. If you change milestone/activity content, regenerate the expert-review packet:
    `node tools/build_review_packet.js` (writes `docs/expert_review_packet_ua.md`).
+7. **Log it — always, unprompted.** After finishing a meaningful unit of work, *or* whenever a
+   decision or direction changes, append a dated bullet to [HANDOFF.md](HANDOFF.md) "Work log"
+   (what changed + why; for a course change, note what we moved away from and why), update its
+   "What's next" / "Key decisions" if they shifted, then **commit and push**. This is what keeps
+   the project resumable across sessions and assistants — do it without being asked.
 
 ## What NOT to do
 

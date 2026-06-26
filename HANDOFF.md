@@ -1,8 +1,14 @@
 # HANDOFF — read this first to continue
 
 Purpose: let **any** assistant (or person) resume this project in minutes, without the user
-re-explaining. This is the single "where are we / what next / how to work here" file. Update
-the dated **Work log** at the bottom when you finish meaningful work.
+re-explaining. This is the single "where are we / what next / how to work here" file.
+
+> **Standing rule — keep this current, unprompted.** After any meaningful unit of work, *or*
+> whenever a decision or direction changes, append a dated bullet to the **Work log** below
+> (what changed + why; for a course change, what we moved away from and why), update **What's
+> next** / **Key decisions** if they shifted, then **commit and push**. This is the mechanism
+> that keeps the project resumable across assistants — treat it as part of finishing the task,
+> not an extra step.
 
 Stable references (read once): [README.md](README.md) = plan & structure ·
 [AGENT.md](AGENT.md) = rules + architecture + how-to · [docs/safety_rules.md](docs/safety_rules.md)
@@ -90,6 +96,13 @@ never generates at runtime.
 ---
 
 ## Work log (newest first)
+
+### 2026-06-26 — Logging discipline made a standing rule + commits pushed
+- Documented a standing rule (AGENT.md how-to step 7 + the note at the top of this file): after
+  any meaningful work *or* course change, append a Work-log entry, update What's next / Key
+  decisions if shifted, then commit and push — so progress and direction changes are recorded
+  automatically by whichever assistant is working.
+- Pushed the session's commits to `origin/main` (durable + available to other machines/sessions).
 
 ### 2026-06-26 — MVP build-out complete; both gates prepped
 - Safety §10 (original/licensed-only image policy) codified in `safety_rules.md`.
