@@ -5,10 +5,10 @@ re-explaining. This is the single "where are we / what next / how to work here" 
 
 > **Standing rule — keep this current, unprompted.** After any meaningful unit of work, *or*
 > whenever a decision or direction changes, append a dated bullet to the **Work log** below
-> (what changed + why; for a course change, what we moved away from and why), update **What's
-> next** / **Key decisions** if they shifted, then **commit and push**. This is the mechanism
-> that keeps the project resumable across assistants — treat it as part of finishing the task,
-> not an extra step.
+> (what changed + why; for a course change, what we moved away from and why) and update
+> **What's next** / **Key decisions** if they shifted. This is **in-file record-keeping** —
+> saving the plan and its changes in the docs — **not** a git step (commits/push are the
+> owner's call). Treat it as part of finishing the task, not an extra step.
 
 Stable references (read once): [README.md](README.md) = plan & structure ·
 [AGENT.md](AGENT.md) = rules + architecture + how-to · [docs/safety_rules.md](docs/safety_rules.md)
@@ -69,6 +69,14 @@ never generates at runtime.
 
 ## What's next (prioritized)
 
+> **Assistant told only "continue" / "давай продовжимо"? Do this:** the next *real* milestones
+> (#1 expert review, #2 parent test) need **people, not code** — you cannot run them yourself.
+> The one substantive task you can do now is **prepare #2's parent-test facilitator pack**
+> (turn `docs/parent_test_script.md` into a ready-to-run session guide + observation sheet +
+> short consent, the same way `tools/build_review_packet.js` produced the review packet).
+> **Propose that first.** Do **not** start #3 (high-caution authors) or #5 (low-value) without
+> asking; #4 is the owner's decision. If in doubt, state where we are in one line and offer the pack.
+
 1. **Expert review** (gate before real users) — fully prepped. Hand a clinician
    `docs/expert_review_packet_ua.md`; they review against `docs/expert_review_checklist.md`;
    record in `docs/expert_review_tracker.md`. **Needs a live reviewer — an assistant cannot do this.**
@@ -97,12 +105,17 @@ never generates at runtime.
 
 ## Work log (newest first)
 
-### 2026-06-26 — Logging discipline made a standing rule + commits pushed
-- Documented a standing rule (AGENT.md how-to step 7 + the note at the top of this file): after
-  any meaningful work *or* course change, append a Work-log entry, update What's next / Key
-  decisions if shifted, then commit and push — so progress and direction changes are recorded
-  automatically by whichever assistant is working.
-- Pushed the session's commits to `origin/main` (durable + available to other machines/sessions).
+### 2026-06-26 — Closed the "what does 'continue' mean" gap
+- Added an explicit **default next action** at the top of "What's next": if an assistant is told
+  only to "continue", it should propose preparing the parent-test facilitator pack (the one
+  doable, non-gated task), since the top milestones need people. Removes the ambiguity that would
+  otherwise make a fresh assistant stop and ask.
+
+### 2026-06-26 — Progress/decision logging made a standing rule (in-file)
+- Standing rule (AGENT.md how-to step 7 + top note here): after any meaningful work *or* course
+  change, append a Work-log entry and update What's next / Key decisions — recorded **in the
+  files** so progress and direction changes are captured by whichever assistant is working.
+  Git commits/push are the owner's call, deliberately **not** part of this rule.
 
 ### 2026-06-26 — MVP build-out complete; both gates prepped
 - Safety §10 (original/licensed-only image policy) codified in `safety_rules.md`.
