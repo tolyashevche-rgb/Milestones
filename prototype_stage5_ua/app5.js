@@ -24,7 +24,7 @@ const STORAGE_KEY = "milestonesMap.stage5.ua";
 function freshChild(name, dob) {
   return { id: "child_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
            name: name || "", dob: dob || "",
-           surveys: {}, snapshots: [], triedActivities: [], notes: "" };
+           surveys: {}, snapshots: [], programSelections: {}, triedActivities: [], notes: "" };
 }
 function freshStore() { return { consent: null, children: [], activeChildId: null }; }
 // Migrate the old single-child shape ({consent, child, surveys, ...}) into children[]. Idempotent.
@@ -36,6 +36,7 @@ function migrate(s) {
   if (s.child) {
     const c = freshChild(s.child.name, s.child.dob);
     c.surveys = s.surveys || {}; c.snapshots = s.snapshots || [];
+    c.programSelections = s.programSelections || {};
     c.triedActivities = s.triedActivities || []; c.notes = s.notes || "";
     st.children.push(c); st.activeChildId = c.id;
   }
@@ -46,15 +47,40 @@ function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
 // Active child — per-child data lives here. Null only before the first child exists.
 function cc() { return store.children.find((c) => c.id === store.activeChildId) || store.children[0] || null; }
 let store = load();
+store.children.forEach((c) => { c.programSelections = c.programSelections || {}; });
+let profileEditing = false;
 
 // ---- helpers ----
+function localDateString(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+function parseLocalDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
+  if (!match) return null;
+  const dob = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (dob.getFullYear() !== Number(match[1]) || dob.getMonth() !== Number(match[2]) - 1 || dob.getDate() !== Number(match[3])) return null;
+  return dob;
+}
 function monthsSince(dobStr) {
-  const dob = new Date(dobStr);
-  if (isNaN(dob)) return null;
+  const dob = parseLocalDate(dobStr);
+  if (!dob) return null;
   const now = new Date();
+  if (dob > now) return null;
   let m = (now.getFullYear() - dob.getFullYear()) * 12 + (now.getMonth() - dob.getMonth());
   if (now.getDate() < dob.getDate()) m -= 1;
-  return Math.max(0, m);
+  return m;
+}
+function validateDob(dobStr) {
+  if (!dobStr) return { months: null, error: "Вкажіть дату народження." };
+  const dob = parseLocalDate(dobStr);
+  if (!dob) return { months: null, error: "Вкажіть коректну дату народження." };
+  if (dob > new Date()) return { months: null, error: "Дата народження не може бути в майбутньому." };
+  const months = monthsSince(dobStr);
+  if (months > 12) return { months, error: "Зараз застосунок підтримує вік від народження до 12 місяців." };
+  return { months, error: "" };
 }
 // Snap real age to the nearest available CDC window (2/4/6/9/12).
 function ageWindowFor(months) {
@@ -99,6 +125,8 @@ function restartSurvey(age) {
   s.variants = {};
   s.date = null;
   cc().surveys[age] = s;
+  delete cc().programSelections[String(age)];
+  surveyUi = { age, index: 0 };
   save();
 }
 
@@ -113,13 +141,29 @@ function askedStats(age) {
 }
 
 function currentAge() { const c = cc(); return c && c.dob ? ageWindowFor(monthsSince(c.dob)) : 6; }
+function profileForSurvey(survey, age) {
+  const s = survey || { states: {}, questionIds: [] };
+  return buildProfile(s.states || {}, age, ENGINE_CONFIG, s.questionIds || null);
+}
+function calendarDayNumber(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date)) return null;
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
+}
+function currentProgramDayIndex(survey, programLength) {
+  if (!programLength) return 0;
+  const started = calendarDayNumber(survey && survey.date);
+  const today = calendarDayNumber(new Date());
+  const elapsed = started == null || today == null ? 0 : Math.max(0, today - started);
+  return elapsed % programLength;
+}
 
 // ---- routing ----
 const NAV = [
   { route: "home", label: "Головна", icon: "⌂" },
-  { route: "survey", label: "Тест", icon: "✎" },
-  { route: "program", label: "Програма", icon: "♪" },
-  { route: "progress", label: "Прогрес", icon: "↗" }
+  { route: "survey", label: "Спостереження", icon: "◎" },
+  { route: "program", label: "Гра", icon: "◇" },
+  { route: "ask", label: "Фахівець", icon: "?" }
 ];
 
 function setHash(route) { location.hash = "#/" + route; }
@@ -145,6 +189,7 @@ function show(screen) {
   renderNav(screen);
   renderAppbar(screen);
   if (screen === "program") afterProgramRender();
+  root.querySelector("h1")?.focus({ preventScroll: true });
 }
 
 function renderNav(active) {
@@ -152,7 +197,7 @@ function renderNav(active) {
   const onboarding = ["welcome", "consent", "profile"].includes(active);
   nav.style.display = onboarding ? "none" : "flex";
   nav.innerHTML = NAV.map((n) => `
-    <button type="button" class="nav-btn ${active === n.route || (active === "results" && n.route === "survey") ? "active" : ""}" data-go="${n.route}">
+    <button type="button" class="nav-btn ${active === n.route || (active === "results" && n.route === "survey") ? "active" : ""}" data-go="${n.route}" ${active === n.route || (active === "results" && n.route === "survey") ? 'aria-current="page"' : ""}>
       <span class="nav-ico" aria-hidden="true">${n.icon}</span><span>${n.label}</span>
     </button>`).join("");
 }
@@ -179,35 +224,38 @@ function renderWelcome() {
   return `
     <section class="screen-pad center">
       <div class="logo-dot" aria-hidden="true"></div>
-      <h1>Перший рік без паніки через milestones</h1>
-      <p class="lead">Спокійний evidence-informed помічник: що спостерігати, у що грати і коли варто запитати фахівця.</p>
+      <h1 tabindex="-1">Перший рік — спокійніше</h1>
+      <p class="lead">Короткі спостереження, прості ігри та зрозумілі підказки для розмови з фахівцем.</p>
       <button type="button" class="btn primary block" data-go="consent">Почати</button>
-      <p class="fineprint">Узгоджено з CDC, AAP, WHO, Harvard. Не діагностика і не скринінг.</p>
+      <p class="fineprint">Матеріали спираються на рекомендації CDC, AAP, WHO та Harvard. Це не діагностика і не скринінг.</p>
     </section>`;
 }
 
 function renderConsent() {
   return `
     <section class="screen-pad">
-      <h2>Перш ніж почати</h2>
-      <p class="muted">Кілька підтверджень. Дані зберігаються лише на цьому пристрої.</p>
-      <label class="check"><input type="checkbox" class="consent-box" data-k="parent"><span>Я батько/мати або опікун дитини.</span></label>
+      <h1 tabindex="-1">Перш ніж почати</h1>
+      <p class="muted">Три короткі підтвердження. Дані залишаються в цьому браузері.</p>
+      <label class="check"><input type="checkbox" class="consent-box" data-k="parent"><span>Я один із батьків або опікун дитини.</span></label>
       <label class="check"><input type="checkbox" class="consent-box" data-k="purpose"><span>Розумію, що це інструмент спостереження і гри, <strong>не діагностика і не скринінг</strong>, і не замінює фахівця.</span></label>
-      <label class="check"><input type="checkbox" class="consent-box" data-k="local"><span>Згоден(на), що мої дані зберігаються локально в цьому браузері.</span></label>
+      <label class="check"><input type="checkbox" class="consent-box" data-k="local"><span>Погоджуюся з локальним зберіганням даних у цьому браузері.</span></label>
       <button type="button" id="consentContinue" class="btn primary block" disabled>Продовжити</button>
     </section>`;
 }
 
 function renderProfile() {
-  const c = {}; // always a blank form — used both for the first child and for "add another"
+  const c = profileEditing ? (cc() || {}) : {};
+  const dobCheck = c.dob ? validateDob(c.dob) : { months: null, error: "" };
+  const ageHint = dobCheck.months == null || dobCheck.error ? "" : `Вік: ~${dobCheck.months} міс. → вікове вікно ${AGE_LABELS[ageWindowFor(dobCheck.months)]}`;
   return `
     <section class="screen-pad">
-      <h2>Профіль дитини</h2>
-      <p class="muted">Дата народження допоможе підібрати вікове вікно. Ім'я — за бажанням.</p>
+      <h1 tabindex="-1">Профіль дитини</h1>
+      <p class="muted">Дата народження потрібна, щоб показати питання за віком. Ім'я можна не вказувати.</p>
       <label class="field"><span>Ім'я (необов'язково)</span><input id="childName" type="text" value="${esc(c.name || "")}" placeholder="Напр., Софія"></label>
-      <label class="field"><span>Дата народження</span><input id="childDob" type="date" value="${esc(c.dob || "")}"></label>
-      <div id="ageHint" class="age-hint"></div>
-      <button type="button" id="profileSave" class="btn primary block">Зберегти і продовжити</button>
+      <label class="field"><span>Дата народження</span><input id="childDob" type="date" value="${esc(c.dob || "")}" max="${localDateString()}" required aria-describedby="ageHint profileError"></label>
+      <div id="ageHint" class="age-hint">${ageHint}</div>
+      <div id="profileError" class="field-error" role="alert">${esc(dobCheck.error)}</div>
+      <button type="button" id="profileSave" class="btn primary block" ${dobCheck.error || !c.dob ? "disabled" : ""}>${profileEditing ? "Зберегти зміни" : "Зберегти і продовжити"}</button>
     </section>`;
 }
 
@@ -215,14 +263,15 @@ function renderProfile() {
 function todaysTask(age) {
   const survey = cc().surveys[age];
   if (!survey || !survey.date) return null;
-  const profile = buildProfile(survey.states || {}, age);
+  const profile = profileForSurvey(survey, age);
   if (profile.notStarted) return null;
   const program = buildProgram(profile, age);
   if (!program.length) return null;
-  const dayIdx = Math.floor(Date.now() / 86400000) % program.length;
+  const dayIdx = currentProgramDayIndex(survey, program.length);
   const day = program[dayIdx];
-  const act = activityById(age, day.options[0]);
-  return act ? { day: dayIdx + 1, domain: day.domain, act } : null;
+  const selected = cc().programSelections[String(age)] && cc().programSelections[String(age)][String(day.day)];
+  const act = activityById(age, selected) || activityById(age, day.options[0]);
+  return act ? { day: dayIdx + 1, domain: domainOf(act.id) || day.domain, act } : null;
 }
 
 function renderHome() {
@@ -235,34 +284,35 @@ function renderHome() {
   return `
     <section class="screen-pad">
       <div class="hello">
-        <span class="muted">Кабінет</span>
-        <h2>${childName || "Розвиток дитини"}</h2>
-        <span class="chip">Вікове вікно: ${AGE_LABELS[age]}</span>
+        <span class="muted">Сьогодні</span>
+        <h1 tabindex="-1">${childName ? `Для ${childName}` : "Для вашої дитини"}</h1>
+        <div class="profile-meta"><span class="chip">${AGE_LABELS[age]}</span><button type="button" class="profile-edit" id="editProfile">Змінити профіль</button></div>
       </div>
 
       <article class="card today">
-        <span class="mini-label">Сьогодні</span>
         ${task ? `
           <div class="illus mini" aria-hidden="true">${(typeof domainIllus === "function" ? domainIllus(task.domain) : "")}</div>
-          <h3>${esc(task.act.title)}</h3>
-          <p class="muted">${esc(task.act.time)} · ${esc(task.act.materials)} · ${DOMAIN_LABELS[task.domain] || ""}</p>
+          <span class="mini-label">Гра на сьогодні · день ${task.day}</span>
+          <h2>${esc(task.act.title)}</h2>
+          <p class="muted">${esc(task.act.time)} · ${esc(task.act.materials)}</p>
           <div class="row">
-            <button type="button" class="btn primary" data-go="program">Відкрити заняття</button>
+            <button type="button" class="btn primary" data-go="program">Почати гру</button>
             <button type="button" class="btn ghost" id="addIcs">У календар</button>
           </div>` : `
-          <h3>Почніть з короткого тесту</h3>
-          <p class="muted">Пройдіть опитування для віку ${AGE_LABELS[age]}, щоб отримати персональний фокус і план гри.</p>
-          <button type="button" class="btn primary" data-go="survey">Пройти тест</button>`}
+          <span class="mini-label">Перший крок</span>
+          <h2>Коротке спостереження</h2>
+          <p class="muted">Відповідайте по одному питанню. Наприкінці отримаєте одну просту гру на сьогодні.</p>
+          <button type="button" class="btn primary" data-go="survey">Почати</button>`}
       </article>
 
-      <div class="tiles">
-        <button type="button" class="tile" data-go="survey" ${tested ? 'data-restart="1"' : ""}><strong>${tested ? "Перепройти тест" : "Пройти тест"}</strong><span class="muted">${tested ? "оновити спостереження" : "кілька питань за віком"}</span></button>
-        <button type="button" class="tile" data-go="program"><strong>Програма гри</strong><span class="muted">щоденні заняття</span></button>
-        <button type="button" class="tile" data-go="progress"><strong>Прогрес</strong><span class="muted">графіки і історія</span></button>
-        <button type="button" class="tile" data-go="ask"><strong>Запитати</strong><span class="muted">нотатки для фахівця</span></button>
-      </div>
+      ${tested ? `<div class="tiles">
+        <button type="button" class="tile" data-go="program"><strong>Усі ігри</strong><span class="muted">план на сім днів</span></button>
+        <button type="button" class="tile" data-go="progress"><strong>Історія</strong><span class="muted">ваші спостереження</span></button>
+        <button type="button" class="tile" data-go="ask"><strong>Для фахівця</strong><span class="muted">підсумок і нотатки</span></button>
+        <button type="button" class="tile" data-go="survey" data-restart="1"><strong>Оновити</strong><span class="muted">пройти ще раз</span></button>
+      </div>` : ""}
 
-      ${next ? `<p class="note">Наступна перевірка milestones — близько ${next} місяців. Це окремий «годинник» від щоденної гри.</p>` : ""}
+      ${next ? `<p class="note">Наступне вікове спостереження — приблизно у ${next} місяців.</p>` : ""}
       <div class="home-danger">
         <button type="button" id="deleteChild" class="linklike danger">Видалити цю дитину</button>
         <button type="button" id="eraseAll" class="linklike danger">Стерти всі мої дані</button>
@@ -271,6 +321,8 @@ function renderHome() {
 }
 
 // ---- survey ----
+let surveyUi = { age: null, index: 0 };
+
 function renderSurvey() {
   const age = currentAge();
   const ids = questionIdsFor(age);
@@ -284,41 +336,45 @@ function renderSurvey() {
   if (changed) save();
   const states = survey.states || {};
   const answered = ids.filter((id) => states[id]).length;
-  const cards = ids.map((id) => {
-    const m = milestoneById(age, id);
-    if (!m) return "";
-    const s = states[id];
-    const pool = variantPoolFor(age, id);
-    const prompt = pool[survey.variants[id]] || m.text;
-    return `
-      <article class="q-card">
-        <div class="q-meta"><span>${esc(m.domain)}</span><span>${esc(m.source)}</span></div>
-        <h4>${esc(m.title)}</h4>
-        <p class="muted">${esc(prompt)}</p>
-        ${(typeof whoWindowFor === "function" && whoWindowFor(id)) ? `<p class="who-window">${esc(whoWindowFor(id))}</p>` : ""}
-        <div class="state-controls" data-id="${id}">
-          <button type="button" data-state="yes" class="${s === "yes" ? "active" : ""}">Бачу</button>
-          <button type="button" data-state="not_sure" class="${s === "not_sure" ? "active" : ""}">Не впевнена</button>
-          <button type="button" data-state="not_yet" class="${s === "not_yet" ? "active" : ""}">Ще ні</button>
-        </div>
-      </article>`;
-  }).join("");
+  if (surveyUi.age !== age) {
+    const firstUnanswered = ids.findIndex((id) => !states[id]);
+    surveyUi = { age, index: firstUnanswered >= 0 ? firstUnanswered : 0 };
+  }
+  surveyUi.index = Math.max(0, Math.min(surveyUi.index, Math.max(0, ids.length - 1)));
+  const id = ids[surveyUi.index];
+  const m = milestoneById(age, id);
+  if (!m) return `<section class="screen-pad"><h1 tabindex="-1">Спостереження</h1><p class="muted">Не вдалося завантажити питання.</p></section>`;
+  const s = states[id];
+  const pool = variantPoolFor(age, id);
+  const prompt = pool[survey.variants[id]] || m.text;
+  const isLast = surveyUi.index === ids.length - 1;
+  const position = surveyUi.index + 1;
   return `
     <section class="screen-pad">
-      <h2>Тест · ${AGE_LABELS[age]}</h2>
-      <p class="muted">Це спостереження, а не іспит для дитини. Відповідайте спокійно — «не впевнена» теж нормально.</p>
-      <div class="progress-mini"><span style="width:${ids.length ? (answered / ids.length) * 100 : 0}%"></span></div>
-      <p class="muted small">${answered} з ${ids.length} відповідей</p>
-      ${cards}
-      <button type="button" id="finishSurvey" class="btn primary block" ${answered === 0 ? "disabled" : ""}>Завершити і побачити результат</button>
+      <h1 tabindex="-1">Спостереження</h1>
+      <p class="muted">Оберіть варіант, який найкраще описує те, що ви бачите зараз.</p>
+      <div class="survey-progress-row"><span>Питання ${position} з ${ids.length}</span><span>${answered} збережено</span></div>
+      <div class="progress-mini" role="progressbar" aria-label="Хід спостереження" aria-valuemin="1" aria-valuemax="${ids.length}" aria-valuenow="${position}"><span style="width:${ids.length ? (position / ids.length) * 100 : 0}%"></span></div>
+      <article class="q-card q-card-single">
+        <span class="mini-label">${esc(m.domain)}</span>
+        <h2 id="questionTitle">${esc(m.title)}</h2>
+        <p class="question-prompt">${esc(prompt)}</p>
+        ${(typeof whoWindowFor === "function" && whoWindowFor(id)) ? `<p class="who-window">${esc(whoWindowFor(id))}</p>` : ""}
+        <div class="state-controls" data-id="${id}" role="group" aria-labelledby="questionTitle">
+          <button type="button" data-state="yes" class="${s === "yes" ? "active" : ""}" aria-pressed="${s === "yes"}">Бачу</button>
+          <button type="button" data-state="not_sure" class="${s === "not_sure" ? "active" : ""}" aria-pressed="${s === "not_sure"}">Ще спостерігаю</button>
+          <button type="button" data-state="not_yet" class="${s === "not_yet" ? "active" : ""}" aria-pressed="${s === "not_yet"}">Поки ні</button>
+        </div>
+      </article>
+      <div class="survey-actions">
+        <button type="button" id="surveyBack" class="btn ghost" ${surveyUi.index === 0 ? "disabled" : ""}>Назад</button>
+        <button type="button" id="surveyNext" class="btn primary" ${s ? "" : "disabled"}>${isLast ? "Побачити підсумок" : "Далі"}</button>
+      </div>
+      <p class="fineprint center">Відповіді зберігаються автоматично. Це не оцінка дитини.</p>
     </section>`;
 }
 
-// ---- results + vision ----
-// One distinct color per test (chronological index → stable color across re-renders).
-const COMPARE_COLORS = ["#0f766e", "#2563eb", "#d97706", "#7c3aed", "#0891b2", "#be185d"];
-const MAX_COMPARE = 5; // how many recent tests to place side by side
-
+// ---- results ----
 function snapshotsForAge(age) { return cc().snapshots.filter((s) => s.age === age); } // chronological
 
 // Per-domain "yes" counts for one snapshot, over the SAME asked question ids (stable across
@@ -332,87 +388,51 @@ function snapshotAskedStats(snap, age) {
   return stats;
 }
 
-// Grouped vertical bar chart: one narrow bar per test, side by side within each domain group,
-// each test a different color, newest on the right — so re-tests compare at a glance.
-// Descriptive only (counts), never a score — see safety_rules.md.
-function domainChart(age) {
+function domainSummary(age) {
   const snaps = snapshotsForAge(age);
-  if (!snaps.length) return `<p class="chart-cap">Пройдіть тест, щоб побачити графік.</p>`;
-  const shown = snaps.slice(-MAX_COMPARE);
-  const base = snaps.length - shown.length; // absolute index of first shown test
-  const colorOf = (i) => COMPARE_COLORS[(base + i) % COMPARE_COLORS.length];
-  const dateOf = (s) => new Date(s.date).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-
-  const legend = shown.map((s, i) =>
-    `<span class="leg"><span class="leg-dot" style="background:${colorOf(i)}"></span>${dateOf(s)}${i === shown.length - 1 ? " (зараз)" : ""}</span>`
-  ).join("");
-
-  const groups = DOMAIN_KEYS.map((k) => {
-    const bars = shown.map((s, i) => {
-      const st = snapshotAskedStats(s, age)[k];
-      const pct = st.total ? Math.round((st.yes / st.total) * 100) : 0;
-      return `<span class="cbar" style="height:${pct}%;background:${colorOf(i)}" title="${dateOf(s)}: ${st.yes}/${st.total}"></span>`;
-    }).join("");
-    const last = snapshotAskedStats(shown[shown.length - 1], age)[k];
-    return `
-      <div class="vgroup">
-        <em class="vbar-count">${last.yes}/${last.total}</em>
-        <div class="cbars">${bars}</div>
-        <span class="vbar-label">${DOMAIN_LABELS_SHORT[k]}</span>
-      </div>`;
-  }).join("");
-
-  const cap = shown.length > 1
-    ? "Кожен стовпчик — окремий тест. Нові додаються праворуч іншим кольором, щоб бачити зміни."
-    : "Скільки ознак ви вже бачите в кожному напрямку (з опитаних). Повторний тест додасть стовпчик поруч.";
-  return `<p class="chart-cap">${cap}</p><div class="chart-legend">${legend}</div><div class="vchart">${groups}</div>`;
+  if (!snaps.length) return `<p class="muted">Спостережень ще немає.</p>`;
+  const stats = snapshotAskedStats(snaps[snaps.length - 1], age);
+  return `<div class="domain-summary">${DOMAIN_KEYS.map((key) => {
+    const item = stats[key];
+    const text = !item.total ? "Питань не було" : item.yes === item.total ? "Усі вибрані ознаки вже помітні" : item.yes === 0 ? "Поки більше спостерігаєте" : "Деякі ознаки вже помітні";
+    return `<div class="domain-row"><strong>${DOMAIN_LABELS[key]}</strong><span>${text}</span></div>`;
+  }).join("")}</div>`;
 }
 
 function renderResults() {
   const age = currentAge();
   const survey = cc().surveys[age] || { states: {} };
-  const profile = buildProfile(survey.states, age);
-
-  // Comparison with the previous snapshot at this age (descriptive, never a score).
-  const prev = cc().snapshots.filter((s) => s.age === age).slice(0, -1).slice(-1)[0];
-  let compare = "";
-  if (prev) {
-    const cur = cc().snapshots.filter((s) => s.age === age).slice(-1)[0];
-    const diff = (cur ? cur.counts.observed : 0) - prev.counts.observed;
-    compare = `<p class="note">Порівняно з минулим разом: ${diff > 0 ? "+" + diff + " нових «бачу»" : diff === 0 ? "без змін у кількості «бачу»" : diff + " «бачу»"}. Це timeline ваших спостережень, не оцінка.</p>`;
-  }
-
-  // Vision: strengths, focus (as chances to play), and "when to discuss" for flagged items.
-  const strengths = profile.strengths.length ? profile.strengths.map((k) => DOMAIN_LABELS[k]).join(", ") : "—";
+  const profile = profileForSurvey(survey, age);
   let focusBlock;
-  if (profile.allClear) focusBlock = `<p>Ви позначили всі питання і поки нічого не виділили для окремого фокусу. Чудово — продовжуйте гру, щоб підтримати те, що формується.</p>`;
-  else if (profile.partialClear) focusBlock = `<p>Поки нічого не виділено для окремого фокусу — гарний знак. Ось легкі ідеї для гри, а решту питань можна пройти згодом.</p>`;
-  else focusBlock = `<p>Цього періоду більше нагод для гри варто дати тут:</p><ul class="focus-list">${profile.focus.map((f) => `<li><strong>${DOMAIN_LABELS[f.domain]}</strong></li>`).join("")}</ul>`;
+  if (profile.allClear) focusBlock = `<p>Продовжуйте звичну гру та спілкування — окремий напрямок зараз не потрібен.</p>`;
+  else if (profile.partialClear) focusBlock = `<p>Продовжуйте спостерігати у власному темпі. Ми запропонуємо легку гру без додаткового навантаження.</p>`;
+  else focusBlock = `<p>Найближчими днями почніть із гри, яка підтримує:</p><ul class="focus-list">${profile.focus.map((f) => `<li><strong>${DOMAIN_LABELS[f.domain]}</strong></li>`).join("")}</ul>`;
 
   const flagged = (survey.questionIds || []).map((id) => milestoneById(age, id)).filter((m) => m && (survey.states[m.id] === "not_yet" || survey.states[m.id] === "not_sure") && DISCUSS_BY_ID[m.id]);
   const discuss = flagged.length ? `
-    <h3 class="mt">На що звернути увагу</h3>
-    ${flagged.map((m) => `<article class="discuss-card"><div class="q-meta"><span>${esc(m.domain)}</span><span>${survey.states[m.id] === "not_yet" ? "Ще ні" : "Не впевнена"}</span></div><h4>${esc(m.title)}</h4><p class="muted">${esc(DISCUSS_BY_ID[m.id])}</p></article>`).join("")}` : "";
+    <details class="calm-details">
+      <summary>Коли варто запитати фахівця</summary>
+      <p class="muted">Відкрийте цей блок, якщо хочете підготуватися до розмови.</p>
+      ${flagged.map((m) => `<article class="discuss-card"><div class="q-meta"><span>${esc(m.domain)}</span><span>${survey.states[m.id] === "not_yet" ? "Поки ні" : "Ще спостерігаю"}</span></div><h3>${esc(m.title)}</h3><p class="muted">${esc(DISCUSS_BY_ID[m.id])}</p></article>`).join("")}
+    </details>` : "";
 
   return `
     <section class="screen-pad">
-      <h2>Результат · ${AGE_LABELS[age]}</h2>
+      <h1 tabindex="-1">Ваші спостереження</h1>
+      <p class="muted">Короткий підсумок для віку ${AGE_LABELS[age]}. Це не оцінка і не діагноз.</p>
       <article class="card">
-        <span class="mini-label">Що ви спостерегли</span>
-        <div class="dbars">${domainChart(age)}</div>
-        ${compare}
+        <span class="mini-label">Що ви помітили</span>
+        ${domainSummary(age)}
       </article>
 
       <article class="card">
-        <span class="mini-label">Бачення цього тижня</span>
-        <p><strong>Сильні напрямки:</strong> ${strengths}</p>
+        <span class="mini-label">З чого почати</span>
         ${focusBlock}
-        <p class="note">Це показує, де дати більше нагод для гри — це не оцінка і не діагноз.</p>
       </article>
 
       ${discuss}
 
-      <button type="button" class="btn primary block" data-go="program">Перейти до плану гри</button>
+      <button type="button" class="btn primary block" data-go="program">Почати гру на сьогодні</button>
     </section>`;
 }
 
@@ -423,15 +443,16 @@ function renderProgram() {
   const age = currentAge();
   const survey = cc().surveys[age];
   if (!survey || !survey.date) {
-    return `<section class="screen-pad"><h2>Програма гри</h2><p class="muted">Спершу пройдіть короткий тест, щоб скласти персональний план.</p><button type="button" class="btn primary block" data-go="survey">Пройти тест</button></section>`;
+    return `<section class="screen-pad"><h1 tabindex="-1">Гра на сьогодні</h1><p class="muted">Спершу дайте відповіді на кілька коротких питань.</p><button type="button" class="btn primary block" data-go="survey">Почати спостереження</button></section>`;
   }
-  const profile = buildProfile(survey.states, age);
+  const profile = profileForSurvey(survey, age);
   const program = buildProgram(profile, age);
-  programState = { age, program, openDay: program[0] ? program[0].day : null, selected: {} };
+  const currentDay = program[currentProgramDayIndex(survey, program.length)];
+  programState = { age, program, openDay: currentDay ? currentDay.day : null, selected: { ...(cc().programSelections[String(age)] || {}) } };
   return `
     <section class="screen-pad">
-      <h2>Програма гри · ${AGE_LABELS[age]}</h2>
-      <p class="muted">Навіть одна коротка активність на день — це вже чудово. Доросла гра, не «доза». Торкніться дня, щоб розгорнути.</p>
+      <h1 tabindex="-1">Гра на тиждень</h1>
+      <p class="muted">Сьогоднішній день уже відкрито. Оберіть одну коротку гру — цього достатньо.</p>
       <div class="program-list" id="programList"></div>
     </section>`;
 }
@@ -446,29 +467,29 @@ function renderProgramList() {
 
 function dayChip(age, dayNum, id, sel) {
   const a = activityById(age, id);
-  return a ? `<button type="button" class="day-opt ${id === sel ? "active" : ""}" data-day-opt="${dayNum}" data-opt="${id}">${esc(a.title)}</button>` : "";
+  return a ? `<button type="button" class="day-opt ${id === sel ? "active" : ""}" data-day-opt="${dayNum}" data-opt="${id}" aria-pressed="${id === sel}">${esc(a.title)}</button>` : "";
 }
 
 function dayAccordionHtml(age, d) {
   const open = programState.openDay === d.day;
   const sel = programState.selected[d.day] || d.options[0];
   const selAct = activityById(age, sel);
+  const selectedDomain = selAct ? domainOf(selAct.id) : d.domain;
   // Primary same-domain ideas (the day's focus).
   const opts = d.options.length > 1
-    ? `<div class="day-opts">${d.options.map((id) => dayChip(age, d.day, id, sel)).join("")}</div>`
+    ? `<p class="bonus-label">Оберіть одну гру:</p><div class="day-opts">${d.options.map((id) => dayChip(age, d.day, id, sel)).join("")}</div>`
     : "";
   // Optional cross-domain "bonus" ideas — clearly optional, so a day can touch several areas.
   const bonus = (d.bonus || []).filter((b) => activityById(age, b.id));
   const bonusHtml = bonus.length
-    ? `<p class="bonus-label">Якщо є настрій — потроху з інших напрямків (необов'язково):</p>
+    ? `<p class="bonus-label">Або оберіть іншу легку ідею:</p>
        <div class="day-opts bonus">${bonus.map((b) => dayChip(age, d.day, b.id, sel)).join("")}</div>`
     : "";
   return `
     <article class="day-acc ${open ? "open" : ""}">
       <button type="button" class="day-acc-head" data-day-toggle="${d.day}" aria-expanded="${open}">
-        <span class="day-acc-meta"><span class="day-num">День ${d.day}</span><span class="chip">${DOMAIN_LABELS_SHORT[d.domain] || d.domain}</span></span>
+        <span class="day-acc-meta"><span class="day-num">День ${d.day}</span><span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span></span>
         <span class="day-acc-title">${esc(selAct ? selAct.title : "")}</span>
-        ${(typeof authorNoteFor === "function" && authorNoteFor(sel)) ? `<span class="day-badge">Підхід</span>` : ""}
         <span class="day-acc-caret" aria-hidden="true">${open ? "▾" : "▸"}</span>
       </button>
       ${open ? `<div class="day-acc-body">${opts}${bonusHtml}${activityDetailHtml(age, sel)}</div>` : ""}
@@ -482,6 +503,9 @@ function evidenceFriendly(ev) {
   if (e.includes("nurturing") || e.includes("догляд")) return "рекомендації догляду (WHO)";
   return ev || "";
 }
+function sourceFriendly(source) {
+  return String(source || "").replace(/WHO motor/gi, "WHO — руховий розвиток");
+}
 
 function activityDetailHtml(age, id) {
   const a = activityById(age, id);
@@ -490,34 +514,31 @@ function activityDetailHtml(age, id) {
   const note = (typeof authorNoteFor === "function") ? authorNoteFor(a.id) : null;
   // Plain-language note: keep author + the actionable idea; the internal mechanism mapping
   // stays in data for traceability but is not shown as jargon to parents.
-  const noteHtml = note ? `
-    <div class="approach">
-      <p><strong>На основі підходу ${esc(note.author)}:</strong> ${esc(note.idea)}.</p>
-    </div>` : "";
+  const basis = a.evidence || note ? `<details class="evidence-details"><summary>Чому ця гра тут</summary>
+    ${a.evidence ? `<p><strong>Основа:</strong> ${esc(evidenceFriendly(a.evidence))}. <strong>Джерело:</strong> ${esc(sourceFriendly(a.source))}.</p>` : ""}
+    ${note ? `<p><strong>Ідея ${esc(note.author)}:</strong> ${esc(note.idea)}.</p>` : ""}
+  </details>` : "";
   return `
     <div class="illus" aria-hidden="true">${(typeof domainIllus === "function" ? domainIllus(domainOf(a.id)) : "")}</div>
     <div class="tag-row"><span class="chip">${DOMAIN_LABELS[domainOf(a.id)] || a.domain}</span><span class="chip">${esc(a.time)}</span><span class="chip">${esc(a.materials)}</span></div>
-    <h3>${esc(a.title)}</h3>
+    <h2>${esc(a.title)}</h2>
     <p class="muted">${esc(a.why)}</p>
-    ${a.evidence ? `<p class="source-line"><strong>На чому ґрунтується:</strong> ${esc(evidenceFriendly(a.evidence))} · <strong>Джерело:</strong> ${esc(a.source)}</p>` : ""}
-    ${noteHtml}
     <div class="steps"><strong>Кроки</strong><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>
-    <div class="stop"><strong>Коли зупинитись:</strong> ${esc(a.stop)}</div>`;
+    <div class="stop"><strong>Коли зупинитися:</strong> ${esc(a.stop)}</div>
+    ${basis}`;
 }
 
 // ---- progress ----
 function renderProgress() {
-  const age = currentAge();
   const snaps = cc().snapshots.slice().reverse();
   const list = snaps.length ? snaps.map((s) => {
     const date = new Date(s.date).toLocaleString("uk-UA", { dateStyle: "medium", timeStyle: "short" });
-    return `<article class="history-item"><h4>${AGE_LABELS[s.age]} · ${date}</h4><dl><dt>Бачу</dt><dd>${s.counts.observed}</dd><dt>Не впевнена</dt><dd>${s.counts.notSure}</dd><dt>Ще ні</dt><dd>${s.counts.notYet}</dd></dl></article>`;
-  }).join("") : `<p class="muted">Збережених тестів ще немає. Пройдіть тест, щоб почати timeline.</p>`;
+    return `<article class="history-item"><h2>${AGE_LABELS[s.age]} · ${date}</h2><dl><dt>Бачу</dt><dd>${s.counts.observed}</dd><dt>Ще спостерігаю</dt><dd>${s.counts.notSure}</dd><dt>Поки ні</dt><dd>${s.counts.notYet}</dd></dl></article>`;
+  }).join("") : `<p class="muted">Збережених спостережень ще немає.</p>`;
   return `
     <section class="screen-pad">
-      <h2>Прогрес · ${AGE_LABELS[age]}</h2>
-      <article class="card"><span class="mini-label">Спостереження по тестах</span><div class="dbars">${domainChart(age)}</div><p class="note">Це timeline батьківських спостережень, не оцінка і не діагноз.</p></article>
-      <h3 class="mt">Історія тестів</h3>
+      <h1 tabindex="-1">Історія спостережень</h1>
+      <p class="muted">Тут зберігаються ваші відповіді з різних дат. Вони не є оцінкою розвитку.</p>
       <div class="history-list">${list}</div>
     </section>`;
 }
@@ -528,13 +549,12 @@ function renderAsk() {
   const survey = cc().surveys[age] || { states: {}, questionIds: [] };
   const flagged = (survey.questionIds || []).map((id) => milestoneById(age, id)).filter((m) => m && (survey.states[m.id] === "not_yet" || survey.states[m.id] === "not_sure") && DISCUSS_BY_ID[m.id]);
   const notes = cc().notes || "";
-  const observed = (MILESTONES_BY_AGE[age] || []).filter((m) => survey.states[m.id] === "yes").map((m) => "- " + m.title).join("\n") || "- поки нічого";
   return `
     <section class="screen-pad">
-      <h2>Запитати фахівця</h2>
-      <p class="muted">Якщо щось турбує — це не привід панікувати, а привід зафіксувати і запитати.</p>
-      <h3 class="mt">На що звернути увагу за вашими позначками</h3>
-      ${flagged.length ? flagged.map((m) => `<article class="discuss-card"><div class="q-meta"><span>${esc(m.domain)}</span><span>${survey.states[m.id] === "not_yet" ? "Ще ні" : "Не впевнена"}</span></div><h4>${esc(m.title)}</h4><p class="muted">${esc(DISCUSS_BY_ID[m.id])}</p></article>`).join("") : `<p class="muted">Поки немає пунктів «Не впевнена» або «Ще ні».</p>`}
+      <h1 tabindex="-1">Для розмови з фахівцем</h1>
+      <p class="muted">Збережіть те, що помітили, і спокійно обговоріть під час візиту.</p>
+      <h2 class="mt">За вашими відповідями</h2>
+      ${flagged.length ? flagged.map((m) => `<article class="discuss-card"><div class="q-meta"><span>${esc(m.domain)}</span><span>${survey.states[m.id] === "not_yet" ? "Поки ні" : "Ще спостерігаю"}</span></div><h3>${esc(m.title)}</h3><p class="muted">${esc(DISCUSS_BY_ID[m.id])}</p></article>`).join("") : `<p class="muted">Поки немає пунктів, які ви позначили «Ще спостерігаю» або «Поки ні».</p>`}
       <label class="field mt"><span>Нотатки для візиту</span><textarea id="askNotes" rows="5" placeholder="Що помітили, що пробували, що хочете запитати?">${esc(notes)}</textarea></label>
       <button type="button" id="copySummary" class="btn ghost block">Скопіювати підсумок для фахівця</button>
       <p id="copyStatus" class="muted small" role="status"></p>
@@ -545,15 +565,16 @@ function summaryText() {
   const age = currentAge();
   const survey = cc().surveys[age] || { states: {} };
   const pick = (st) => (MILESTONES_BY_AGE[age] || []).filter((m) => survey.states[m.id] === st).map((m) => "- " + m.title).join("\n") || "- поки нічого";
-  return `Вік: ${AGE_LABELS[age]}\nМета: нотатки для розмови про розвиток, не діагностика і не скринінг\n\nБачу:\n${pick("yes")}\n\nНе впевнена:\n${pick("not_sure")}\n\nЩе ні:\n${pick("not_yet")}\n\nНотатки:\n${cc().notes || "- немає"}\n\nПитання до фахівця:\n1.\n2.\n3.`;
+  return `Вік: ${AGE_LABELS[age]}\nМета: нотатки для розмови про розвиток, не діагностика і не скринінг\n\nБачу:\n${pick("yes")}\n\nЩе спостерігаю:\n${pick("not_sure")}\n\nПоки ні:\n${pick("not_yet")}\n\nНотатки:\n${cc().notes || "- немає"}\n\nПитання до фахівця:\n1.\n2.\n3.`;
 }
 
 // ---- snapshot on finishing a survey ----
 function finishSurvey() {
   const age = currentAge();
   const survey = cc().surveys[age] || { states: {}, questionIds: [] };
-  const profile = buildProfile(survey.states, age);
   const ids = survey.questionIds || [];
+  if (!ids.length || ids.some((id) => !survey.states[id])) return;
+  const profile = profileForSurvey(survey, age);
   const counts = {
     observed: ids.filter((id) => survey.states[id] === "yes").length,
     notSure: ids.filter((id) => survey.states[id] === "not_sure").length,
@@ -581,10 +602,14 @@ function downloadIcs(title) {
 }
 
 // ---- events ----
-document.addEventListener("click", (e) => {
+document.addEventListener("click", async (e) => {
   const go = e.target.closest("[data-go]");
   if (go) {
-    if (go.dataset.restart) restartSurvey(currentAge());
+    if (go.dataset.restart) {
+      const ok = confirm("Почати нове спостереження? Попередній підсумок залишиться в історії.");
+      if (!ok) return;
+      restartSurvey(currentAge());
+    }
     setHash(go.dataset.go);
     return;
   }
@@ -595,7 +620,30 @@ document.addEventListener("click", (e) => {
   if (e.target.id === "profileSave") {
     const name = document.getElementById("childName").value.trim();
     const dob = document.getElementById("childDob").value;
-    const child = freshChild(name, dob); store.children.push(child); store.activeChildId = child.id; save(); setHash("home"); return;
+    const checked = validateDob(dob);
+    const error = document.getElementById("profileError");
+    const input = document.getElementById("childDob");
+    if (checked.error) {
+      if (error) error.textContent = checked.error;
+      if (input) { input.setAttribute("aria-invalid", "true"); input.focus(); }
+      return;
+    }
+    if (input) input.removeAttribute("aria-invalid");
+    if (profileEditing && cc()) {
+      cc().name = name;
+      cc().dob = dob;
+    } else {
+      const child = freshChild(name, dob);
+      store.children.push(child);
+      store.activeChildId = child.id;
+    }
+    profileEditing = false;
+    save(); setHash("home"); return;
+  }
+  if (e.target.id === "editProfile") {
+    profileEditing = true;
+    setHash("profile");
+    return;
   }
   if (e.target.id === "deleteChild") {
     const c = cc(); if (!c) return;
@@ -603,7 +651,7 @@ document.addEventListener("click", (e) => {
       store.children = store.children.filter((x) => x.id !== c.id);
       store.activeChildId = (store.children[0] && store.children[0].id) || null;
       save();
-      if (!store.children.length) setHash("profile");
+      if (!store.children.length) { profileEditing = false; setHash("profile"); }
       route();
     }
     return;
@@ -615,8 +663,29 @@ document.addEventListener("click", (e) => {
   if (e.target.id === "finishSurvey") { finishSurvey(); return; }
   if (e.target.id === "addIcs") { const t = todaysTask(currentAge()); downloadIcs(t ? t.act.title : "Гра з дитиною"); return; }
   if (e.target.id === "copySummary") {
-    navigator.clipboard?.writeText(summaryText());
-    const st = document.getElementById("copyStatus"); if (st) st.textContent = "Підсумок скопійовано.";
+    const st = document.getElementById("copyStatus");
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(summaryText());
+      if (st) st.textContent = "Підсумок скопійовано.";
+    } catch {
+      if (st) st.textContent = "Не вдалося скопіювати. Спробуйте ще раз у захищеному браузері.";
+    }
+    return;
+  }
+  if (e.target.id === "surveyBack") {
+    surveyUi.index = Math.max(0, surveyUi.index - 1);
+    show("survey");
+    return;
+  }
+  if (e.target.id === "surveyNext") {
+    const age = currentAge();
+    const survey = cc().surveys[age];
+    const ids = survey.questionIds || [];
+    const currentId = ids[surveyUi.index];
+    if (!currentId || !survey.states[currentId]) return;
+    if (surveyUi.index >= ids.length - 1) finishSurvey();
+    else { surveyUi.index += 1; show("survey"); }
     return;
   }
 
@@ -627,14 +696,13 @@ document.addEventListener("click", (e) => {
     cc().surveys[age] = cc().surveys[age] || { states: {}, questionIds: questionIdsFor(age) };
     cc().surveys[age].states[wrap.dataset.id] = stateBtn.dataset.state;
     save();
-    wrap.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+    wrap.querySelectorAll("button").forEach((b) => { b.classList.remove("active"); b.setAttribute("aria-pressed", "false"); });
     stateBtn.classList.add("active");
-    // live progress update
+    stateBtn.setAttribute("aria-pressed", "true");
     const ids = cc().surveys[age].questionIds || [];
     const answered = ids.filter((id) => cc().surveys[age].states[id]).length;
-    const bar = document.querySelector(".progress-mini span"); if (bar) bar.style.width = (ids.length ? (answered / ids.length) * 100 : 0) + "%";
-    const fin = document.getElementById("finishSurvey"); if (fin) fin.disabled = answered === 0;
-    const cnt = document.querySelector(".small"); if (cnt && cnt.textContent.includes("відповід")) cnt.textContent = `${answered} з ${ids.length} відповідей`;
+    const saved = document.querySelector(".survey-progress-row span:last-child"); if (saved) saved.textContent = `${answered} збережено`;
+    const next = document.getElementById("surveyNext"); if (next) next.disabled = false;
     return;
   }
 
@@ -649,6 +717,9 @@ document.addEventListener("click", (e) => {
   if (dayOpt) {
     const day = Number(dayOpt.dataset.dayOpt);
     programState.selected[day] = dayOpt.dataset.opt;
+    cc().programSelections[String(programState.age)] = cc().programSelections[String(programState.age)] || {};
+    cc().programSelections[String(programState.age)][String(day)] = dayOpt.dataset.opt;
+    save();
     programState.openDay = day;
     renderProgramList();
     return;
@@ -665,14 +736,19 @@ document.addEventListener("click", (e) => {
 document.addEventListener("input", (e) => {
   if (e.target.id === "childSwitch") {
     const v = e.target.value;
-    if (v === "__add") { setHash("profile"); return; }
+    if (v === "__add") { profileEditing = false; setHash("profile"); return; }
     store.activeChildId = v; save(); route();
     return;
   }
   if (e.target.id === "childDob") {
     const hint = document.getElementById("ageHint");
-    const m = monthsSince(e.target.value);
-    if (hint) hint.textContent = m == null ? "" : `Вік: ~${m} міс. → вікове вікно ${AGE_LABELS[ageWindowFor(m)]}`;
+    const error = document.getElementById("profileError");
+    const button = document.getElementById("profileSave");
+    const checked = validateDob(e.target.value);
+    if (hint) hint.textContent = checked.error || checked.months == null ? "" : `Вік: ~${checked.months} міс. → вікове вікно ${AGE_LABELS[ageWindowFor(checked.months)]}`;
+    if (error) error.textContent = checked.error;
+    if (button) button.disabled = Boolean(checked.error);
+    e.target.toggleAttribute("aria-invalid", Boolean(checked.error));
   }
   if (e.target.id === "askNotes") { cc().notes = e.target.value; save(); }
 });

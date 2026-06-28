@@ -31,9 +31,12 @@ function domainOf(id) {
 
 // Build the focus profile from the parent's milestone states for one age.
 // states: { milestoneId: "yes" | "not_sure" | "not_yet" }
-function buildProfile(states, age, config = ENGINE_CONFIG) {
+// milestoneIds: optional scope when a survey shows a curated subset for this age.
+function buildProfile(states, age, config = ENGINE_CONFIG, milestoneIds = null) {
   states = states || {};
-  const milestones = (typeof MILESTONES_BY_AGE !== "undefined" && MILESTONES_BY_AGE[age]) || [];
+  const allMilestones = (typeof MILESTONES_BY_AGE !== "undefined" && MILESTONES_BY_AGE[age]) || [];
+  const scopedIds = Array.isArray(milestoneIds) && milestoneIds.length ? new Set(milestoneIds) : null;
+  const milestones = scopedIds ? allMilestones.filter((m) => scopedIds.has(m.id)) : allMilestones;
 
   // Per-domain tallies for this age only.
   const stats = {};

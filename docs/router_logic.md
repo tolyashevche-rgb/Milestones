@@ -18,6 +18,9 @@ risk ever leaves it.
 - `states`: `{ milestoneId: "yes" | "not_sure" | "not_yet" }` — what the parent marked
   in the "Watch" checklist for one age.
 - `age`: one of `2, 4, 6, 9, 12` (months).
+- `milestoneIds` (optional): limits the profile to the curated questions shown in a
+  particular survey round. This keeps completion and maintenance states correct when
+  the question pool is larger than the displayed selection.
 - Data globals from `data.js`: `MILESTONES_BY_AGE`, `ACTIVITIES_BY_AGE`. Each activity
   carries `supports: [milestoneIds]`, `evidence`, `source`.
 
@@ -26,9 +29,10 @@ A stable, language-independent domain key is parsed from the id:
 
 ---
 
-## Step 1 — `buildProfile(states, age)`
+## Step 1 — `buildProfile(states, age, config?, milestoneIds?)`
 
-1. Group the age's milestones into the four domains.
+1. If `milestoneIds` is provided, scope the age's milestones to those ids; then group
+   the resulting milestones into the four domains.
 2. Per domain, tally `yes`, `not_sure`, `not_yet`, and collect the ids the parent did
    not confirm (`notYetIds`, then `notSureIds`) as `targetMilestoneIds`.
 3. Internal ordering weight per domain:
@@ -40,9 +44,10 @@ A stable, language-independent domain key is parsed from the id:
    **This weight is internal only — never shown to the parent.** It just orders focus.
 4. `focus` = domains with `weight > 0`, sorted descending, capped at `maxFocus` (2).
 5. `strengths` = domains with the most `yes`, top 2.
-6. Flags: `notStarted` (nothing marked), `allClear` (everything marked, nothing flagged).
+6. Flags: `notStarted` (nothing marked), `allClear` (everything in scope marked,
+   nothing flagged), and `partialClear` (some answers, nothing flagged yet).
 
-Output: `{ age, answered, allClear, notStarted, strengths, focus, stats }`.
+Output: `{ age, answered, total, allClear, partialClear, notStarted, strengths, focus, stats }`.
 
 ---
 
