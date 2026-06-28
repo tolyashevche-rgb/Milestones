@@ -155,6 +155,19 @@ function testAppState() {
     first.activityCompletions[completionKey(4)] = { activityId: playStep.task.act.id };
     const doneStep = homeNextStep(4);
     const doneMarkup = renderHome();
+    const programMarkup = renderProgram();
+    const currentProgramDay = programState.program[programState.currentIndex];
+    const upcomingProgramDay = programState.program[(programState.currentIndex + 1) % programState.program.length];
+    const todayMarkup = todayActivityHtml(4, currentProgramDay);
+    const upcomingMarkup = dayAccordionHtml(4, upcomingProgramDay);
+    const programUiOkay = programMarkup.includes('<div id="programToday"></div>')
+      && programMarkup.includes('<details class="week-plan">')
+      && todayMarkup.includes('class="day-acc open today-game"')
+      && todayMarkup.includes('class="activity-switcher"')
+      && todayMarkup.includes('id="toggleTodayDone"')
+      && !todayMarkup.includes('data-day-toggle=')
+      && upcomingMarkup.includes('data-day-toggle=')
+      && !upcomingMarkup.includes('id="toggleTodayDone"');
     const homeNextStepOkay = startStep.kind === "start-observation"
       && continueStep.kind === "continue-observation"
       && continueStep.progress.value === 1
@@ -207,7 +220,7 @@ function testAppState() {
       && changes.newlyObserved.length === 2
       && changes.changed.length === 1;
 
-    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay };
+    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay };
   })()`, context);
 
   assert.equal(result.restartOkay, true, "re-test must clear only the active plan and today's completion");
@@ -216,8 +229,9 @@ function testAppState() {
   assert.equal(result.migrationOkay, true, "legacy single-child data must migrate losslessly");
   assert.equal(result.historyOkay, true, "history comparison must support old snapshots and describe answer changes");
   assert.equal(result.homeNextStepOkay, true, "home must expose one contextual primary action and a calm done state");
+  assert.equal(result.programUiOkay, true, "program must keep today's game open and future days secondary");
 }
 
 testContentAndEngine();
 testAppState();
-console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, contextual home, re-tests, history comparison, migration, multi-child isolation.");
+console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, contextual home, today-first game, re-tests, history comparison, migration, multi-child isolation.");

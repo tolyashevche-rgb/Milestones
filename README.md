@@ -107,6 +107,10 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
+- **P2.3 today-first game:** the program screen now opens one complete activity for today,
+  formats its steps as a short numbered sequence, and keeps the single completion control in
+  view. Alternative activities and the next six days remain available in collapsed sections
+  instead of competing with today's instruction.
 - **P2.2 contextual home:** Stage5 now shows one calm next step based on the active child's
   state: start or continue the observation, play today's game, or stop after today's game is
   done. Secondary destinations and destructive data controls are collapsed into clearly named
@@ -209,9 +213,10 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | 8 | P1 regression QA + edge-case hardening | **done** — automated five-age suite, idempotent finish, clean re-test state, mobile accessibility audit |
 | 9 | P2.1 descriptive observation history | **done** — dated records, same-age comparison, full answer details, legacy snapshot support, mobile QA |
 | 10 | P2.2 contextual home | **done** — one state-aware next step, resumable observation progress, calm done state, collapsed secondary/data controls, mobile QA |
+| 11 | P2.3 today-first game | **done** — one open activity, numbered steps, collapsed alternatives and next six days, single completion control, mobile QA |
 
 Stage5 status: working guided flow (welcome → consent → child profile → contextual home/cabinet →
-survey → calm descriptive summary → program → descriptive history with same-age changes → ask), local-first storage with **multi-child**
+survey → calm descriptive summary → today-first game → descriptive history with same-age changes → ask), local-first storage with **multi-child**
 (`children[]`, appbar switcher, add/delete, lossless migration), a per-age survey that asks
 **all** milestones for the age (fixed set a re-test reuses), a **curated question pool**
 (multiple phrasings per milestone, reshuffled on re-test), descriptive charts, `.ics`

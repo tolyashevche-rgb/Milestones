@@ -536,7 +536,7 @@ function renderResults() {
     </section>`;
 }
 
-// ---- program (accordion: each day expands inline, one open at a time) ----
+// ---- program (today first; alternatives and future days stay available but secondary) ----
 let programState = { age: null, program: null, openDay: null, currentDay: null, selected: {} };
 
 function renderProgram() {
@@ -549,12 +549,16 @@ function renderProgram() {
   const program = buildProgram(profile, age);
   const currentIndex = currentProgramDayIndex(survey, program.length);
   const currentDay = program[currentIndex];
-  programState = { age, program, openDay: currentDay ? currentDay.day : null, currentDay: currentDay ? currentDay.day : null, currentIndex, selected: { ...(cc().programSelections[String(age)] || {}) } };
+  programState = { age, program, openDay: null, currentDay: currentDay ? currentDay.day : null, currentIndex, selected: { ...(cc().programSelections[String(age)] || {}) } };
   return `
     <section class="screen-pad">
-      <h1 tabindex="-1">Ігри на найближчі 7 днів</h1>
-      <p class="muted">Сьогоднішню гру вже відкрито. Оберіть одну коротку ідею — цього достатньо.</p>
-      <div class="program-list" id="programList"></div>
+      <h1 tabindex="-1">Гра на сьогодні</h1>
+      <p class="muted">Одна коротка ідея — цього достатньо. Зупиніться раніше, якщо дитина втомилася або втратила інтерес.</p>
+      <div id="programToday"></div>
+      <details class="week-plan">
+        <summary><span>Наступні 6 днів</span><span class="muted small">Переглянути план</span></summary>
+        <div class="program-list" id="programList"></div>
+      </details>
     </section>`;
 }
 
@@ -562,10 +566,12 @@ function afterProgramRender() { renderProgramList(); }
 
 function renderProgramList() {
   const list = document.getElementById("programList");
-  if (!list || !programState.program) return;
+  const today = document.getElementById("programToday");
+  if (!list || !today || !programState.program) return;
   const visibleDays = Array.from({ length: Math.min(7, programState.program.length) }, (_, offset) =>
     programState.program[(programState.currentIndex + offset) % programState.program.length]);
-  list.innerHTML = visibleDays.map((d, index) => dayAccordionHtml(programState.age, d, index === 0)).join("");
+  today.innerHTML = visibleDays[0] ? todayActivityHtml(programState.age, visibleDays[0]) : "";
+  list.innerHTML = visibleDays.slice(1).map((d) => dayAccordionHtml(programState.age, d)).join("");
 }
 
 function dayChip(age, dayNum, id, sel) {
@@ -573,32 +579,52 @@ function dayChip(age, dayNum, id, sel) {
   return a ? `<button type="button" class="day-opt ${id === sel ? "active" : ""}" data-day-opt="${dayNum}" data-opt="${id}" aria-pressed="${id === sel}">${esc(a.title)}</button>` : "";
 }
 
-function dayAccordionHtml(age, d, isToday) {
+function dayChoiceHtml(age, d, sel) {
+  const opts = d.options.length > 1
+    ? `<p class="bonus-label">Основні ідеї:</p><div class="day-opts">${d.options.map((id) => dayChip(age, d.day, id, sel)).join("")}</div>`
+    : "";
+  const bonus = (d.bonus || []).filter((b) => activityById(age, b.id));
+  const bonusHtml = bonus.length
+    ? `<p class="bonus-label">Інші легкі ідеї:</p><div class="day-opts bonus">${bonus.map((b) => dayChip(age, d.day, b.id, sel)).join("")}</div>`
+    : "";
+  if (!opts && !bonusHtml) return "";
+  return `<details class="activity-switcher"><summary>Хочете іншу гру?</summary><div class="activity-switcher-body">${opts}${bonusHtml}</div></details>`;
+}
+
+function dayBodyHtml(age, d, isToday) {
+  const sel = programState.selected[d.day] || d.options[0];
+  const done = isToday && completedActivityToday(age)?.activityId === sel;
+  const completion = isToday ? `<button type="button" id="toggleTodayDone" class="btn ${done ? "ghost" : "primary"} block" data-activity-id="${sel}" aria-pressed="${done}">${done ? "✓ Виконано сьогодні" : "Позначити виконаним"}</button>` : "";
+  return `${activityDetailHtml(age, sel)}${dayChoiceHtml(age, d, sel)}${completion}`;
+}
+
+function todayActivityHtml(age, d) {
+  const sel = programState.selected[d.day] || d.options[0];
+  const selectedDomain = domainOf(sel) || d.domain;
+  return `
+    <article class="day-acc open today-game">
+      <div class="today-game-head">
+        <span class="day-num">Сьогодні</span>
+        <span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span>
+      </div>
+      <div class="day-acc-body">${dayBodyHtml(age, d, true)}</div>
+    </article>`;
+}
+
+function dayAccordionHtml(age, d) {
   const open = programState.openDay === d.day;
   const sel = programState.selected[d.day] || d.options[0];
   const selAct = activityById(age, sel);
   const selectedDomain = selAct ? domainOf(selAct.id) : d.domain;
-  // Primary same-domain ideas (the day's focus).
-  const opts = d.options.length > 1
-    ? `<p class="bonus-label">Оберіть одну гру:</p><div class="day-opts">${d.options.map((id) => dayChip(age, d.day, id, sel)).join("")}</div>`
-    : "";
-  // Optional cross-domain "bonus" ideas — clearly optional, so a day can touch several areas.
-  const bonus = (d.bonus || []).filter((b) => activityById(age, b.id));
-  const bonusHtml = bonus.length
-    ? `<p class="bonus-label">Або оберіть іншу легку ідею:</p>
-       <div class="day-opts bonus">${bonus.map((b) => dayChip(age, d.day, b.id, sel)).join("")}</div>`
-    : "";
-  const done = isToday && completedActivityToday(age)?.activityId === sel;
-  const completion = isToday ? `<button type="button" id="toggleTodayDone" class="btn ${done ? "ghost" : "primary"} block" data-activity-id="${sel}" aria-pressed="${done}">${done ? "✓ Виконано сьогодні" : "Позначити виконаним"}</button>` : "";
   const bodyId = `day-body-${d.day}`;
   return `
     <article class="day-acc ${open ? "open" : ""}">
       <button type="button" class="day-acc-head" data-day-toggle="${d.day}" aria-expanded="${open}" ${open ? `aria-controls="${bodyId}"` : ""}>
-        <span class="day-acc-meta"><span class="day-num">${isToday ? "Сьогодні" : `День ${d.day}`}</span><span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span></span>
+        <span class="day-acc-meta"><span class="day-num">День ${d.day}</span><span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span></span>
         <span class="day-acc-title">${esc(selAct ? selAct.title : "")}</span>
         <span class="day-acc-caret" aria-hidden="true">${open ? "▾" : "▸"}</span>
       </button>
-      ${open ? `<div class="day-acc-body" id="${bodyId}">${opts}${bonusHtml}${activityDetailHtml(age, sel)}${completion}</div>` : ""}
+      ${open ? `<div class="day-acc-body" id="${bodyId}">${dayBodyHtml(age, d, false)}</div>` : ""}
     </article>`;
 }
 

@@ -181,11 +181,18 @@ main {
 .approach { margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; background: #f6faf9; }
 .approach p { margin: 6px 0 0; font-size: 14px; }
 .approach-tag { display: inline-block; font-size: 11px; color: var(--teal-dark); background: var(--mint); border-radius: 999px; padding: 2px 8px; }
-.steps ol { margin: 6px 0 0; padding-left: 18px; }
+.steps ol { counter-reset: activity-step; display: grid; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+.steps li { counter-increment: activity-step; position: relative; min-height: 40px; padding: 10px 12px 10px 44px; border-radius: 10px; background: #f7faf9; }
+.steps li::before { content: counter(activity-step); position: absolute; left: 10px; top: 9px; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--teal); font-size: 12px; font-weight: 700; }
 .stop { margin-top: 12px; font-size: 14px; background: #fff7ed; border: 1px solid #f3e2c7; border-radius: 10px; padding: 10px 12px; }
 .program-list { display: grid; gap: 10px; margin-top: 10px; }
+.week-plan { margin-top: 18px; border-top: 1px solid var(--line); }
+.week-plan > summary { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--teal-dark); cursor: pointer; font-weight: 700; }
+.week-plan[open] > summary { border-bottom: 1px solid var(--line); }
 .day-acc { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
 .day-acc.open { border-color: var(--teal); box-shadow: var(--shadow); }
+.today-game { margin-top: 14px; }
+.today-game-head { display: flex; align-items: center; gap: 8px; padding: 14px 14px 0; }
 .day-acc-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 14px; border: 0; background: transparent; cursor: pointer; text-align: left; }
 .day-acc-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .day-num { font-weight: 700; }
@@ -201,6 +208,9 @@ main {
 .day-opts.bonus { margin-bottom: 4px; }
 .day-opts.bonus .day-opt { background: #fff; border-style: dashed; }
 .day-opts.bonus .day-opt.active { background: var(--teal); border-style: solid; }
+.activity-switcher { margin: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.activity-switcher summary { min-height: 48px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-weight: 700; }
+.activity-switcher-body { padding-bottom: 4px; }
 
 /* history */
 .history-list { display: grid; gap: 14px; margin-top: 16px; }

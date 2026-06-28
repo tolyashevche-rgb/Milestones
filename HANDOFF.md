@@ -58,6 +58,8 @@ legacy snapshot support without scores, levels, or developmental conclusions.
 P2.2 makes the home contextual: it shows at most one primary action for start/continue/play,
 switches to a calm no-action state after today's game is complete, and collapses secondary
 destinations plus destructive data controls.
+P2.3 makes the program today-first: one complete activity stays open with numbered steps and
+one completion control; alternative activities and the next six days are collapsed by default.
 
 ## Key decisions & findings (do NOT re-litigate)
 
@@ -118,6 +120,17 @@ destinations plus destructive data controls.
 ---
 
 ## Work log (newest first)
+
+### 2026-06-28 — P2.3 today-first game screen
+- Replaced the seven-day accordion-first layout with one always-open activity for today.
+  Activity steps now render as a compact numbered sequence with the stop guidance and one
+  completion control kept in the main flow.
+- Moved alternative activities under “Хочете іншу гру?” and the remaining six days under
+  “Наступні 6 днів”. Existing activity selection, future-day details, evidence notes, and
+  completion persistence remain available.
+- Extended the product regression suite with today/future markup invariants. Browser QA at
+  390×844 found one today card, one completion button, no overflow, undersized controls,
+  duplicate ids, or console errors; both secondary sections are collapsed by default.
 
 ### 2026-06-28 — P2.2 contextual home and action hierarchy
 - Replaced the equal-weight home dashboard with `homeNextStep()`: first observation, resumable
