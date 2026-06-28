@@ -18,6 +18,32 @@ function contentContext() {
 }
 
 function testContentAndEngine() {
+  const stage5Index = read("prototype_stage5_ua/index.html");
+  const stage5Styles = read("prototype_stage5_ua/styles5.css");
+  const stage5App = read("prototype_stage5_ua/app5.js");
+  const pwaScript = read("prototype_stage5_ua/pwa.js");
+  const serviceWorker = read("prototype_stage5_ua/sw.js");
+  const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
+  const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
+  const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
+  assert.ok(stage5Index.includes("20260629-p2-10"), "Stage5 assets must use the P2.10 cache key");
+  assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
+  assert.ok(stage5Styles.includes("@media (forced-colors: active)"), "high-contrast mode needs explicit active-state support");
+  assert.ok(stage5Styles.includes("@media (prefers-reduced-motion: reduce)"), "reduced-motion preference must stay supported");
+  assert.ok(stage5App.includes('document.getElementById("toggleTodayDone")?.focus'), "program updates must restore focus to the thumb action");
+  assert.equal(manifest.display, "standalone", "PWA manifest must request standalone display");
+  assert.equal(manifest.start_url, "./", "PWA must start inside its own scope");
+  assert.ok(manifest.icons.some((icon) => icon.sizes === "192x192"), "PWA needs a 192px icon");
+  assert.ok(manifest.icons.some((icon) => icon.sizes === "512x512"), "PWA needs a 512px icon");
+  assert.equal(icon192.readUInt32BE(16), 192, "192px icon width");
+  assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
+  assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
+  assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-10"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('caches.match("./index.html")'), "offline navigation needs an app-shell fallback");
+  assert.ok(pwaScript.includes('navigator.serviceWorker.register("./sw.js")'), "the app must register its service worker");
+  assert.ok(stage5Index.includes('id="offlineStatus"'), "the app shell needs a quiet offline status");
+
   assert.equal(
     read("prototype_stage4/engine.js"),
     read("prototype_stage4_ua/engine.js"),
@@ -135,6 +161,60 @@ function appContext() {
   return context;
 }
 
+async function testServiceWorker() {
+  const listeners = {};
+  const cachedShell = [];
+  const deletedCaches = [];
+  const storedRequests = [];
+  let skipWaitingCalled = false;
+  let clientsClaimed = false;
+  const offlineDocument = { kind: "offline-index" };
+  const cache = {
+    addAll: async (paths) => { cachedShell.push(...paths); },
+    put: async (request) => { storedRequests.push(request); }
+  };
+  const context = vm.createContext({
+    URL,
+    Promise,
+    fetch: async () => { throw new Error("offline"); },
+    caches: {
+      open: async () => cache,
+      keys: async () => ["milestones-stage5-p2-9", "milestones-stage5-p2-10", "unrelated-cache"],
+      delete: async (key) => { deletedCaches.push(key); return true; },
+      match: async (request) => request === "./index.html" ? offlineDocument : null
+    },
+    self: {
+      location: { origin: "http://localhost:4175" },
+      addEventListener: (type, handler) => { listeners[type] = handler; },
+      skipWaiting: async () => { skipWaitingCalled = true; },
+      clients: { claim: async () => { clientsClaimed = true; } }
+    }
+  });
+  run(context, "prototype_stage5_ua/sw.js");
+
+  let installWork;
+  listeners.install({ waitUntil: (promise) => { installWork = promise; } });
+  await installWork;
+  assert.equal(skipWaitingCalled, true, "service worker must activate the new shell promptly");
+  assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
+  assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260629-p2-10"), "offline shell must cache canonical content");
+
+  let activateWork;
+  listeners.activate({ waitUntil: (promise) => { activateWork = promise; } });
+  await activateWork;
+  assert.deepEqual(deletedCaches, ["milestones-stage5-p2-9"], "activation must delete only older Stage5 caches");
+  assert.equal(clientsClaimed, true, "new service worker must claim the app after activation");
+
+  let navigationResponse;
+  listeners.fetch({
+    request: { method: "GET", mode: "navigate", url: "http://localhost:4175/prototype_stage5_ua/#/home" },
+    respondWith: (promise) => { navigationResponse = promise; }
+  });
+  assert.equal(await navigationResponse, offlineDocument, "offline navigation must return the cached app shell");
+  assert.deepEqual(storedRequests, [], "offline fallback must not attempt a cache write");
+}
+
 function testAppState() {
   const context = appContext();
   const result = vm.runInContext(`(() => {
@@ -155,11 +235,26 @@ function testAppState() {
     const startStep = homeNextStep(4);
     const startMarkup = renderHome();
     const surveyMarkup = renderSurvey();
+    const backup = backupPayload();
+    const restoredBackup = validateBackupPayload(backup);
+    const tamperedBackup = JSON.parse(JSON.stringify(backup));
+    tamperedBackup.data.children[0].surveys[4].states[ids[0]] = "diagnosis";
+    const dataBackupOkay = startMarkup.includes('id="exportBackup"')
+      && startMarkup.includes('id="chooseBackup"')
+      && startMarkup.includes('id="importBackup"')
+      && backup.schema === BACKUP_SCHEMA
+      && backup.version === BACKUP_VERSION
+      && restoredBackup.ok
+      && restoredBackup.store.children.length === 2
+      && !validateBackupPayload({ schema: "other", version: 1, data: {} }).ok
+      && !validateBackupPayload(tamperedBackup).ok;
     const emotionalCopyOkay = OBSERVATION_LABELS.not_yet === "Ще не помічаю"
       && surveyMarkup.includes("Ще не помічаю")
       && !surveyMarkup.includes("Поки ні")
       && calmDiscussionIntroHtml().includes("Це не висновок")
       && discussCardHtml(milestoneById(4, ids[0]), "not_yet").includes("Ще не помічаю");
+    const accessibilityOkay = surveyMarkup.includes('id="questionTitle" tabindex="-1" aria-describedby="questionPrompt"')
+      && surveyMarkup.includes('role="status" aria-live="polite" aria-atomic="true"');
     const answerWrap = {
       dataset: { id: ids[0] },
       querySelectorAll: () => [answerButton]
@@ -184,6 +279,8 @@ function testAppState() {
       && surveyUi.index === 1;
     const continueStep = homeNextStep(4);
     const continueMarkup = renderHome();
+    const homeProgressAccessibilityOkay = continueMarkup.includes('role="progressbar"')
+      && continueMarkup.includes('aria-valuemin="0"');
     first.surveys[4].states = Object.fromEntries(ids.map((id) => [id, "yes"]));
     first.surveys[4].date = "2026-06-20T10:00:00.000Z";
     const playStep = homeNextStep(4);
@@ -275,7 +372,7 @@ function testAppState() {
       && changes.newlyObserved.length === 2
       && changes.changed.length === 1;
 
-    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay };
+    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay };
   })()`, context);
 
   assert.equal(result.restartOkay, true, "re-test must clear only the active plan and today's completion");
@@ -289,8 +386,16 @@ function testAppState() {
   assert.equal(result.oneThumbSurveyOkay, true, "survey answers must save and advance without a separate next button");
   assert.equal(result.emotionalCopyOkay, true, "sensitive observation copy must keep the emotion-aware, explicitly non-conclusive guardrails");
   assert.equal(result.navIconsOkay, true, "bottom navigation must use one consistent four-icon SVG set");
+  assert.equal(result.accessibilityOkay, true, "survey and home must expose focused, concise accessibility semantics");
+  assert.equal(result.dataBackupOkay, true, "local backup must round-trip valid data and reject malformed answers");
 }
 
-testContentAndEngine();
-testAppState();
-console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, contextual home, unified SVG navigation, one-thumb survey, emotion-aware copy, today-first game, specialist prep, re-tests, history comparison, migration, multi-child isolation.");
+(async () => {
+  testContentAndEngine();
+  testAppState();
+  await testServiceWorker();
+  console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, contextual home, installable offline shell, service-worker lifecycle, safe local backup/restore, unified SVG navigation, one-thumb survey, accessible focus/status semantics, emotion-aware copy, today-first game, specialist prep, re-tests, history comparison, migration, multi-child isolation.");
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

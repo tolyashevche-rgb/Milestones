@@ -107,6 +107,18 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
+- **P2.10 private backup and restore:** hidden data controls can download a versioned local
+  JSON backup and restore it after explicit confirmation. Files never leave the device through
+  the app, malformed structures and unknown answer states are rejected, and the UI warns that
+  the backup contains private observations.
+- **P2.9 installable offline app:** Stage5 now ships with a web app manifest, original
+  192/512/SVG icons, a versioned service-worker app shell, and a quiet offline indicator.
+  After one successful online load, the core guided flow and curated content can reopen without
+  a connection; local child data remains in the same browser storage.
+- **P2.8 accessibility hardening:** route changes now focus the relevant heading without
+  announcing the whole page, survey status updates are concise and atomic, dynamic program
+  controls retain keyboard focus after re-rendering, helper text is larger, and forced-colors
+  plus reduced-motion preferences have explicit support.
 - **P2.7 unified navigation icons:** the four bottom destinations now use one original
   outline-SVG family: home, observation eye, play kite, and specialist pencil. Every icon uses
   the same 20×20 grid, stroke weight, rounded joins, active color, and accessible text label.
@@ -235,6 +247,9 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | 13 | P2.5 one-thumb pass | **done** — one-tap survey advance, compact activity, thumb-reachable primary actions, optional collapsed notes, calmer specialist overview, mobile QA |
 | 14 | P2.6 emotion-aware copy guardrails | **done** — gentler observation label, non-conclusion reassurance before sensitive notes, explicit pause/return language, larger helper text, mobile QA; live validation still pending |
 | 15 | P2.7 unified navigation icons | **done** — original home/eye/kite/pencil outline SVG set with consistent sizing, stroke, active state, labels, and regression QA |
+| 16 | P2.8 accessibility hardening | **done** — focused question announcements, atomic live statuses, restored focus after program updates, larger helper text, forced-colors/reduced-motion support, regression QA |
+| 17 | P2.9 installable offline app | **done** — manifest, original 192/512/SVG icons, versioned app-shell service worker, quiet offline status, lifecycle/fallback regression QA |
+| 18 | P2.10 private backup and restore | **done** — versioned local JSON export, validated restore with replacement confirmation, privacy warning, malformed-file and round-trip regression QA |
 
 Stage5 status: working guided flow (welcome → consent → child profile → contextual home/cabinet →
 survey → calm descriptive summary → today-first game → descriptive history with same-age changes → visit-ready specialist prep), local-first storage with **multi-child**

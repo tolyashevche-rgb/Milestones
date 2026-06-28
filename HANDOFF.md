@@ -74,6 +74,15 @@ returning. This reduces avoidable pressure but does not replace expert or parent
 P2.7 replaces the mixed Unicode bottom-nav glyphs with one original outline-SVG family:
 home, observation eye, play kite, and specialist pencil. All four share one grid, stroke,
 rounded geometry, active color, and visible text labels.
+P2.8 hardens accessibility: focused route/question announcements replace a noisy live main
+region; live statuses are atomic; program controls regain focus after dynamic updates; helper
+text is larger; forced-colors and reduced-motion preferences are explicitly supported.
+P2.9 makes Stage5 installable and offline-capable after one complete online load: manifest,
+original SVG/192/512 icons, a versioned service-worker app shell, and a quiet offline status.
+The core curated flow is cached; child data remains local in browser storage.
+P2.10 adds private local backup/restore under collapsed data controls. Exports are versioned
+JSON files containing sensitive observations; restore validates structure and answer states,
+requires replacement confirmation, and never uploads the file.
 
 ## Key decisions & findings (do NOT re-litigate)
 
@@ -134,6 +143,38 @@ rounded geometry, active color, and visible text labels.
 ---
 
 ## Work log (newest first)
+
+### 2026-06-29 — P2.10 private local backup and restore
+- Added a versioned JSON backup download under collapsed data settings with a plain privacy
+  warning. The app does not upload the file or require an account.
+- Restore accepts only the current Milestones schema, caps file size, validates child ids,
+  profiles, storage containers, survey answer states, history, and specialist notes, then asks
+  before replacing the current local store. Invalid files leave existing data untouched.
+- Added round-trip and deliberate tampering regression coverage, updated the PWA cache to
+  P2.10, and moved the unstarted validation baseline to P2.10. Syntax, full regression, and
+  diff checks pass.
+
+### 2026-06-29 — P2.9 installable offline app
+- Added a standards-based web manifest, theme/install metadata, and an original kite icon in
+  SVG plus 192/512 PNG sizes. No third-party artwork or external runtime dependency is used.
+- Added a versioned service worker that pre-caches the complete Stage5 shell and canonical UA
+  content, removes only older Stage5 caches, uses network-first navigation, and falls back to
+  cached `index.html` offline. A small appbar status appears only while offline.
+- Added manifest/icon assertions and an isolated service-worker lifecycle test covering install,
+  activate, old-cache cleanup, and offline navigation. Syntax, regression, HTTP/MIME, and diff
+  checks pass. The in-app browser connection timed out during live registration inspection, so
+  that browser-only check is not claimed. Validation baseline moved to P2.9 before outreach.
+
+### 2026-06-28 — P2.8 accessibility hardening
+- Removed `aria-live` from the entire changing main region and focused the relevant heading or
+  current survey question instead. Survey and copy feedback now use concise atomic statuses.
+- Preserved keyboard focus after completion, accordion, and activity-choice re-renders. Added
+  semantic progress values to the resumable home card and enlarged key helper, label, and
+  navigation text.
+- Added forced-colors active-state support while retaining reduced-motion rules. Updated the
+  validation baseline from P2.7 to P2.8 because external review has not started. Automated QA,
+  syntax checks, diff checks, and localhost asset checks pass; the in-app browser connection
+  timed out twice during post-change visual verification, so no visual pass is claimed.
 
 ### 2026-06-28 — Validation materials synchronized to P2.7
 - Updated the parent facilitator pack to v1.1 so its scripted answers and controls match the

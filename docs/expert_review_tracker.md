@@ -2,7 +2,7 @@
 
 Version: Stage 5
 Started: 2026-06-16
-Interface review baseline: Stage 5 UA / P2.7 (2026-06-28)
+Interface review baseline: Stage 5 UA / P2.10 (2026-06-29)
 Companion to: [expert_review_checklist.md](expert_review_checklist.md) (the *questions*); this
 file is the *answers + status*. It is the Stage 5 deliverable #1 from
 [action_plan.md](action_plan.md).

@@ -25,6 +25,9 @@ const OBSERVATION_LABELS = {
 };
 
 const STORAGE_KEY = "milestonesMap.stage5.ua";
+const BACKUP_SCHEMA = "milestones.stage5.ua.backup";
+const BACKUP_VERSION = 1;
+const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
 
 // ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
 function emptySpecialistPrep(noticed = "") {
@@ -66,6 +69,68 @@ function migrate(s) {
 }
 function load() { try { return migrate(JSON.parse(localStorage.getItem(STORAGE_KEY))); } catch { return freshStore(); } }
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
+function backupPayload(source = store) {
+  return {
+    schema: BACKUP_SCHEMA,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    data: JSON.parse(JSON.stringify(source))
+  };
+}
+function isRecord(value) { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
+function validateBackupPayload(payload) {
+  const fail = (error) => ({ ok: false, error });
+  if (!isRecord(payload) || payload.schema !== BACKUP_SCHEMA || payload.version !== BACKUP_VERSION || !isRecord(payload.data)) {
+    return fail("Це не схоже на резервну копію Milestones.");
+  }
+  const imported = migrate(JSON.parse(JSON.stringify(payload.data)));
+  if (!Array.isArray(imported.children) || imported.children.length > 20) return fail("Файл має непідтримувану структуру.");
+  if (imported.consent != null && (!isRecord(imported.consent) || typeof imported.consent.accepted !== "boolean")) {
+    return fail("У файлі є пошкоджені налаштування.");
+  }
+  const childIds = new Set();
+  for (const child of imported.children) {
+    if (!isRecord(child) || typeof child.id !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(child.id) || childIds.has(child.id)) {
+      return fail("У файлі є пошкоджений профіль.");
+    }
+    childIds.add(child.id);
+    const parsedDob = typeof child.dob === "string" ? parseLocalDate(child.dob) : null;
+    if (typeof child.name !== "string" || child.name.length > 200 || !parsedDob || parsedDob > new Date()) {
+      return fail("У файлі є некоректні дані профілю.");
+    }
+    if (!isRecord(child.surveys) || !Array.isArray(child.snapshots) || !isRecord(child.programSelections)
+      || !isRecord(child.activityCompletions) || !Array.isArray(child.triedActivities)) {
+      return fail("У файлі є пошкоджені дані спостережень.");
+    }
+    if (Object.values(child.programSelections).some((selection) => !isRecord(selection))
+      || Object.values(child.activityCompletions).some((completion) => !isRecord(completion))
+      || child.triedActivities.some((id) => typeof id !== "string")
+      || child.snapshots.some((snapshot) => !isRecord(snapshot) || !isRecord(snapshot.states || {})
+        || (snapshot.questionIds != null && !Array.isArray(snapshot.questionIds)))) {
+      return fail("У файлі є пошкоджена історія або план.");
+    }
+    for (const survey of Object.values(child.surveys)) {
+      if (!isRecord(survey) || !isRecord(survey.states || {})
+        || (survey.questionIds != null && !Array.isArray(survey.questionIds))
+        || (survey.variants != null && !isRecord(survey.variants))) {
+        return fail("У файлі є пошкоджені відповіді.");
+      }
+      if (Object.values(survey.states || {}).some((state) => !["yes", "not_sure", "not_yet"].includes(state))) {
+        return fail("У файлі є невідомий варіант відповіді.");
+      }
+    }
+    if (child.notes != null && typeof child.notes !== "string") return fail("У файлі є пошкоджені нотатки.");
+    if (child.specialistPrep != null && (!isRecord(child.specialistPrep)
+      || ["noticed", "tried", "questions"].some((key) => child.specialistPrep[key] != null && typeof child.specialistPrep[key] !== "string"))) {
+      return fail("У файлі є пошкоджені нотатки для фахівця.");
+    }
+    child.notes = child.notes || "";
+    child.specialistPrep = child.specialistPrep || emptySpecialistPrep(child.notes);
+    specialistPrepFor(child);
+  }
+  imported.activeChildId = childIds.has(imported.activeChildId) ? imported.activeChildId : (imported.children[0]?.id || null);
+  return { ok: true, store: imported };
+}
 // Active child — per-child data lives here. Null only before the first child exists.
 function cc() { return store.children.find((c) => c.id === store.activeChildId) || store.children[0] || null; }
 let store = load();
@@ -75,6 +140,7 @@ store.children.forEach((c) => {
   specialistPrepFor(c);
 });
 let profileEditing = false;
+let dataNotice = "";
 
 // ---- helpers ----
 function localDateString(date = new Date()) {
@@ -231,7 +297,8 @@ function show(screen) {
   renderAppbar(screen);
   if (screen === "program") afterProgramRender();
   window.scrollTo(0, 0);
-  root.querySelector("h1")?.focus({ preventScroll: true });
+  const focusTarget = screen === "survey" ? root.querySelector("#questionTitle") : root.querySelector("h1");
+  focusTarget?.focus({ preventScroll: true });
 }
 
 function renderNav(active) {
@@ -383,7 +450,7 @@ function homeNextStep(age) {
 
 function homeNextStepHtml(step) {
   const progress = step.progress ? `
-    <div class="next-step-progress" aria-label="${step.progress.value} з ${step.progress.total} питань збережено">
+    <div class="next-step-progress" role="progressbar" aria-label="Збережені відповіді" aria-valuemin="0" aria-valuemax="${step.progress.total}" aria-valuenow="${step.progress.value}">
       <span style="width:${step.progress.total ? (step.progress.value / step.progress.total) * 100 : 0}%"></span>
     </div>` : "";
   const action = step.route ? `<button type="button" class="btn primary" data-primary-action="${step.kind}" data-go="${step.route}">${step.cta}</button>` : "";
@@ -424,6 +491,15 @@ function renderHome() {
       ${next ? `<p class="note">Наступне вікове спостереження — приблизно у ${next} місяців.</p>` : ""}
       <details class="data-controls">
         <summary>Керування профілем і даними</summary>
+        <div class="backup-controls">
+          <p class="muted small">Резервна копія залишається у вас. Вона містить локальні спостереження, тому зберігайте файл приватно.</p>
+          <div class="backup-actions">
+            <button type="button" id="exportBackup" class="btn ghost">Зберегти копію</button>
+            <button type="button" id="chooseBackup" class="btn">Відновити з файлу</button>
+            <input id="importBackup" class="visually-hidden" type="file" accept="application/json,.json" tabindex="-1">
+          </div>
+          <p id="backupStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true">${esc(dataNotice)}</p>
+        </div>
         <div class="home-danger">
           <button type="button" id="editProfile" class="linklike">Редагувати профіль</button>
           <button type="button" id="deleteChild" class="linklike danger">Видалити цю дитину</button>
@@ -480,8 +556,8 @@ function renderSurvey() {
       <div class="progress-mini" role="progressbar" aria-label="Хід спостереження" aria-valuemin="1" aria-valuemax="${ids.length}" aria-valuenow="${position}"><span style="width:${ids.length ? (position / ids.length) * 100 : 0}%"></span></div>
       <article class="q-card q-card-single">
         <span class="mini-label">${esc(m.domain)}</span>
-        <h2 id="questionTitle">${esc(m.title)}</h2>
-        <p class="question-prompt">${esc(prompt)}</p>
+        <h2 id="questionTitle" tabindex="-1" aria-describedby="questionPrompt">${esc(m.title)}</h2>
+        <p id="questionPrompt" class="question-prompt">${esc(prompt)}</p>
         ${(typeof whoWindowFor === "function" && whoWindowFor(id)) ? `<p class="who-window">${esc(whoWindowFor(id))}</p>` : ""}
         <div class="state-controls" data-id="${id}" data-auto-advance="true" role="group" aria-labelledby="questionTitle">
           <button type="button" data-state="yes" class="${s === "yes" ? "active" : ""}" aria-pressed="${s === "yes"}">Бачу</button>
@@ -491,7 +567,7 @@ function renderSurvey() {
       </article>
       <div class="survey-actions survey-actions-auto">
         ${surveyUi.index > 0 ? `<button type="button" id="surveyBack" class="btn ghost">Назад</button>` : ""}
-        <p id="surveyAdvanceStatus" class="survey-auto-hint" role="status">Один дотик зберігає відповідь. На наступному екрані можна повернутися.</p>
+        <p id="surveyAdvanceStatus" class="survey-auto-hint" role="status" aria-live="polite" aria-atomic="true">Один дотик зберігає відповідь. На наступному екрані можна повернутися.</p>
       </div>
       <p class="fineprint center">Можна зупинитися будь-коли — відповіді вже збережені. Це не тест чи оцінка дитини.</p>
     </section>`;
@@ -848,7 +924,7 @@ function renderAsk() {
           <label class="field"><span>Що хочете запитати?</span><textarea id="prepQuestions" data-prep-field="questions" rows="3" placeholder="Наприклад: на що звернути увагу до наступного візиту?">${esc(prep.questions)}</textarea></label>
         </div>
       </details>
-      <div class="thumb-action"><p id="copyStatus" class="thumb-status" role="status"></p><button type="button" id="copySummary" class="btn primary">Скопіювати підсумок</button></div>` : ""}
+      <div class="thumb-action"><p id="copyStatus" class="thumb-status" role="status" aria-live="polite" aria-atomic="true"></p><button type="button" id="copySummary" class="btn primary">Скопіювати підсумок</button></div>` : ""}
     </section>`;
 }
 
@@ -893,6 +969,16 @@ function downloadIcs(title) {
     "RRULE:FREQ=DAILY;COUNT=14", "SUMMARY:" + title, "DESCRIPTION:Коротка гра з дитиною (Карта розвитку)", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
   const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
   const a = document.createElement("a"); a.href = url; a.download = "milestones-task.ics"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadBackup() {
+  const contents = JSON.stringify(backupPayload(), null, 2);
+  const url = URL.createObjectURL(new Blob([contents], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `milestones-backup-${localDateString()}.json`;
+  a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -965,6 +1051,18 @@ document.addEventListener("click", async (e) => {
     else cc().activityCompletions[key] = { activityId, completedAt: new Date().toISOString() };
     save();
     renderProgramList();
+    document.getElementById("toggleTodayDone")?.focus({ preventScroll: true });
+    return;
+  }
+  if (e.target.id === "exportBackup") {
+    downloadBackup();
+    dataNotice = "Резервну копію збережено. Не надсилайте цей файл стороннім.";
+    const status = document.getElementById("backupStatus");
+    if (status) status.textContent = dataNotice;
+    return;
+  }
+  if (e.target.id === "chooseBackup") {
+    document.getElementById("importBackup")?.click();
     return;
   }
   if (e.target.id === "addIcs") { const t = todaysTask(currentAge()); downloadIcs(t ? t.act.title : "Гра з дитиною"); return; }
@@ -1022,6 +1120,7 @@ document.addEventListener("click", async (e) => {
     const day = Number(dayToggle.dataset.dayToggle);
     programState.openDay = (programState.openDay === day) ? null : day;
     renderProgramList();
+    document.querySelector(`[data-day-toggle="${day}"]`)?.focus({ preventScroll: true });
     return;
   }
   const dayOpt = e.target.closest("[data-day-opt]");
@@ -1033,6 +1132,7 @@ document.addEventListener("click", async (e) => {
     save();
     programState.openDay = day;
     renderProgramList();
+    document.querySelector(`[data-day-opt="${day}"][data-opt="${dayOpt.dataset.opt}"]`)?.focus({ preventScroll: true });
     return;
   }
 
@@ -1066,6 +1166,47 @@ document.addEventListener("input", (e) => {
     specialistPrepFor()[prepField] = e.target.value;
     if (prepField === "noticed") cc().notes = e.target.value;
     save();
+  }
+});
+
+document.addEventListener("change", async (e) => {
+  if (e.target.id !== "importBackup") return;
+  const input = e.target;
+  const file = input.files && input.files[0];
+  const status = document.getElementById("backupStatus");
+  if (!file) return;
+  if (file.size > MAX_BACKUP_BYTES) {
+    dataNotice = "Файл завеликий для резервної копії Milestones.";
+    if (status) status.textContent = dataNotice;
+    input.value = "";
+    return;
+  }
+  try {
+    let parsed;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch {
+      dataNotice = "Файл не є коректною резервною копією Milestones.";
+      if (status) status.textContent = dataNotice;
+      return;
+    }
+    const checked = validateBackupPayload(parsed);
+    if (!checked.ok) {
+      dataNotice = checked.error;
+      if (status) status.textContent = dataNotice;
+      return;
+    }
+    if (!confirm("Відновлення замінить поточні локальні дані. Продовжити?")) return;
+    store = checked.store;
+    save();
+    dataNotice = "Резервну копію відновлено локально.";
+    setHash("home");
+    route();
+  } catch {
+    dataNotice = "Не вдалося прочитати резервну копію.";
+    if (status) status.textContent = dataNotice;
+  } finally {
+    input.value = "";
   }
 });
 
