@@ -49,7 +49,7 @@ you must never cross".)
 
 Stage5 UA is a complete MVP loop: onboarding → consent → **multi-child** profile → cabinet →
 survey (full coverage + phrasing variants + WHO windows) → results/vision → 1–2 week program →
-descriptive history with same-age change details → ask/notes → `.ics` export. Local-first (`localStorage`), GDPR-minded
+descriptive history with same-age change details → visit-ready specialist prep → `.ics` export. Local-first (`localStorage`), GDPR-minded
 (consent + erase). Engine is pure and traceable — it **selects** from curated, sourced content,
 never generates at runtime. P1 now uses one question per screen, a calm descriptive summary,
 the nearest 7 days of the 14-day cycle, a reversible “done today” state, and automated regression QA.
@@ -60,6 +60,20 @@ switches to a calm no-action state after today's game is complete, and collapses
 destinations plus destructive data controls.
 P2.3 makes the program today-first: one complete activity stays open with numbered steps and
 one completion control; alternative activities and the next six days are collapsed by default.
+P2.4 makes the specialist tab visit-ready: one compact observation overview, collapsed
+discussion prompts, three short note fields, and a copyable summary. Existing free-form notes
+migrate into “Що ви помітили?” and all preparation remains isolated per child.
+P2.5 adds a one-thumb interaction pass: answer selection auto-advances, repeated home profile
+content is gone, activity instructions begin above the fold, and the primary actions on
+results/program/specialist screens stay directly above the bottom navigation. Optional notes
+and secondary explanations remain collapsed.
+P2.6 adds emotion-aware copy guardrails without rewriting the clinical source layer: “Поки ні”
+became “Ще не помічаю”; sensitive discussion blocks first explain that one answer is not a
+conclusion and no immediate re-check is needed; survey copy explicitly permits pausing and
+returning. This reduces avoidable pressure but does not replace expert or parent validation.
+P2.7 replaces the mixed Unicode bottom-nav glyphs with one original outline-SVG family:
+home, observation eye, play kite, and specialist pencil. All four share one grid, stroke,
+rounded geometry, active color, and visible text labels.
 
 ## Key decisions & findings (do NOT re-litigate)
 
@@ -121,6 +135,62 @@ one completion control; alternative activities and the next six days are collaps
 
 ## Work log (newest first)
 
+### 2026-06-28 — Validation materials synchronized to P2.7
+- Updated the parent facilitator pack to v1.1 so its scripted answers and controls match the
+  live interface: «Ще не помічаю», one-tap survey advance with Back, the fixed game
+  action, and optional collapsed specialist notes.
+- Added explicit one-hand, one-glance, interruption-recovery, and emotional-safety observations
+  plus first-round thresholds. The test must never ask a participant to hold a real child.
+- Locked expert review and the first parent round to the Stage 5 UA / P2.7 baseline. Added
+  expert checks for gentle wording, reassurance-vs-urgency, collapsed sensitive guidance, and
+  the copied specialist summary. No outreach or live testing has been started.
+
+### 2026-06-28 — P2.7 unified bottom-navigation icon family
+- Replaced the unrelated `⌂ / ◎ / ◇ / ✎` glyphs with four original inline SVG icons: house,
+  eye, kite, and pencil. They share a 20×20 view box, 1.7 px stroke, round caps/joins, and inherit
+  the existing inactive/active navigation color.
+- Kept icons decorative for assistive technology while preserving the four visible button
+  labels and 48 px tap targets. Added a regression invariant requiring all four SVGs and
+  rejecting the legacy glyphs.
+
+### 2026-06-28 — P2.6 emotion-aware copy guardrails
+- Changed the parent-facing `not_yet` label from “Поки ні” to “Ще не помічаю” across survey,
+  history, discussion cards, and the copied specialist summary while preserving the stored
+  state key and all comparison logic.
+- Added one shared reassurance block before sensitive “discuss” guidance: one answer is not a
+  conclusion, the parent need not re-check the child immediately, and a normal example can be
+  noted for a later conversation. The underlying clinician-review text remains unchanged.
+- Extended the one-tap transition to 450 ms and made pause/return behavior explicit. Increased
+  small navigation, helper, discussion-meta, and history-label text. Regression coverage now
+  protects the gentler label and non-conclusion framing. This remains a UX hypothesis pending
+  live clinician and parent validation.
+
+### 2026-06-28 — P2.5 one-thumb and low-attention pass
+- Reduced the survey interaction from answer + Next to one answer tap with a short saved state,
+  automatic advance, and Back on subsequent questions. Added a regression simulation that
+  verifies the state is saved and the question index advances without a separate Next button.
+- Removed repeated child/age/profile controls from home and moved profile editing into data
+  management. Removed the large activity illustration and repeated rationale from the primary
+  game flow so the title and all four steps fit in the first 390×844 viewport.
+- Added one consistent thumb action above bottom navigation for results, today's completion,
+  and specialist-summary copy. Specialist note fields are now optional and collapsed;
+  numerical discussion badges and visible answer counts were removed from that screen.
+- Browser QA at 390×844 found no horizontal overflow, duplicate ids, undersized visible
+  controls, console warnings, or errors. Fixed actions sit above navigation; home, game, and
+  specialist secondary sections stay collapsed by default.
+
+### 2026-06-28 — P2.4 visit-ready specialist preparation
+- Replaced the long specialist page with a compact latest-observation card showing the child,
+  age, date, and descriptive answer counts. “When to discuss” guidance remains available under
+  one collapsed disclosure and no new developmental conclusion or medical claim was added.
+- Split the single notes textarea into “Що ви помітили?”, “Що вже пробували?”, and “Що хочете
+  запитати?”. The copy action now creates a visit-ready plain-text summary from the current
+  child only; legacy notes migrate into the first field without loss.
+- Extended regression coverage for markup, summary output, migration, and child isolation.
+  Browser QA at 390×844 found three textareas, one copy action, no overflow, undersized visible
+  controls, duplicate ids, console warnings, or errors; the five discussion items are collapsed
+  by default and expand correctly.
+
 ### 2026-06-28 — P2.3 today-first game screen
 - Replaced the seven-day accordion-first layout with one always-open activity for today.
   Activity steps now render as a compact numbered sequence with the stop guidance and one
@@ -145,7 +215,7 @@ one completion control; alternative activities and the next six days are collaps
 
 ### 2026-06-28 — P2.1 descriptive observation history
 - Rebuilt the Stage5 history screen around dated observation cards with calm counts for
-  “Бачу”, “Ще спостерігаю”, and “Поки ні”; no score or developmental rating is introduced.
+  “Бачу”, “Ще спостерігаю”, and “Ще не помічаю”; no score or developmental rating is introduced.
 - Added same-age comparison against the previous saved observation, including newly observed
   items and changed answers, plus an expandable full-answer view. New snapshots retain their
   milestone ids while legacy snapshots continue to render from stored counts/state.

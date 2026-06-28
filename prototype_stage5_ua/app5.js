@@ -21,16 +21,30 @@ const DOMAIN_LABELS_SHORT = {
 const OBSERVATION_LABELS = {
   yes: "Бачу",
   not_sure: "Ще спостерігаю",
-  not_yet: "Поки ні"
+  not_yet: "Ще не помічаю"
 };
 
 const STORAGE_KEY = "milestonesMap.stage5.ua";
 
 // ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
+function emptySpecialistPrep(noticed = "") {
+  return { noticed: noticed || "", tried: "", questions: "" };
+}
+function specialistPrepFor(child = cc()) {
+  if (!child) return emptySpecialistPrep();
+  if (!child.specialistPrep || typeof child.specialistPrep !== "object") {
+    child.specialistPrep = emptySpecialistPrep(child.notes || "");
+  }
+  child.specialistPrep.noticed = child.specialistPrep.noticed || "";
+  child.specialistPrep.tried = child.specialistPrep.tried || "";
+  child.specialistPrep.questions = child.specialistPrep.questions || "";
+  return child.specialistPrep;
+}
 function freshChild(name, dob) {
   return { id: "child_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
            name: name || "", dob: dob || "",
-           surveys: {}, snapshots: [], programSelections: {}, activityCompletions: {}, triedActivities: [], notes: "" };
+           surveys: {}, snapshots: [], programSelections: {}, activityCompletions: {}, triedActivities: [], notes: "",
+           specialistPrep: emptySpecialistPrep() };
 }
 function freshStore() { return { consent: null, children: [], activeChildId: null }; }
 // Migrate the old single-child shape ({consent, child, surveys, ...}) into children[]. Idempotent.
@@ -45,6 +59,7 @@ function migrate(s) {
     c.programSelections = s.programSelections || {};
     c.activityCompletions = s.activityCompletions || {};
     c.triedActivities = s.triedActivities || []; c.notes = s.notes || "";
+    c.specialistPrep = s.specialistPrep || emptySpecialistPrep(c.notes);
     st.children.push(c); st.activeChildId = c.id;
   }
   return st;
@@ -57,6 +72,7 @@ let store = load();
 store.children.forEach((c) => {
   c.programSelections = c.programSelections || {};
   c.activityCompletions = c.activityCompletions || {};
+  specialistPrepFor(c);
 });
 let profileEditing = false;
 
@@ -138,6 +154,8 @@ function restartSurvey(age) {
   delete cc().programSelections[String(age)];
   delete cc().activityCompletions[completionKey(age)];
   surveyUi = { age, index: 0 };
+  surveyAdvancePending = false;
+  surveyAdvanceToken += 1;
   save();
 }
 
@@ -173,11 +191,21 @@ function completedActivityToday(age) { return cc().activityCompletions[completio
 
 // ---- routing ----
 const NAV = [
-  { route: "home", label: "Головна", icon: "⌂" },
-  { route: "survey", label: "Спостереження", icon: "◎" },
-  { route: "program", label: "Гра", icon: "◇" },
-  { route: "ask", label: "Фахівець", icon: "?" }
+  { route: "home", label: "Головна", icon: "home" },
+  { route: "survey", label: "Спостереження", icon: "observe" },
+  { route: "program", label: "Гра", icon: "play" },
+  { route: "ask", label: "Фахівець", icon: "pencil" }
 ];
+
+function navIcon(name) {
+  const paths = {
+    home: `<path d="M3.5 9.2 10 3.4l6.5 5.8v7.1a1.3 1.3 0 0 1-1.3 1.3H4.8a1.3 1.3 0 0 1-1.3-1.3Z"/><path d="M7.6 17.6v-5.2h4.8v5.2"/>`,
+    observe: `<path d="M2.4 10s2.8-4.4 7.6-4.4 7.6 4.4 7.6 4.4-2.8 4.4-7.6 4.4S2.4 10 2.4 10Z"/><circle cx="10" cy="10" r="2.2"/>`,
+    play: `<path d="m10 2.6 6.1 6.1-6.1 6.1-6.1-6.1Z"/><path d="M10 14.8c0 1.6 2 1.4 2 3"/><path d="m10.9 16.4 2 .2-.8 1.7"/>`,
+    pencil: `<path d="m4 16 1-3.8 8.4-8.4a1.4 1.4 0 0 1 2 0l.8.8a1.4 1.4 0 0 1 0 2L7.8 15Z"/><path d="m12.2 5 2.8 2.8M5 12.2 7.8 15"/>`
+  };
+  return `<svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[name] || paths.home}</svg>`;
+}
 
 function setHash(route) { location.hash = "#/" + route; }
 function currentRoute() { return (location.hash.replace(/^#\//, "") || "home").split("?")[0]; }
@@ -216,7 +244,7 @@ function renderNav(active) {
     const isActive = active === n.route || (active === "results" && n.route === "survey");
     return `
     <button type="button" class="nav-btn ${isActive ? "active" : ""}" data-go="${target}" ${isActive ? 'aria-current="page"' : ""}>
-      <span class="nav-ico" aria-hidden="true">${n.icon}</span><span>${n.label}</span>
+      <span class="nav-ico" data-icon="${n.icon}" aria-hidden="true">${navIcon(n.icon)}</span><span>${n.label}</span>
     </button>`;
   }).join("");
 }
@@ -358,11 +386,9 @@ function homeNextStepHtml(step) {
     <div class="next-step-progress" aria-label="${step.progress.value} з ${step.progress.total} питань збережено">
       <span style="width:${step.progress.total ? (step.progress.value / step.progress.total) * 100 : 0}%"></span>
     </div>` : "";
-  const illustration = step.task ? `<div class="illus mini" aria-hidden="true">${(typeof domainIllus === "function" ? domainIllus(step.task.domain) : "")}</div>` : "";
   const action = step.route ? `<button type="button" class="btn primary" data-primary-action="${step.kind}" data-go="${step.route}">${step.cta}</button>` : "";
   return `
     <article class="card next-step ${step.kind}" aria-labelledby="nextStepTitle">
-      ${illustration}
       <span class="mini-label">${step.label}</span>
       <h2 id="nextStepTitle">${esc(step.title)}</h2>
       <p class="muted">${esc(step.body)}</p>
@@ -373,7 +399,6 @@ function homeNextStepHtml(step) {
 
 function renderHome() {
   const age = currentAge();
-  const c = cc(); const childName = (c && c.name) ? esc(c.name) : "";
   const survey = cc().surveys[age];
   const task = todaysTask(age);
   const nextStep = homeNextStep(age);
@@ -381,11 +406,7 @@ function renderHome() {
   const tested = survey && survey.date;
   return `
     <section class="screen-pad">
-      <div class="hello">
-        <span class="muted">Сьогодні</span>
-        <h1 tabindex="-1">${childName || "Для вашої дитини"}</h1>
-        <div class="profile-meta"><span class="chip">${AGE_LABELS[age]}</span><button type="button" class="profile-edit" id="editProfile">Змінити профіль</button></div>
-      </div>
+      <h1 tabindex="-1">Сьогодні</h1>
 
       ${homeNextStepHtml(nextStep)}
 
@@ -404,6 +425,7 @@ function renderHome() {
       <details class="data-controls">
         <summary>Керування профілем і даними</summary>
         <div class="home-danger">
+          <button type="button" id="editProfile" class="linklike">Редагувати профіль</button>
           <button type="button" id="deleteChild" class="linklike danger">Видалити цю дитину</button>
           <button type="button" id="eraseAll" class="linklike danger">Стерти всі мої дані</button>
         </div>
@@ -413,6 +435,8 @@ function renderHome() {
 
 // ---- survey ----
 let surveyUi = { age: null, index: 0 };
+let surveyAdvancePending = false;
+let surveyAdvanceToken = 0;
 
 function renderSurvey() {
   const age = currentAge();
@@ -447,7 +471,6 @@ function renderSurvey() {
   const s = states[id];
   const pool = variantPoolFor(age, id);
   const prompt = pool[survey.variants[id]] || m.text;
-  const isLast = surveyUi.index === ids.length - 1;
   const position = surveyUi.index + 1;
   return `
     <section class="screen-pad">
@@ -460,17 +483,17 @@ function renderSurvey() {
         <h2 id="questionTitle">${esc(m.title)}</h2>
         <p class="question-prompt">${esc(prompt)}</p>
         ${(typeof whoWindowFor === "function" && whoWindowFor(id)) ? `<p class="who-window">${esc(whoWindowFor(id))}</p>` : ""}
-        <div class="state-controls" data-id="${id}" role="group" aria-labelledby="questionTitle">
+        <div class="state-controls" data-id="${id}" data-auto-advance="true" role="group" aria-labelledby="questionTitle">
           <button type="button" data-state="yes" class="${s === "yes" ? "active" : ""}" aria-pressed="${s === "yes"}">Бачу</button>
           <button type="button" data-state="not_sure" class="${s === "not_sure" ? "active" : ""}" aria-pressed="${s === "not_sure"}">Ще спостерігаю</button>
-          <button type="button" data-state="not_yet" class="${s === "not_yet" ? "active" : ""}" aria-pressed="${s === "not_yet"}">Поки ні</button>
+          <button type="button" data-state="not_yet" class="${s === "not_yet" ? "active" : ""}" aria-pressed="${s === "not_yet"}">Ще не помічаю</button>
         </div>
       </article>
-      <div class="survey-actions">
-        <button type="button" id="surveyBack" class="btn ghost" ${surveyUi.index === 0 ? "disabled" : ""}>Назад</button>
-        <button type="button" id="surveyNext" class="btn primary" ${s ? "" : "disabled"}>${isLast ? "Побачити підсумок" : "Далі"}</button>
+      <div class="survey-actions survey-actions-auto">
+        ${surveyUi.index > 0 ? `<button type="button" id="surveyBack" class="btn ghost">Назад</button>` : ""}
+        <p id="surveyAdvanceStatus" class="survey-auto-hint" role="status">Один дотик зберігає відповідь. На наступному екрані можна повернутися.</p>
       </div>
-      <p class="fineprint center">Відповіді зберігаються автоматично. Це не оцінка дитини.</p>
+      <p class="fineprint center">Можна зупинитися будь-коли — відповіді вже збережені. Це не тест чи оцінка дитини.</p>
     </section>`;
 }
 
@@ -499,6 +522,14 @@ function domainSummary(age) {
   }).join("")}</div>`;
 }
 
+function calmDiscussionIntroHtml() {
+  return `<div class="calm-anchor"><strong>Це не висновок.</strong> Одна відповідь описує лише те, що ви помітили зараз. Не потрібно перевіряти дитину ще раз просто зараз.</div><p class="muted small">Коли буде зручно, занотуйте звичайний приклад і обговоріть його з фахівцем.</p>`;
+}
+
+function discussCardHtml(m, state) {
+  return `<article class="discuss-card"><div class="q-meta"><span>${esc(m.domain)}</span><span>${OBSERVATION_LABELS[state] || "Спостереження"}</span></div><h3>${esc(m.title)}</h3><p class="muted"><strong>Для розмови:</strong> ${esc(DISCUSS_BY_ID[m.id])}</p></article>`;
+}
+
 function renderResults() {
   const age = currentAge();
   const survey = cc().surveys[age] || { states: {} };
@@ -511,13 +542,13 @@ function renderResults() {
   const flagged = (survey.questionIds || []).map((id) => milestoneById(age, id)).filter((m) => m && (survey.states[m.id] === "not_yet" || survey.states[m.id] === "not_sure") && DISCUSS_BY_ID[m.id]);
   const discuss = flagged.length ? `
     <details class="calm-details">
-      <summary>Коли варто запитати фахівця</summary>
-      <p class="muted">Відкрийте цей блок, якщо хочете підготуватися до розмови.</p>
-      ${flagged.map((m) => `<article class="discuss-card"><div class="q-meta"><span>${esc(m.domain)}</span><span>${survey.states[m.id] === "not_yet" ? "Поки ні" : "Ще спостерігаю"}</span></div><h3>${esc(m.title)}</h3><p class="muted">${esc(DISCUSS_BY_ID[m.id])}</p></article>`).join("")}
+      <summary>Що можна спокійно обговорити</summary>
+      ${calmDiscussionIntroHtml()}
+      ${flagged.map((m) => discussCardHtml(m, survey.states[m.id])).join("")}
     </details>` : "";
 
   return `
-    <section class="screen-pad">
+    <section class="screen-pad has-thumb-action">
       <h1 tabindex="-1">Ваші спостереження</h1>
       <p class="muted">Короткий підсумок для віку ${AGE_LABELS[age]}. Це не оцінка і не діагноз.</p>
       <article class="card">
@@ -532,7 +563,7 @@ function renderResults() {
 
       ${discuss}
 
-      <button type="button" class="btn primary block" data-go="program">Почати гру на сьогодні</button>
+      <div class="thumb-action"><button type="button" class="btn primary" data-go="program">Почати гру на сьогодні</button></div>
     </section>`;
 }
 
@@ -551,7 +582,7 @@ function renderProgram() {
   const currentDay = program[currentIndex];
   programState = { age, program, openDay: null, currentDay: currentDay ? currentDay.day : null, currentIndex, selected: { ...(cc().programSelections[String(age)] || {}) } };
   return `
-    <section class="screen-pad">
+    <section class="screen-pad has-thumb-action">
       <h1 tabindex="-1">Гра на сьогодні</h1>
       <p class="muted">Одна коротка ідея — цього достатньо. Зупиніться раніше, якщо дитина втомилася або втратила інтерес.</p>
       <div id="programToday"></div>
@@ -591,24 +622,24 @@ function dayChoiceHtml(age, d, sel) {
   return `<details class="activity-switcher"><summary>Хочете іншу гру?</summary><div class="activity-switcher-body">${opts}${bonusHtml}</div></details>`;
 }
 
-function dayBodyHtml(age, d, isToday) {
+function dayBodyHtml(age, d) {
   const sel = programState.selected[d.day] || d.options[0];
-  const done = isToday && completedActivityToday(age)?.activityId === sel;
-  const completion = isToday ? `<button type="button" id="toggleTodayDone" class="btn ${done ? "ghost" : "primary"} block" data-activity-id="${sel}" aria-pressed="${done}">${done ? "✓ Виконано сьогодні" : "Позначити виконаним"}</button>` : "";
-  return `${activityDetailHtml(age, sel)}${dayChoiceHtml(age, d, sel)}${completion}`;
+  return `${activityDetailHtml(age, sel)}${dayChoiceHtml(age, d, sel)}`;
 }
 
 function todayActivityHtml(age, d) {
   const sel = programState.selected[d.day] || d.options[0];
   const selectedDomain = domainOf(sel) || d.domain;
+  const done = completedActivityToday(age)?.activityId === sel;
   return `
     <article class="day-acc open today-game">
       <div class="today-game-head">
         <span class="day-num">Сьогодні</span>
         <span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span>
       </div>
-      <div class="day-acc-body">${dayBodyHtml(age, d, true)}</div>
-    </article>`;
+      <div class="day-acc-body">${dayBodyHtml(age, d)}</div>
+    </article>
+    <div class="thumb-action"><button type="button" id="toggleTodayDone" class="btn ${done ? "ghost" : "primary"}" data-activity-id="${sel}" aria-pressed="${done}">${done ? "✓ Виконано сьогодні" : "Позначити виконаним"}</button></div>`;
 }
 
 function dayAccordionHtml(age, d) {
@@ -624,7 +655,7 @@ function dayAccordionHtml(age, d) {
         <span class="day-acc-title">${esc(selAct ? selAct.title : "")}</span>
         <span class="day-acc-caret" aria-hidden="true">${open ? "▾" : "▸"}</span>
       </button>
-      ${open ? `<div class="day-acc-body" id="${bodyId}">${dayBodyHtml(age, d, false)}</div>` : ""}
+      ${open ? `<div class="day-acc-body" id="${bodyId}">${dayBodyHtml(age, d)}</div>` : ""}
     </article>`;
 }
 
@@ -646,15 +677,14 @@ function activityDetailHtml(age, id) {
   const note = (typeof authorNoteFor === "function") ? authorNoteFor(a.id) : null;
   // Plain-language note: keep author + the actionable idea; the internal mechanism mapping
   // stays in data for traceability but is not shown as jargon to parents.
-  const basis = a.evidence || note ? `<details class="evidence-details"><summary>Чому ця гра тут</summary>
+  const basis = a.why || a.evidence || note ? `<details class="evidence-details"><summary>Чому ця гра тут</summary>
+    ${a.why ? `<p>${esc(a.why)}</p>` : ""}
     ${a.evidence ? `<p><strong>Основа:</strong> ${esc(evidenceFriendly(a.evidence))}. <strong>Джерело:</strong> ${esc(sourceFriendly(a.source))}.</p>` : ""}
     ${note ? `<p><strong>Ідея ${esc(note.author)}:</strong> ${esc(note.idea)}.</p>` : ""}
   </details>` : "";
   return `
-    <div class="illus" aria-hidden="true">${(typeof domainIllus === "function" ? domainIllus(domainOf(a.id)) : "")}</div>
-    <div class="tag-row"><span class="chip">${DOMAIN_LABELS[domainOf(a.id)] || a.domain}</span><span class="chip">${esc(a.time)}</span><span class="chip">${esc(a.materials)}</span></div>
-    <h2>${esc(a.title)}</h2>
-    <p class="muted">${esc(a.why)}</p>
+    <h2 class="activity-title">${esc(a.title)}</h2>
+    <div class="tag-row activity-quick-meta"><span class="chip">${esc(a.time)}</span><span class="chip">${esc(a.materials)}</span></div>
     <div class="steps"><strong>Кроки</strong><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>
     <div class="stop"><strong>Коли зупинитися:</strong> ${esc(a.stop)}</div>
     ${basis}`;
@@ -749,7 +779,7 @@ function historySnapshotHtml(snap, previous, isLatest) {
       <div class="history-counts" aria-label="Підсумок відповідей">
         <div><strong>${counts.observed}</strong><span>Бачу</span></div>
         <div><strong>${counts.notSure}</strong><span>Ще спостерігаю</span></div>
-        <div><strong>${counts.notYet}</strong><span>Поки ні</span></div>
+        <div><strong>${counts.notYet}</strong><span>Ще не помічаю</span></div>
       </div>
       ${historyComparisonHtml(snap, previous)}
       <details class="history-details">
@@ -781,28 +811,55 @@ function renderProgress() {
 }
 
 // ---- ask ----
+function visitDateLabel(value) {
+  const date = new Date(value);
+  return value && !isNaN(date) ? date.toLocaleDateString("uk-UA", { dateStyle: "medium" }) : "Ще не завершено";
+}
+
 function renderAsk() {
   const age = currentAge();
   const survey = cc().surveys[age] || { states: {}, questionIds: [] };
-  const flagged = (survey.questionIds || []).map((id) => milestoneById(age, id)).filter((m) => m && (survey.states[m.id] === "not_yet" || survey.states[m.id] === "not_sure") && DISCUSS_BY_ID[m.id]);
-  const notes = cc().notes || "";
+  const ids = survey.questionIds || [];
+  const flagged = ids.map((id) => milestoneById(age, id)).filter((m) => m && (survey.states[m.id] === "not_yet" || survey.states[m.id] === "not_sure") && DISCUSS_BY_ID[m.id]);
+  const prep = specialistPrepFor();
+  const flaggedList = flagged.length
+    ? `${calmDiscussionIntroHtml()}${flagged.map((m) => discussCardHtml(m, survey.states[m.id])).join("")}`
+    : `<p class="muted small">У цьому спостереженні немає пунктів із підказкою для обговорення.</p>`;
   return `
-    <section class="screen-pad">
-      <h1 tabindex="-1">Для розмови з фахівцем</h1>
-      <p class="muted">Збережіть те, що помітили, і спокійно обговоріть під час візиту.</p>
-      <h2 class="mt">За вашими відповідями</h2>
-      ${flagged.length ? flagged.map((m) => `<article class="discuss-card"><div class="q-meta"><span>${esc(m.domain)}</span><span>${survey.states[m.id] === "not_yet" ? "Поки ні" : "Ще спостерігаю"}</span></div><h3>${esc(m.title)}</h3><p class="muted">${esc(DISCUSS_BY_ID[m.id])}</p></article>`).join("") : `<p class="muted">Поки немає пунктів, які ви позначили «Ще спостерігаю» або «Поки ні».</p>`}
-      <label class="field mt"><span>Нотатки для візиту</span><textarea id="askNotes" rows="5" placeholder="Що помітили, що пробували, що хочете запитати?">${esc(notes)}</textarea></label>
-      <button type="button" id="copySummary" class="btn ghost block">Скопіювати підсумок для фахівця</button>
-      <p id="copyStatus" class="muted small" role="status"></p>
+    <section class="screen-pad${ids.length ? " has-thumb-action" : ""}">
+      <h1 tabindex="-1">Підготовка до розмови</h1>
+      <p class="muted">Зберіть спостереження й запитання в одному місці. Це нотатка для розмови, а не висновок про розвиток.</p>
+
+      <article class="visit-overview" aria-label="Огляд останнього спостереження">
+        <div class="visit-overview-head">
+          <div><span class="mini-label">Останнє спостереження</span><h2>${esc(cc().name || "Дитина")} · ${esc(AGE_LABELS[age])}</h2></div>
+          <time datetime="${esc(survey.date || "")}">${esc(visitDateLabel(survey.date))}</time>
+        </div>
+        ${ids.length ? `<p class="visit-ready-line">Автоматичний підсумок уже готовий.</p>` : `<p class="muted small">Спершу завершіть коротке спостереження — тоді тут з’явиться автоматичний підсумок.</p><button type="button" class="btn ghost block" data-go="survey">Почати спостереження</button>`}
+        ${ids.length ? `<details class="visit-discuss"><summary>Що можна спокійно обговорити</summary><div class="visit-discuss-body">${flaggedList}</div></details>` : ""}
+      </article>
+
+      ${ids.length ? `<p class="local-note">Підсумок можна скопіювати одразу. Власні нотатки — необов’язкові.</p>
+      <details class="visit-notes">
+        <summary><span>Додати свої нотатки</span><span class="muted small">необов’язково</span></summary>
+        <div class="visit-prep" aria-label="Ваші короткі нотатки">
+          <label class="field"><span>Що ви помітили?</span><textarea id="prepNoticed" data-prep-field="noticed" rows="3" placeholder="Наприклад: коли кличу зліва, частіше повертає голову…">${esc(prep.noticed)}</textarea></label>
+          <label class="field"><span>Що вже пробували?</span><textarea id="prepTried" data-prep-field="tried" rows="3" placeholder="Наприклад: короткі голосові ігри два дні…">${esc(prep.tried)}</textarea></label>
+          <label class="field"><span>Що хочете запитати?</span><textarea id="prepQuestions" data-prep-field="questions" rows="3" placeholder="Наприклад: на що звернути увагу до наступного візиту?">${esc(prep.questions)}</textarea></label>
+        </div>
+      </details>
+      <div class="thumb-action"><p id="copyStatus" class="thumb-status" role="status"></p><button type="button" id="copySummary" class="btn primary">Скопіювати підсумок</button></div>` : ""}
     </section>`;
 }
 
 function summaryText() {
   const age = currentAge();
-  const survey = cc().surveys[age] || { states: {} };
-  const pick = (st) => (MILESTONES_BY_AGE[age] || []).filter((m) => survey.states[m.id] === st).map((m) => "- " + m.title).join("\n") || "- поки нічого";
-  return `Вік: ${AGE_LABELS[age]}\nМета: нотатки для розмови про розвиток, не діагностика і не скринінг\n\nБачу:\n${pick("yes")}\n\nЩе спостерігаю:\n${pick("not_sure")}\n\nПоки ні:\n${pick("not_yet")}\n\nНотатки:\n${cc().notes || "- немає"}\n\nПитання до фахівця:\n1.\n2.\n3.`;
+  const survey = cc().surveys[age] || { states: {}, questionIds: [] };
+  const ids = survey.questionIds || [];
+  const prep = specialistPrepFor();
+  const pick = (st) => ids.map((id) => milestoneById(age, id)).filter((m) => m && survey.states[m.id] === st).map((m) => "- " + m.title).join("\n") || "- нічого не позначено";
+  const note = (value) => value.trim() || "- немає";
+  return `ПІДГОТОВКА ДО РОЗМОВИ З ФАХІВЦЕМ\n\nДитина: ${cc().name || "не вказано"}\nВік: ${AGE_LABELS[age]}\nДата спостереження: ${visitDateLabel(survey.date)}\nМета: нотатки для розмови про розвиток, не діагностика і не скринінг\n\nБачу:\n${pick("yes")}\n\nЩе спостерігаю:\n${pick("not_sure")}\n\nЩе не помічаю:\n${pick("not_yet")}\n\nЩО ПОМІТИЛИ\n${note(prep.noticed)}\n\nЩО ВЖЕ ПРОБУВАЛИ\n${note(prep.tried)}\n\nПИТАННЯ ДО ФАХІВЦЯ\n${note(prep.questions)}`;
 }
 
 // ---- snapshot on finishing a survey ----
@@ -923,25 +980,19 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (e.target.id === "surveyBack") {
+    surveyAdvancePending = false;
+    surveyAdvanceToken += 1;
     surveyUi.index = Math.max(0, surveyUi.index - 1);
     show("survey");
-    return;
-  }
-  if (e.target.id === "surveyNext") {
-    const age = currentAge();
-    const survey = cc().surveys[age];
-    const ids = survey.questionIds || [];
-    const currentId = ids[surveyUi.index];
-    if (!currentId || !survey.states[currentId]) return;
-    if (surveyUi.index >= ids.length - 1) finishSurvey();
-    else { surveyUi.index += 1; show("survey"); }
     return;
   }
 
   const stateBtn = e.target.closest(".state-controls button");
   if (stateBtn) {
+    if (surveyAdvancePending) return;
     const wrap = stateBtn.closest(".state-controls");
     const age = currentAge();
+    const currentIndex = surveyUi.index;
     cc().surveys[age] = cc().surveys[age] || { states: {}, questionIds: questionIdsFor(age) };
     cc().surveys[age].states[wrap.dataset.id] = stateBtn.dataset.state;
     save();
@@ -951,7 +1002,18 @@ document.addEventListener("click", async (e) => {
     const ids = cc().surveys[age].questionIds || [];
     const answered = ids.filter((id) => cc().surveys[age].states[id]).length;
     const saved = document.querySelector(".survey-progress-row span:last-child"); if (saved) saved.textContent = `${answered} збережено`;
-    const next = document.getElementById("surveyNext"); if (next) next.disabled = false;
+    const status = document.getElementById("surveyAdvanceStatus");
+    if (status) status.textContent = currentIndex >= ids.length - 1 ? "Збережено. Спокійно готуємо підсумок…" : "Збережено. Переходимо далі…";
+    wrap.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+    surveyAdvancePending = true;
+    const advanceToken = ++surveyAdvanceToken;
+    window.setTimeout(() => {
+      if (advanceToken !== surveyAdvanceToken) return;
+      surveyAdvancePending = false;
+      if (currentRoute() !== "survey" || currentAge() !== age) return;
+      if (currentIndex >= ids.length - 1) finishSurvey();
+      else { surveyUi.index = currentIndex + 1; show("survey"); }
+    }, 450);
     return;
   }
 
@@ -999,7 +1061,12 @@ document.addEventListener("input", (e) => {
     if (button) button.disabled = Boolean(checked.error);
     e.target.toggleAttribute("aria-invalid", Boolean(checked.error));
   }
-  if (e.target.id === "askNotes") { cc().notes = e.target.value; save(); }
+  const prepField = e.target.dataset.prepField;
+  if (prepField && ["noticed", "tried", "questions"].includes(prepField)) {
+    specialistPrepFor()[prepField] = e.target.value;
+    if (prepField === "noticed") cc().notes = e.target.value;
+    save();
+  }
 });
 
 window.addEventListener("hashchange", route);

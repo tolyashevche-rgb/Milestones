@@ -102,6 +102,7 @@ function testContentAndEngine() {
 
 function appContext() {
   const storage = new Map();
+  const listeners = {};
   const nodes = {
     screen: { innerHTML: "", querySelector: () => null },
     bottomNav: { innerHTML: "", style: {} },
@@ -115,15 +116,17 @@ function appContext() {
       removeItem: (key) => storage.delete(key)
     },
     document: {
-      addEventListener: () => {},
-      getElementById: (id) => nodes[id] || null
+      addEventListener: (type, handler) => { listeners[type] = handler; },
+      getElementById: (id) => nodes[id] || null,
+      querySelector: () => null
     },
-    window: { addEventListener: () => {}, scrollTo: () => {} },
+    window: { addEventListener: () => {}, scrollTo: () => {}, setTimeout: (callback) => callback() },
     location: { hash: "#/welcome" },
     navigator: {},
     confirm: () => true,
     URL: { createObjectURL: () => "blob:test", revokeObjectURL: () => {} },
-    Blob: function Blob() {}
+    Blob: function Blob() {},
+    __listeners: listeners
   });
   run(context, "prototype_stage4_ua/data_ua.js");
   run(context, "prototype_stage4_ua/engine.js");
@@ -142,10 +145,43 @@ function testAppState() {
     const second = freshChild("Друга", "2025-09-28");
     store = { consent: { accepted: true }, children: [first, second], activeChildId: first.id };
 
+    renderNav("home");
+    const navMarkup = document.getElementById("bottomNav").innerHTML;
+    const navIconsOkay = (navMarkup.match(/class="nav-icon"/g) || []).length === 4
+      && ["home", "observe", "play", "pencil"].every((name) => navMarkup.includes('data-icon="' + name + '"'))
+      && !navMarkup.includes("⌂") && !navMarkup.includes("◎") && !navMarkup.includes("◇") && !navMarkup.includes("✎");
+
     const ids = questionIdsFor(4);
     const startStep = homeNextStep(4);
     const startMarkup = renderHome();
-    first.surveys[4].states[ids[0]] = "yes";
+    const surveyMarkup = renderSurvey();
+    const emotionalCopyOkay = OBSERVATION_LABELS.not_yet === "Ще не помічаю"
+      && surveyMarkup.includes("Ще не помічаю")
+      && !surveyMarkup.includes("Поки ні")
+      && calmDiscussionIntroHtml().includes("Це не висновок")
+      && discussCardHtml(milestoneById(4, ids[0]), "not_yet").includes("Ще не помічаю");
+    const answerWrap = {
+      dataset: { id: ids[0] },
+      querySelectorAll: () => [answerButton]
+    };
+    const answerButton = {
+      dataset: { state: "yes" },
+      disabled: false,
+      classList: { add: () => {}, remove: () => {} },
+      setAttribute: () => {},
+      closest: (selector) => selector === ".state-controls" ? answerWrap : null
+    };
+    const answerTarget = {
+      id: "",
+      closest: (selector) => selector === ".state-controls button" ? answerButton : null
+    };
+    location.hash = "#/survey";
+    __listeners.click({ target: answerTarget });
+    const oneThumbSurveyOkay = surveyMarkup.includes('data-auto-advance="true"')
+      && surveyMarkup.includes('id="surveyAdvanceStatus"')
+      && !surveyMarkup.includes('id="surveyNext"')
+      && first.surveys[4].states[ids[0]] === "yes"
+      && surveyUi.index === 1;
     const continueStep = homeNextStep(4);
     const continueMarkup = renderHome();
     first.surveys[4].states = Object.fromEntries(ids.map((id) => [id, "yes"]));
@@ -164,7 +200,9 @@ function testAppState() {
       && programMarkup.includes('<details class="week-plan">')
       && todayMarkup.includes('class="day-acc open today-game"')
       && todayMarkup.includes('class="activity-switcher"')
+      && todayMarkup.includes('class="thumb-action"')
       && todayMarkup.includes('id="toggleTodayDone"')
+      && !todayMarkup.includes('class="illus"')
       && !todayMarkup.includes('data-day-toggle=')
       && upcomingMarkup.includes('data-day-toggle=')
       && !upcomingMarkup.includes('id="toggleTodayDone"');
@@ -177,6 +215,8 @@ function testAppState() {
       && (continueMarkup.match(/data-primary-action=/g) || []).length === 1
       && (playMarkup.match(/data-primary-action=/g) || []).length === 1
       && (doneMarkup.match(/data-primary-action=/g) || []).length === 0
+      && !startMarkup.includes('class="hello"')
+      && !startMarkup.includes('class="profile-meta"')
       && doneMarkup.includes('<details class="home-more">');
     first.snapshots.push({ id: "snap_existing" });
     first.programSelections["4"] = { "1": "act_004_language_001" };
@@ -195,9 +235,23 @@ function testAppState() {
     finishSurvey();
     const finishIsIdempotent = first.snapshots.length === snapshotsAfterFirstFinish;
 
-    first.notes = "лише перша";
+    first.specialistPrep = { noticed: "повертає голову на голос", tried: "короткі голосові ігри", questions: "що спостерігати далі?" };
+    first.notes = first.specialistPrep.noticed;
+    const askMarkup = renderAsk();
+    const specialistSummary = summaryText();
+    const specialistPrepOkay = (askMarkup.match(/data-prep-field=/g) || []).length === 3
+      && askMarkup.includes('class="visit-overview"')
+      && askMarkup.includes('class="visit-discuss"')
+      && askMarkup.includes('class="visit-notes"')
+      && askMarkup.includes('class="thumb-action"')
+      && !askMarkup.includes('class="visit-badge"')
+      && askMarkup.includes('id="copySummary"')
+      && specialistSummary.includes("Дитина: Перша")
+      && specialistSummary.includes("ЩО ВЖЕ ПРОБУВАЛИ")
+      && specialistSummary.includes(first.specialistPrep.questions);
+
     store.activeChildId = second.id;
-    const childrenIsolated = cc().notes === "" && !cc().surveys[4] && !completedActivityToday(4);
+    const childrenIsolated = cc().notes === "" && specialistPrepFor().noticed === "" && !cc().surveys[4] && !completedActivityToday(4);
 
     const migrated = migrate({
       consent: { accepted: true }, child: { name: "Старий профіль", dob: "2026-02-28" },
@@ -208,6 +262,7 @@ function testAppState() {
     const migrationOkay = migrated.children.length === 1
       && migrated.children[0].snapshots.length === 1
       && migrated.children[0].notes === "нотатка"
+      && migrated.children[0].specialistPrep.noticed === "нотатка"
       && migrated.children[0].activityCompletions.sample.activityId === "activity";
 
     const oldSnapshot = { age: 4, states: { [ids[0]]: "not_sure", [ids[1]]: "yes" } };
@@ -220,7 +275,7 @@ function testAppState() {
       && changes.newlyObserved.length === 2
       && changes.changed.length === 1;
 
-    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay };
+    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay };
   })()`, context);
 
   assert.equal(result.restartOkay, true, "re-test must clear only the active plan and today's completion");
@@ -230,8 +285,12 @@ function testAppState() {
   assert.equal(result.historyOkay, true, "history comparison must support old snapshots and describe answer changes");
   assert.equal(result.homeNextStepOkay, true, "home must expose one contextual primary action and a calm done state");
   assert.equal(result.programUiOkay, true, "program must keep today's game open and future days secondary");
+  assert.equal(result.specialistPrepOkay, true, "specialist prep must keep one overview, three structured notes, and a copyable summary");
+  assert.equal(result.oneThumbSurveyOkay, true, "survey answers must save and advance without a separate next button");
+  assert.equal(result.emotionalCopyOkay, true, "sensitive observation copy must keep the emotion-aware, explicitly non-conclusive guardrails");
+  assert.equal(result.navIconsOkay, true, "bottom navigation must use one consistent four-icon SVG set");
 }
 
 testContentAndEngine();
 testAppState();
-console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, contextual home, today-first game, re-tests, history comparison, migration, multi-child isolation.");
+console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, contextual home, unified SVG navigation, one-thumb survey, emotion-aware copy, today-first game, specialist prep, re-tests, history comparison, migration, multi-child isolation.");

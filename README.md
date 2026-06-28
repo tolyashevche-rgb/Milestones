@@ -107,6 +107,23 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
+- **P2.7 unified navigation icons:** the four bottom destinations now use one original
+  outline-SVG family: home, observation eye, play kite, and specialist pencil. Every icon uses
+  the same 20×20 grid, stroke weight, rounded joins, active color, and accessible text label.
+- **P2.6 emotion-aware copy guardrails:** the most negative observation label is now “Ще не
+  помічаю” rather than “Поки ні”. Sensitive discussion sections explicitly say that one answer
+  is not a conclusion, discourage immediate re-checking, and suggest noting an ordinary example
+  for a later conversation. Survey copy now makes pausing and returning explicit. These are UX
+  guardrails, not a substitute for the pending clinician and parent-review gates.
+- **P2.5 one-thumb pass:** survey answers now save and advance with one tap while Back remains
+  available. Home no longer repeats the active child and age, today's activity opens directly
+  on the title and steps, and the main actions on results, program, and specialist prep stay in
+  a thumb-reachable bar above bottom navigation. Optional specialist notes are collapsed and
+  visible numerical “discussion” badges were removed.
+- **P2.4 visit-ready specialist prep:** the specialist tab now turns the latest observation
+  into one compact overview, keeps detailed discussion prompts collapsed, and separates the
+  parent's notes into “noticed / tried / questions”. The copyable summary includes the child,
+  date, observation groups, and those notes; legacy free-form notes migrate without loss.
 - **P2.3 today-first game:** the program screen now opens one complete activity for today,
   formats its steps as a short numbered sequence, and keeps the single completion control in
   view. Alternative activities and the next six days remain available in collapsed sections
@@ -214,9 +231,13 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | 9 | P2.1 descriptive observation history | **done** — dated records, same-age comparison, full answer details, legacy snapshot support, mobile QA |
 | 10 | P2.2 contextual home | **done** — one state-aware next step, resumable observation progress, calm done state, collapsed secondary/data controls, mobile QA |
 | 11 | P2.3 today-first game | **done** — one open activity, numbered steps, collapsed alternatives and next six days, single completion control, mobile QA |
+| 12 | P2.4 visit-ready specialist prep | **done** — compact observation overview, collapsed discussion prompts, three structured notes, copyable visit summary, legacy-note migration, mobile QA |
+| 13 | P2.5 one-thumb pass | **done** — one-tap survey advance, compact activity, thumb-reachable primary actions, optional collapsed notes, calmer specialist overview, mobile QA |
+| 14 | P2.6 emotion-aware copy guardrails | **done** — gentler observation label, non-conclusion reassurance before sensitive notes, explicit pause/return language, larger helper text, mobile QA; live validation still pending |
+| 15 | P2.7 unified navigation icons | **done** — original home/eye/kite/pencil outline SVG set with consistent sizing, stroke, active state, labels, and regression QA |
 
 Stage5 status: working guided flow (welcome → consent → child profile → contextual home/cabinet →
-survey → calm descriptive summary → today-first game → descriptive history with same-age changes → ask), local-first storage with **multi-child**
+survey → calm descriptive summary → today-first game → descriptive history with same-age changes → visit-ready specialist prep), local-first storage with **multi-child**
 (`children[]`, appbar switcher, add/delete, lossless migration), a per-age survey that asks
 **all** milestones for the age (fixed set a re-test reuses), a **curated question pool**
 (multiple phrasings per milestone, reshuffled on re-test), descriptive charts, `.ics`

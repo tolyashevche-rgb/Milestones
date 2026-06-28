@@ -1,6 +1,6 @@
 # Expert Review Checklist: CDC x Europe Milestones
 
-Version: Stage 5 draft
+Version: Stage 5 / P2.7 review baseline
 Date: 2026-06-28
 
 ## Purpose
@@ -126,6 +126,18 @@ Review whether the content might make a parent feel:
 - "This replaces a professional."
 
 If yes, revise toward calm observation and one small next step.
+
+## Current Interface Tone and Safety
+
+Review the exact parent-facing wording in the **Stage 5 UA / P2.7** prototype:
+
+- Does «Ще не помічаю» feel gentler than pass/fail language while still describing the observation clearly?
+- Is the difference between «Ще спостерігаю» and «Ще не помічаю» meaningful enough for a parent?
+- Does «Це не висновок» reduce panic without weakening an appropriate prompt to contact a professional?
+- Could the collapsed «Що можна спокійно обговорити» section hide time-sensitive guidance?
+- Is the copied specialist summary neutral, concise, and clinically useful without implying a diagnosis?
+- Could one-tap survey auto-advance make an accidental answer look more certain than it is, despite the available Back action?
+- Do optional personal notes remain clearly optional and separate from automatically generated observations?
 
 ## Review Output Format
 

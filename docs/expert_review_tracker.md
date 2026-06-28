@@ -2,6 +2,7 @@
 
 Version: Stage 5
 Started: 2026-06-16
+Interface review baseline: Stage 5 UA / P2.7 (2026-06-28)
 Companion to: [expert_review_checklist.md](expert_review_checklist.md) (the *questions*); this
 file is the *answers + status*. It is the Stage 5 deliverable #1 from
 [action_plan.md](action_plan.md).
@@ -84,6 +85,10 @@ Cross-cutting (review once, not per cell):
 | WHO motor-window mappings accurate? (esp. `ms_012_movement_001` ≈ "standing with assistance" — approximate; `who_windows.js` / `data/who_motor_windows_0_12.csv`) |  |  |  |
 | WHO "typical range" wording stays reassurance, never a deadline |  |  |  |
 | **Milestone priority** — CDC deliberately does NOT rank age milestones (act-early = any unmet). Should any be flagged higher-priority for an age, or stay uniform? (parent-raised) |  |  |  |
+| «Ще спостерігаю» vs «Ще не помічаю» is clear, gentle, and not pass/fail |  |  |  |
+| «Це не висновок» calms without delaying appropriate professional contact |  |  |  |
+| Collapsed sensitive prompts do not hide time-sensitive guidance |  |  |  |
+| Copied specialist summary is neutral, concise, and useful |  |  |  |
 
 ---
 
