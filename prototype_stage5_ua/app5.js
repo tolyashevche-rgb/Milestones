@@ -130,6 +130,7 @@ function restartSurvey(age) {
   s.date = null;
   cc().surveys[age] = s;
   delete cc().programSelections[String(age)];
+  delete cc().activityCompletions[completionKey(age)];
   surveyUi = { age, index: 0 };
   save();
 }
@@ -599,6 +600,7 @@ function summaryText() {
 function finishSurvey() {
   const age = currentAge();
   const survey = cc().surveys[age] || { states: {}, questionIds: [] };
+  if (survey.date) return;
   const ids = survey.questionIds || [];
   if (!ids.length || ids.some((id) => !survey.states[id])) return;
   const profile = profileForSurvey(survey, age);
@@ -688,9 +690,10 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (e.target.id === "finishSurvey") { finishSurvey(); return; }
-  if (e.target.id === "toggleTodayDone") {
+  const completionButton = e.target.closest("#toggleTodayDone");
+  if (completionButton) {
     const key = completionKey(programState.age);
-    const activityId = e.target.dataset.activityId;
+    const activityId = completionButton.dataset.activityId;
     const current = cc().activityCompletions[key];
     if (current && current.activityId === activityId) delete cc().activityCompletions[key];
     else cc().activityCompletions[key] = { activityId, completedAt: new Date().toISOString() };

@@ -34,6 +34,8 @@ you must never cross".)
 - **Run the app:** from repo root `py -m http.server 8000`, then open
   `http://127.0.0.1:8000/prototype_stage5_ua/index.html` (stage5 = the primary build).
 - **Syntax check:** `node --check <file.js>`.
+- **P1 regression suite:** `node tools/test_p1_qa.js` — all 5 ages, content links,
+  deterministic plans, re-tests, legacy migration, and multi-child isolation.
 - **Headless logic test:** load `prototype_stage4_ua/data_ua.js` + `engine.js` in a Node `vm`
   (pure, no DOM). For `app5.js`, stub `document`/`localStorage`/`window` (see how earlier
   multi-child / coverage tests were run — vm + fake DOM).
@@ -48,7 +50,8 @@ Stage5 UA is a complete MVP loop: onboarding → consent → **multi-child** pro
 survey (full coverage + phrasing variants + WHO windows) → results/vision → 1–2 week program →
 progress charts → ask/notes → `.ics` export. Local-first (`localStorage`), GDPR-minded
 (consent + erase). Engine is pure and traceable — it **selects** from curated, sourced content,
-never generates at runtime.
+never generates at runtime. P1 now uses one question per screen, a calm descriptive summary,
+the nearest 7 days of the 14-day cycle, a reversible “done today” state, and automated regression QA.
 
 ## Key decisions & findings (do NOT re-litigate)
 
@@ -104,6 +107,16 @@ never generates at runtime.
 ---
 
 ## Work log (newest first)
+
+### 2026-06-28 — P1.3 regression QA and edge-case hardening
+- Added `tools/test_p1_qa.js`: covers all 2/4/6/9/12-month content, question/discuss/author
+  links, deterministic 14-day plans, EN/UA engine parity, legacy migration, re-test behavior,
+  duplicate-finish prevention, and per-child isolation.
+- Hardened re-tests so a new observation clears the active age’s plan choice and stale
+  “done today” marker while preserving history; made survey finishing idempotent.
+- Mobile browser audit at 390×844 found no horizontal overflow, undersized visible controls,
+  duplicate IDs, missing page heading, or duplicate active navigation state; console had no errors.
+- The previous P1 interaction package was committed as `2b6b5d8` before this QA unit.
 
 ### 2026-06-26 — Closed the "what does 'continue' mean" gap
 - Added an explicit **default next action** at the top of "What's next": if an assistant is told

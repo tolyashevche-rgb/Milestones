@@ -107,6 +107,11 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
+- **P1 guided-flow hardening + QA:** the primary Stage5 build shows one observation at a time,
+  routes completed observations to a calm summary, exposes the nearest 7 days of the 14-day
+  play cycle, and supports a reversible “done today” state. `node tools/test_p1_qa.js` now
+  regression-tests all five ages, content integrity, deterministic plans, re-tests, legacy
+  migration, and multi-child isolation.
 - EN + UA prototypes: survey → **focus profile** → **weekly play plan** → progress charts
   by domain → re-assessment prompt. Open `prototype_stage4_ua/index.html` to try.
 - Engine is pure, traceable, **never generates content at runtime** — it only selects from
@@ -186,9 +191,10 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | 5 | **Guided interface redesign** (onboarding → survey → results → program → cabinet) | **scaffolded** in `prototype_stage5_ua/` (bottom-nav shell) |
 | 6 | Exercise **illustrations** (original/licensed) | **interim done**: original inline-SVG per domain (`illustrations.js`); designer-made art still a later upgrade |
 | 7 | Consent / age-gate screen + data-erasure control | **done** in stage5 (consent + "erase all") |
+| 8 | P1 regression QA + edge-case hardening | **done** — automated five-age suite, idempotent finish, clean re-test state, mobile accessibility audit |
 
 Stage5 status: working guided flow (welcome → consent → child profile → home/cabinet →
-survey → results+vision → program → progress → ask), local-first storage with **multi-child**
+survey → calm descriptive summary → program → history → ask), local-first storage with **multi-child**
 (`children[]`, appbar switcher, add/delete, lossless migration), a per-age survey that asks
 **all** milestones for the age (fixed set a re-test reuses), a **curated question pool**
 (multiple phrasings per milestone, reshuffled on re-test), descriptive charts, `.ics`
