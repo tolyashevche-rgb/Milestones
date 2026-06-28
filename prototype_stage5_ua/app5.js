@@ -24,7 +24,7 @@ const STORAGE_KEY = "milestonesMap.stage5.ua";
 function freshChild(name, dob) {
   return { id: "child_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
            name: name || "", dob: dob || "",
-           surveys: {}, snapshots: [], programSelections: {}, triedActivities: [], notes: "" };
+           surveys: {}, snapshots: [], programSelections: {}, activityCompletions: {}, triedActivities: [], notes: "" };
 }
 function freshStore() { return { consent: null, children: [], activeChildId: null }; }
 // Migrate the old single-child shape ({consent, child, surveys, ...}) into children[]. Idempotent.
@@ -37,6 +37,7 @@ function migrate(s) {
     const c = freshChild(s.child.name, s.child.dob);
     c.surveys = s.surveys || {}; c.snapshots = s.snapshots || [];
     c.programSelections = s.programSelections || {};
+    c.activityCompletions = s.activityCompletions || {};
     c.triedActivities = s.triedActivities || []; c.notes = s.notes || "";
     st.children.push(c); st.activeChildId = c.id;
   }
@@ -47,7 +48,10 @@ function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
 // Active child — per-child data lives here. Null only before the first child exists.
 function cc() { return store.children.find((c) => c.id === store.activeChildId) || store.children[0] || null; }
 let store = load();
-store.children.forEach((c) => { c.programSelections = c.programSelections || {}; });
+store.children.forEach((c) => {
+  c.programSelections = c.programSelections || {};
+  c.activityCompletions = c.activityCompletions || {};
+});
 let profileEditing = false;
 
 // ---- helpers ----
@@ -157,6 +161,8 @@ function currentProgramDayIndex(survey, programLength) {
   const elapsed = started == null || today == null ? 0 : Math.max(0, today - started);
   return elapsed % programLength;
 }
+function completionKey(age) { return `${localDateString()}:${age}`; }
+function completedActivityToday(age) { return cc().activityCompletions[completionKey(age)] || null; }
 
 // ---- routing ----
 const NAV = [
@@ -189,6 +195,7 @@ function show(screen) {
   renderNav(screen);
   renderAppbar(screen);
   if (screen === "program") afterProgramRender();
+  window.scrollTo(0, 0);
   root.querySelector("h1")?.focus({ preventScroll: true });
 }
 
@@ -196,10 +203,15 @@ function renderNav(active) {
   const nav = document.getElementById("bottomNav");
   const onboarding = ["welcome", "consent", "profile"].includes(active);
   nav.style.display = onboarding ? "none" : "flex";
-  nav.innerHTML = NAV.map((n) => `
-    <button type="button" class="nav-btn ${active === n.route || (active === "results" && n.route === "survey") ? "active" : ""}" data-go="${n.route}" ${active === n.route || (active === "results" && n.route === "survey") ? 'aria-current="page"' : ""}>
+  nav.innerHTML = NAV.map((n) => {
+    const survey = cc() && cc().surveys[currentAge()];
+    const target = n.route === "survey" && survey && survey.date ? "results" : n.route;
+    const isActive = active === n.route || (active === "results" && n.route === "survey");
+    return `
+    <button type="button" class="nav-btn ${isActive ? "active" : ""}" data-go="${target}" ${isActive ? 'aria-current="page"' : ""}>
       <span class="nav-ico" aria-hidden="true">${n.icon}</span><span>${n.label}</span>
-    </button>`).join("");
+    </button>`;
+  }).join("");
 }
 
 // Active-child switcher in the appbar (global, hidden during onboarding).
@@ -246,7 +258,7 @@ function renderConsent() {
 function renderProfile() {
   const c = profileEditing ? (cc() || {}) : {};
   const dobCheck = c.dob ? validateDob(c.dob) : { months: null, error: "" };
-  const ageHint = dobCheck.months == null || dobCheck.error ? "" : `Вік: ~${dobCheck.months} міс. → вікове вікно ${AGE_LABELS[ageWindowFor(dobCheck.months)]}`;
+  const ageHint = dobCheck.months == null || dobCheck.error ? "" : `Показуватимемо питання для віку ${AGE_LABELS[ageWindowFor(dobCheck.months)]}.`;
   return `
     <section class="screen-pad">
       <h1 tabindex="-1">Профіль дитини</h1>
@@ -271,7 +283,7 @@ function todaysTask(age) {
   const day = program[dayIdx];
   const selected = cc().programSelections[String(age)] && cc().programSelections[String(age)][String(day.day)];
   const act = activityById(age, selected) || activityById(age, day.options[0]);
-  return act ? { day: dayIdx + 1, domain: domainOf(act.id) || day.domain, act } : null;
+  return act ? { day: day.day, domain: domainOf(act.id) || day.domain, act, done: completedActivityToday(age)?.activityId === act.id } : null;
 }
 
 function renderHome() {
@@ -285,18 +297,18 @@ function renderHome() {
     <section class="screen-pad">
       <div class="hello">
         <span class="muted">Сьогодні</span>
-        <h1 tabindex="-1">${childName ? `Для ${childName}` : "Для вашої дитини"}</h1>
+        <h1 tabindex="-1">${childName || "Для вашої дитини"}</h1>
         <div class="profile-meta"><span class="chip">${AGE_LABELS[age]}</span><button type="button" class="profile-edit" id="editProfile">Змінити профіль</button></div>
       </div>
 
       <article class="card today">
         ${task ? `
           <div class="illus mini" aria-hidden="true">${(typeof domainIllus === "function" ? domainIllus(task.domain) : "")}</div>
-          <span class="mini-label">Гра на сьогодні · день ${task.day}</span>
+          <span class="mini-label">${task.done ? "✓ Виконано сьогодні" : `Гра на сьогодні · день ${task.day}`}</span>
           <h2>${esc(task.act.title)}</h2>
           <p class="muted">${esc(task.act.time)} · ${esc(task.act.materials)}</p>
           <div class="row">
-            <button type="button" class="btn primary" data-go="program">Почати гру</button>
+            <button type="button" class="btn ${task.done ? "ghost" : "primary"}" data-go="program">${task.done ? "Переглянути гру" : "Почати гру"}</button>
             <button type="button" class="btn ghost" id="addIcs">У календар</button>
           </div>` : `
           <span class="mini-label">Перший крок</span>
@@ -306,7 +318,7 @@ function renderHome() {
       </article>
 
       ${tested ? `<div class="tiles">
-        <button type="button" class="tile" data-go="program"><strong>Усі ігри</strong><span class="muted">план на сім днів</span></button>
+        <button type="button" class="tile" data-go="program"><strong>Усі ігри</strong><span class="muted">найближчі сім днів</span></button>
         <button type="button" class="tile" data-go="progress"><strong>Історія</strong><span class="muted">ваші спостереження</span></button>
         <button type="button" class="tile" data-go="ask"><strong>Для фахівця</strong><span class="muted">підсумок і нотатки</span></button>
         <button type="button" class="tile" data-go="survey" data-restart="1"><strong>Оновити</strong><span class="muted">пройти ще раз</span></button>
@@ -327,6 +339,15 @@ function renderSurvey() {
   const age = currentAge();
   const ids = questionIdsFor(age);
   const survey = cc().surveys[age];
+  if (survey.date) {
+    return `
+      <section class="screen-pad">
+        <h1 tabindex="-1">Спостереження збережено</h1>
+        <p class="muted">Підсумок уже готовий. Оновлюйте відповіді лише тоді, коли хочете зафіксувати нові спостереження.</p>
+        <button type="button" class="btn primary block" data-go="results">Переглянути підсумок</button>
+        <button type="button" class="btn ghost block" data-go="survey" data-restart="1">Оновити спостереження</button>
+      </section>`;
+  }
   survey.variants = survey.variants || {};
   // Freeze a random phrasing per question for this round (stable while answering).
   let changed = false;
@@ -437,7 +458,7 @@ function renderResults() {
 }
 
 // ---- program (accordion: each day expands inline, one open at a time) ----
-let programState = { age: null, program: null, openDay: null, selected: {} };
+let programState = { age: null, program: null, openDay: null, currentDay: null, selected: {} };
 
 function renderProgram() {
   const age = currentAge();
@@ -447,12 +468,13 @@ function renderProgram() {
   }
   const profile = profileForSurvey(survey, age);
   const program = buildProgram(profile, age);
-  const currentDay = program[currentProgramDayIndex(survey, program.length)];
-  programState = { age, program, openDay: currentDay ? currentDay.day : null, selected: { ...(cc().programSelections[String(age)] || {}) } };
+  const currentIndex = currentProgramDayIndex(survey, program.length);
+  const currentDay = program[currentIndex];
+  programState = { age, program, openDay: currentDay ? currentDay.day : null, currentDay: currentDay ? currentDay.day : null, currentIndex, selected: { ...(cc().programSelections[String(age)] || {}) } };
   return `
     <section class="screen-pad">
-      <h1 tabindex="-1">Гра на тиждень</h1>
-      <p class="muted">Сьогоднішній день уже відкрито. Оберіть одну коротку гру — цього достатньо.</p>
+      <h1 tabindex="-1">Ігри на найближчі 7 днів</h1>
+      <p class="muted">Сьогоднішню гру вже відкрито. Оберіть одну коротку ідею — цього достатньо.</p>
       <div class="program-list" id="programList"></div>
     </section>`;
 }
@@ -462,7 +484,9 @@ function afterProgramRender() { renderProgramList(); }
 function renderProgramList() {
   const list = document.getElementById("programList");
   if (!list || !programState.program) return;
-  list.innerHTML = programState.program.map((d) => dayAccordionHtml(programState.age, d)).join("");
+  const visibleDays = Array.from({ length: Math.min(7, programState.program.length) }, (_, offset) =>
+    programState.program[(programState.currentIndex + offset) % programState.program.length]);
+  list.innerHTML = visibleDays.map((d, index) => dayAccordionHtml(programState.age, d, index === 0)).join("");
 }
 
 function dayChip(age, dayNum, id, sel) {
@@ -470,7 +494,7 @@ function dayChip(age, dayNum, id, sel) {
   return a ? `<button type="button" class="day-opt ${id === sel ? "active" : ""}" data-day-opt="${dayNum}" data-opt="${id}" aria-pressed="${id === sel}">${esc(a.title)}</button>` : "";
 }
 
-function dayAccordionHtml(age, d) {
+function dayAccordionHtml(age, d, isToday) {
   const open = programState.openDay === d.day;
   const sel = programState.selected[d.day] || d.options[0];
   const selAct = activityById(age, sel);
@@ -485,14 +509,17 @@ function dayAccordionHtml(age, d) {
     ? `<p class="bonus-label">Або оберіть іншу легку ідею:</p>
        <div class="day-opts bonus">${bonus.map((b) => dayChip(age, d.day, b.id, sel)).join("")}</div>`
     : "";
+  const done = isToday && completedActivityToday(age)?.activityId === sel;
+  const completion = isToday ? `<button type="button" id="toggleTodayDone" class="btn ${done ? "ghost" : "primary"} block" data-activity-id="${sel}" aria-pressed="${done}">${done ? "✓ Виконано сьогодні" : "Позначити виконаним"}</button>` : "";
+  const bodyId = `day-body-${d.day}`;
   return `
     <article class="day-acc ${open ? "open" : ""}">
-      <button type="button" class="day-acc-head" data-day-toggle="${d.day}" aria-expanded="${open}">
-        <span class="day-acc-meta"><span class="day-num">День ${d.day}</span><span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span></span>
+      <button type="button" class="day-acc-head" data-day-toggle="${d.day}" aria-expanded="${open}" ${open ? `aria-controls="${bodyId}"` : ""}>
+        <span class="day-acc-meta"><span class="day-num">${isToday ? "Сьогодні" : `День ${d.day}`}</span><span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span></span>
         <span class="day-acc-title">${esc(selAct ? selAct.title : "")}</span>
         <span class="day-acc-caret" aria-hidden="true">${open ? "▾" : "▸"}</span>
       </button>
-      ${open ? `<div class="day-acc-body">${opts}${bonusHtml}${activityDetailHtml(age, sel)}</div>` : ""}
+      ${open ? `<div class="day-acc-body" id="${bodyId}">${opts}${bonusHtml}${activityDetailHtml(age, sel)}${completion}</div>` : ""}
     </article>`;
 }
 
@@ -661,6 +688,16 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (e.target.id === "finishSurvey") { finishSurvey(); return; }
+  if (e.target.id === "toggleTodayDone") {
+    const key = completionKey(programState.age);
+    const activityId = e.target.dataset.activityId;
+    const current = cc().activityCompletions[key];
+    if (current && current.activityId === activityId) delete cc().activityCompletions[key];
+    else cc().activityCompletions[key] = { activityId, completedAt: new Date().toISOString() };
+    save();
+    renderProgramList();
+    return;
+  }
   if (e.target.id === "addIcs") { const t = todaysTask(currentAge()); downloadIcs(t ? t.act.title : "Гра з дитиною"); return; }
   if (e.target.id === "copySummary") {
     const st = document.getElementById("copyStatus");
@@ -745,7 +782,7 @@ document.addEventListener("input", (e) => {
     const error = document.getElementById("profileError");
     const button = document.getElementById("profileSave");
     const checked = validateDob(e.target.value);
-    if (hint) hint.textContent = checked.error || checked.months == null ? "" : `Вік: ~${checked.months} міс. → вікове вікно ${AGE_LABELS[ageWindowFor(checked.months)]}`;
+    if (hint) hint.textContent = checked.error || checked.months == null ? "" : `Показуватимемо питання для віку ${AGE_LABELS[ageWindowFor(checked.months)]}.`;
     if (error) error.textContent = checked.error;
     if (button) button.disabled = Boolean(checked.error);
     e.target.toggleAttribute("aria-invalid", Boolean(checked.error));
