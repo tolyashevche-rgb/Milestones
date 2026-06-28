@@ -1,13 +1,16 @@
 # Expert Review Checklist: CDC x Europe Milestones
 
-Version: Stage 3 draft
-Date: 2026-05-05
+Version: Stage 5 draft
+Date: 2026-06-28
 
 ## Purpose
 
 This checklist is for pediatric, movement, speech/language, occupational therapy, psychology, and early childhood experts who review the first `CDC x Europe Milestones` content pack.
 
 The review goal is not to approve the product as a medical device. The goal is to confirm that the content is accurate, safe, parent-friendly, and clear about its limits.
+
+Operational setup, outreach templates, scope confirmation, and the gated path to parent
+recruitment are in [validation_launch_kit_ua.md](validation_launch_kit_ua.md).
 
 ## Reviewer Roles
 

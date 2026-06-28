@@ -6,6 +6,9 @@ Companion to: [expert_review_checklist.md](expert_review_checklist.md) (the *que
 file is the *answers + status*. It is the Stage 5 deliverable #1 from
 [action_plan.md](action_plan.md).
 
+For reviewer outreach, scope confirmation, follow-up, the approval gate, and parent
+recruitment templates, use [validation_launch_kit_ua.md](validation_launch_kit_ua.md).
+
 ## How to use
 
 1. A reviewer reads the checklist, then reviews the **current files** below.
