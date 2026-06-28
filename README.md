@@ -107,6 +107,18 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
+- **P2.13 guarded local storage:** blocked, corrupt, or full browser storage no longer throws
+  through the parent’s active action. A rare “Not saved” appbar status explains that the tab
+  should stay open and points to local backup; a later successful write clears it automatically.
+  Failed erase/restore operations no longer report false success.
+- **P2.12 user-approved PWA updates:** a newly installed service worker waits instead of
+  interrupting an active task. A quiet “Update now” action appears only in collapsed settings;
+  the page reloads exactly once and only after that explicit action. First install never causes
+  an unsolicited reload.
+- **P2.11 calm install guidance:** collapsed data settings explain how to add Milestones to a
+  home screen on browsers without a programmable prompt. When the browser does offer its
+  native install flow, one explicit button appears; dismissing it stays pressure-free, and all
+  install guidance disappears in standalone mode.
 - **P2.10 private backup and restore:** hidden data controls can download a versioned local
   JSON backup and restore it after explicit confirmation. Files never leave the device through
   the app, malformed structures and unknown answer states are rejected, and the UI warns that
@@ -250,6 +262,9 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | 16 | P2.8 accessibility hardening | **done** — focused question announcements, atomic live statuses, restored focus after program updates, larger helper text, forced-colors/reduced-motion support, regression QA |
 | 17 | P2.9 installable offline app | **done** — manifest, original 192/512/SVG icons, versioned app-shell service worker, quiet offline status, lifecycle/fallback regression QA |
 | 18 | P2.10 private backup and restore | **done** — versioned local JSON export, validated restore with replacement confirmation, privacy warning, malformed-file and round-trip regression QA |
+| 19 | P2.11 calm install guidance | **done** — fallback home-screen instructions, user-triggered native prompt when supported, dismissal/installed states, install-flow regression QA |
+| 20 | P2.12 user-approved PWA updates | **done** — waiting service worker, hidden update action, explicit activation, one controlled reload, first-install protection, lifecycle regression QA |
+| 21 | P2.13 guarded local storage | **done** — non-throwing read/write failures, accessible unsaved status, backup recovery path, accurate erase/restore feedback, recovery regression QA |
 
 Stage5 status: working guided flow (welcome → consent → child profile → contextual home/cabinet →
 survey → calm descriptive summary → today-first game → descriptive history with same-age changes → visit-ready specialist prep), local-first storage with **multi-child**

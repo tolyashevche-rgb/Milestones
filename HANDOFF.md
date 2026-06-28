@@ -83,6 +83,15 @@ The core curated flow is cached; child data remains local in browser storage.
 P2.10 adds private local backup/restore under collapsed data controls. Exports are versioned
 JSON files containing sensitive observations; restore validates structure and answer states,
 requires replacement confirmation, and never uploads the file.
+P2.11 adds calm install discovery inside those same collapsed controls: a cross-browser
+home-screen instruction, a user-triggered native prompt only when the browser provides it,
+and no redundant guidance once running standalone.
+P2.12 makes PWA updates user-approved: a new worker waits, the hidden settings expose one
+«Оновити зараз» action, and the app reloads once only after that action. First install does
+not trigger an unsolicited reload.
+P2.13 guards local storage failures: read/write errors no longer break the active action, a
+rare accessible «Не збережено» status points to backup without discarding in-memory data,
+successful recovery clears it, and erase/restore cannot report false persistence.
 
 ## Key decisions & findings (do NOT re-litigate)
 
@@ -143,6 +152,33 @@ requires replacement confirmation, and never uploads the file.
 ---
 
 ## Work log (newest first)
+
+### 2026-06-29 — P2.13 guarded local storage
+- Replaced throwing `localStorage` reads/writes with safe operations that retain in-memory
+  state and return persistence success. A rare appbar status gives a short visible label and a
+  fuller accessible recovery message pointing to private backup.
+- A later successful write clears the stale warning automatically. Failed full erasure leaves
+  the current store intact; backup restore distinguishes “opened in memory” from persistently saved.
+- Added regression coverage that forces storage failure and recovery. Updated the offline cache
+  and unstarted validation baseline to P2.13; syntax, full QA, HTTP, and diff checks pass.
+
+### 2026-06-29 — P2.12 user-approved PWA updates
+- Removed automatic `skipWaiting` during service-worker installation. New shells may download
+  in the background but cannot interrupt an observation, note, or activity in progress.
+- Added a hidden-settings update card that appears only for a waiting worker. Tapping
+  «Оновити зараз» sends one explicit activation message; `controllerchange` reloads exactly
+  once and only when that action was requested.
+- Extended lifecycle tests for waiting, explicit activation, first-install no-reload, and
+  duplicate controller changes. Updated cache and the unstarted validation baseline to P2.12.
+
+### 2026-06-29 — P2.11 calm install discovery
+- Added a short «Додати на головний екран» fallback inside collapsed data settings. It
+  does not compete with the primary home action.
+- On browsers that emit `beforeinstallprompt`, one explicit install button appears and opens
+  the native prompt only after the parent taps it. Dismissal copy is pressure-free; the prompt
+  is never reused; installed/standalone mode hides the controls.
+- Added an isolated install-flow test covering deferred prompt, dismissal, installed state,
+  and service-worker registration. Updated the cache and unstarted validation baseline to P2.11.
 
 ### 2026-06-29 — P2.10 private local backup and restore
 - Added a versioned JSON backup download under collapsed data settings with a plain privacy

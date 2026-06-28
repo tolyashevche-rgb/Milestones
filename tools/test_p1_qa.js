@@ -26,11 +26,13 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260629-p2-10"), "Stage5 assets must use the P2.10 cache key");
+  assert.ok(stage5Index.includes("20260629-p2-13"), "Stage5 assets must use the P2.13 cache key");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Styles.includes("@media (forced-colors: active)"), "high-contrast mode needs explicit active-state support");
   assert.ok(stage5Styles.includes("@media (prefers-reduced-motion: reduce)"), "reduced-motion preference must stay supported");
   assert.ok(stage5App.includes('document.getElementById("toggleTodayDone")?.focus'), "program updates must restore focus to the thumb action");
+  assert.ok(stage5App.includes('id="installApp"') && stage5App.includes('id="installHelp"'), "data settings need install guidance without changing the primary home action");
+  assert.ok(stage5App.includes('id="updateControls"') && stage5App.includes('id="applyUpdate"'), "PWA updates need an explicit action in collapsed settings");
   assert.equal(manifest.display, "standalone", "PWA manifest must request standalone display");
   assert.equal(manifest.start_url, "./", "PWA must start inside its own scope");
   assert.ok(manifest.icons.some((icon) => icon.sizes === "192x192"), "PWA needs a 192px icon");
@@ -39,10 +41,14 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-10"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-13"'), "service worker cache must be versioned");
   assert.ok(serviceWorker.includes('caches.match("./index.html")'), "offline navigation needs an app-shell fallback");
   assert.ok(pwaScript.includes('navigator.serviceWorker.register("./sw.js")'), "the app must register its service worker");
+  assert.ok(pwaScript.includes('window.addEventListener("beforeinstallprompt"'), "supported browsers need a deferred native install action");
+  assert.ok(pwaScript.includes('window.addEventListener("appinstalled"'), "installed mode must hide redundant install guidance");
+  assert.ok(pwaScript.includes('navigator.serviceWorker.addEventListener("controllerchange"'), "accepted updates must reload only after controller change");
   assert.ok(stage5Index.includes('id="offlineStatus"'), "the app shell needs a quiet offline status");
+  assert.ok(stage5Index.includes('id="storageStatus"'), "storage failures need a persistent visible status");
 
   assert.equal(
     read("prototype_stage4/engine.js"),
@@ -126,19 +132,26 @@ function testContentAndEngine() {
   Object.keys(api.WHO_WINDOW_BY_ID).forEach((id) => assert.ok(milestoneIds.has(id), `WHO window points to unknown milestone ${id}`));
 }
 
-function appContext() {
+function appContext(options = {}) {
   const storage = new Map();
+  let storageWriteFails = Boolean(options.storageWriteFails);
+  let storageReadFails = Boolean(options.storageReadFails);
   const listeners = {};
   const nodes = {
     screen: { innerHTML: "", querySelector: () => null },
     bottomNav: { innerHTML: "", style: {} },
-    appbarChild: { innerHTML: "" }
+    appbarChild: { innerHTML: "" },
+    storageStatus: {
+      hidden: true, textContent: "", title: "", ariaLabel: "",
+      setAttribute(name, value) { if (name === "aria-label") this.ariaLabel = value; },
+      removeAttribute(name) { if (name === "aria-label") this.ariaLabel = ""; }
+    }
   };
   const context = vm.createContext({
     console,
     localStorage: {
-      getItem: (key) => storage.has(key) ? storage.get(key) : null,
-      setItem: (key, value) => storage.set(key, String(value)),
+      getItem: (key) => { if (storageReadFails) throw new Error("storage read blocked"); return storage.has(key) ? storage.get(key) : null; },
+      setItem: (key, value) => { if (storageWriteFails) throw new Error("storage full"); storage.set(key, String(value)); },
       removeItem: (key) => storage.delete(key)
     },
     document: {
@@ -152,13 +165,40 @@ function appContext() {
     confirm: () => true,
     URL: { createObjectURL: () => "blob:test", revokeObjectURL: () => {} },
     Blob: function Blob() {},
-    __listeners: listeners
+    __listeners: listeners,
+    __setStorageWriteFails: (value) => { storageWriteFails = Boolean(value); },
+    __setStorageReadFails: (value) => { storageReadFails = Boolean(value); }
   });
   run(context, "prototype_stage4_ua/data_ua.js");
   run(context, "prototype_stage4_ua/engine.js");
   run(context, "prototype_stage5_ua/questions_ua.js");
   run(context, "prototype_stage5_ua/app5.js");
   return context;
+}
+
+function testStorageFailureRecovery() {
+  const context = appContext({ storageWriteFails: true });
+  const failed = vm.runInContext(`(() => {
+    store = freshStore();
+    const saved = save();
+    const status = document.getElementById("storageStatus");
+    return { saved, problem: storageProblem, hidden: status.hidden, text: status.textContent, ariaLabel: status.ariaLabel };
+  })()`, context);
+  assert.equal(failed.saved, false, "blocked localStorage must not throw through the active interaction");
+  assert.ok(failed.problem.includes("не зберіг"), "storage failure needs actionable calm guidance");
+  assert.equal(failed.hidden, false, "storage failure status must become visible");
+  assert.equal(failed.text, "Не збережено", "storage failure needs a short visible label");
+  assert.ok(failed.ariaLabel.includes("резервну копію"), "assistive text must explain the recovery path");
+
+  context.__setStorageWriteFails(false);
+  const recovered = vm.runInContext(`(() => {
+    const saved = save();
+    const status = document.getElementById("storageStatus");
+    return { saved, problem: storageProblem, hidden: status.hidden, text: status.textContent };
+  })()`, context);
+  assert.equal(recovered.saved, true, "storage must recover without restarting the app");
+  assert.equal(recovered.problem, "", "successful save must clear the stale failure state");
+  assert.equal(recovered.hidden, true, "recovered storage must hide the warning");
 }
 
 async function testServiceWorker() {
@@ -179,7 +219,7 @@ async function testServiceWorker() {
     fetch: async () => { throw new Error("offline"); },
     caches: {
       open: async () => cache,
-      keys: async () => ["milestones-stage5-p2-9", "milestones-stage5-p2-10", "unrelated-cache"],
+      keys: async () => ["milestones-stage5-p2-12", "milestones-stage5-p2-13", "unrelated-cache"],
       delete: async (key) => { deletedCaches.push(key); return true; },
       match: async (request) => request === "./index.html" ? offlineDocument : null
     },
@@ -195,15 +235,18 @@ async function testServiceWorker() {
   let installWork;
   listeners.install({ waitUntil: (promise) => { installWork = promise; } });
   await installWork;
-  assert.equal(skipWaitingCalled, true, "service worker must activate the new shell promptly");
+  assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260629-p2-10"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260629-p2-13"), "offline shell must cache canonical content");
+
+  listeners.message({ data: { type: "SKIP_WAITING" } });
+  assert.equal(skipWaitingCalled, true, "approved update must tell the waiting worker to activate");
 
   let activateWork;
   listeners.activate({ waitUntil: (promise) => { activateWork = promise; } });
   await activateWork;
-  assert.deepEqual(deletedCaches, ["milestones-stage5-p2-9"], "activation must delete only older Stage5 caches");
+  assert.deepEqual(deletedCaches, ["milestones-stage5-p2-12"], "activation must delete only older Stage5 caches");
   assert.equal(clientsClaimed, true, "new service worker must claim the app after activation");
 
   let navigationResponse;
@@ -213,6 +256,95 @@ async function testServiceWorker() {
   });
   assert.equal(await navigationResponse, offlineDocument, "offline navigation must return the cached app shell");
   assert.deepEqual(storedRequests, [], "offline fallback must not attempt a cache write");
+}
+
+async function testPwaInstallUi() {
+  const windowListeners = {};
+  const documentListeners = {};
+  const nodes = {
+    offlineStatus: { hidden: false, textContent: "" },
+    installApp: { hidden: true, disabled: false },
+    installHelp: { hidden: false, textContent: "" },
+    installStatus: { textContent: "" },
+    updateControls: { hidden: true },
+    applyUpdate: { disabled: false },
+    updateStatus: { textContent: "" },
+    screen: {}
+  };
+  let registered = false;
+  let promptCalls = 0;
+  let prevented = false;
+  let updateMessages = 0;
+  let reloads = 0;
+  const serviceWorkerListeners = {};
+  const waitingWorker = { postMessage: (message) => { if (message && message.type === "SKIP_WAITING") updateMessages += 1; } };
+  const registration = {
+    waiting: waitingWorker,
+    installing: null,
+    addEventListener: () => {}
+  };
+  class FakeMutationObserver { constructor(callback) { this.callback = callback; } observe() {} }
+  const context = vm.createContext({
+    Promise,
+    MutationObserver: FakeMutationObserver,
+    location: { protocol: "http:" },
+    navigator: {
+      onLine: true,
+      standalone: false,
+      serviceWorker: {
+        controller: { scriptURL: "old-sw.js" },
+        addEventListener: (type, handler) => { serviceWorkerListeners[type] = handler; },
+        register: async () => { registered = true; return registration; }
+      }
+    },
+    window: {
+      MutationObserver: FakeMutationObserver,
+      matchMedia: () => ({ matches: false }),
+      location: { reload: () => { reloads += 1; } },
+      addEventListener: (type, handler) => { windowListeners[type] = handler; }
+    },
+    document: {
+      getElementById: (id) => nodes[id] || null,
+      addEventListener: (type, handler) => { documentListeners[type] = handler; }
+    }
+  });
+  run(context, "prototype_stage5_ua/pwa.js");
+  assert.equal(nodes.offlineStatus.hidden, true, "online mode must not show an offline badge");
+  assert.equal(nodes.installApp.hidden, true, "install action stays hidden until the browser offers it");
+
+  const installEvent = {
+    preventDefault: () => { prevented = true; },
+    prompt: async () => { promptCalls += 1; },
+    userChoice: Promise.resolve({ outcome: "dismissed" })
+  };
+  windowListeners.beforeinstallprompt(installEvent);
+  assert.equal(prevented, true, "browser install prompt must be deferred until the user asks");
+  assert.equal(nodes.installApp.hidden, false, "native install action must appear when supported");
+
+  await documentListeners.click({
+    target: { closest: (selector) => selector === "#installApp" ? nodes.installApp : null }
+  });
+  assert.equal(promptCalls, 1, "install action must invoke the native prompt once");
+  assert.equal(nodes.installApp.hidden, true, "a consumed install prompt cannot stay actionable");
+  assert.ok(nodes.installStatus.textContent.includes("пізніше"), "dismissal must stay calm and reversible");
+
+  windowListeners.appinstalled();
+  assert.equal(nodes.installHelp.hidden, true, "installed mode must hide redundant guidance");
+  assert.ok(nodes.installStatus.textContent.includes("додано"), "successful installation needs concise feedback");
+  await windowListeners.load();
+  assert.equal(registered, true, "PWA bootstrap must register the service worker on load");
+  assert.equal(nodes.updateControls.hidden, false, "waiting update must appear only in collapsed settings");
+  serviceWorkerListeners.controllerchange();
+  assert.equal(reloads, 0, "first install must not trigger an unsolicited reload");
+  await documentListeners.click({
+    target: { closest: (selector) => selector === "#applyUpdate" ? nodes.applyUpdate : null }
+  });
+  assert.equal(updateMessages, 1, "update action must activate the waiting worker once");
+  assert.equal(nodes.applyUpdate.disabled, true, "update action must lock while activation starts");
+  assert.ok(nodes.updateStatus.textContent.includes("Оновлюємо"), "update action needs immediate calm feedback");
+  serviceWorkerListeners.controllerchange();
+  serviceWorkerListeners.controllerchange();
+  assert.equal(reloads, 1, "controller change must reload exactly once");
 }
 
 function testAppState() {
@@ -393,8 +525,10 @@ function testAppState() {
 (async () => {
   testContentAndEngine();
   testAppState();
+  testStorageFailureRecovery();
   await testServiceWorker();
-  console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, contextual home, installable offline shell, service-worker lifecycle, safe local backup/restore, unified SVG navigation, one-thumb survey, accessible focus/status semantics, emotion-aware copy, today-first game, specialist prep, re-tests, history comparison, migration, multi-child isolation.");
+  await testPwaInstallUi();
+  console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, contextual home, guarded local storage, installable offline shell, deferred install UX, user-approved PWA updates, service-worker lifecycle, safe local backup/restore, unified SVG navigation, one-thumb survey, accessible focus/status semantics, emotion-aware copy, today-first game, specialist prep, re-tests, history comparison, migration, multi-child isolation.");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

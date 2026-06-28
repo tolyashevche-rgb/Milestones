@@ -1,6 +1,6 @@
 # Expert Review Checklist: CDC x Europe Milestones
 
-Version: Stage 5 / P2.10 review baseline
+Version: Stage 5 / P2.13 review baseline
 Date: 2026-06-29
 
 ## Purpose
@@ -129,7 +129,7 @@ If yes, revise toward calm observation and one small next step.
 
 ## Current Interface Tone and Safety
 
-Review the exact parent-facing wording in the **Stage 5 UA / P2.10** prototype:
+Review the exact parent-facing wording in the **Stage 5 UA / P2.13** prototype:
 
 - Does «Ще не помічаю» feel gentler than pass/fail language while still describing the observation clearly?
 - Is the difference between «Ще спостерігаю» and «Ще не помічаю» meaningful enough for a parent?

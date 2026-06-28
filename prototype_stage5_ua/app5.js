@@ -28,6 +28,7 @@ const STORAGE_KEY = "milestonesMap.stage5.ua";
 const BACKUP_SCHEMA = "milestones.stage5.ua.backup";
 const BACKUP_VERSION = 1;
 const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
+let storageProblem = "";
 
 // ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
 function emptySpecialistPrep(noticed = "") {
@@ -67,8 +68,36 @@ function migrate(s) {
   }
   return st;
 }
-function load() { try { return migrate(JSON.parse(localStorage.getItem(STORAGE_KEY))); } catch { return freshStore(); } }
-function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
+function renderStorageStatus() {
+  const status = document.getElementById("storageStatus");
+  if (!status) return;
+  status.hidden = !storageProblem;
+  status.textContent = storageProblem ? "Не збережено" : "";
+  status.title = storageProblem;
+  if (storageProblem) status.setAttribute("aria-label", storageProblem);
+  else status.removeAttribute("aria-label");
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return migrate(raw ? JSON.parse(raw) : null);
+  } catch {
+    storageProblem = "Не вдалося прочитати локальні дані. Не закривайте вкладку; скористайтеся резервною копією, якщо вона є.";
+    return freshStore();
+  }
+}
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    storageProblem = "";
+    renderStorageStatus();
+    return true;
+  } catch {
+    storageProblem = "Браузер не зберіг останні зміни. Не закривайте вкладку; збережіть резервну копію в керуванні даними.";
+    renderStorageStatus();
+    return false;
+  }
+}
 function backupPayload(source = store) {
   return {
     schema: BACKUP_SCHEMA,
@@ -295,6 +324,7 @@ function show(screen) {
   root.innerHTML = (renderers[screen] || renderHome)();
   renderNav(screen);
   renderAppbar(screen);
+  renderStorageStatus();
   if (screen === "program") afterProgramRender();
   window.scrollTo(0, 0);
   const focusTarget = screen === "survey" ? root.querySelector("#questionTitle") : root.querySelector("h1");
@@ -491,6 +521,16 @@ function renderHome() {
       ${next ? `<p class="note">Наступне вікове спостереження — приблизно у ${next} місяців.</p>` : ""}
       <details class="data-controls">
         <summary>Керування профілем і даними</summary>
+        <div class="install-controls">
+          <p id="installHelp" class="muted small">Щоб відкривати Milestones одним дотиком, у меню браузера оберіть «Додати на головний екран».</p>
+          <button type="button" id="installApp" class="btn ghost" hidden>Встановити на телефон</button>
+          <p id="installStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
+        </div>
+        <div id="updateControls" class="update-controls" hidden>
+          <p class="muted small">Нова версія вже готова. Поточні відповіді збережені локально.</p>
+          <button type="button" id="applyUpdate" class="btn ghost">Оновити зараз</button>
+          <p id="updateStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
+        </div>
         <div class="backup-controls">
           <p class="muted small">Резервна копія залишається у вас. Вона містить локальні спостереження, тому зберігайте файл приватно.</p>
           <div class="backup-actions">
@@ -1038,7 +1078,18 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (e.target.id === "eraseAll") {
-    if (confirm("Стерти всі локальні дані цього застосунку?")) { localStorage.removeItem(STORAGE_KEY); store = freshStore(); setHash("welcome"); route(); }
+    if (confirm("Стерти всі локальні дані цього застосунку?")) {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        storageProblem = "";
+        store = freshStore();
+        setHash("welcome");
+        route();
+      } catch {
+        storageProblem = "Браузер не зміг стерти локальні дані. Перевірте налаштування сховища.";
+        renderStorageStatus();
+      }
+    }
     return;
   }
   if (e.target.id === "finishSurvey") { finishSurvey(); return; }
@@ -1198,8 +1249,10 @@ document.addEventListener("change", async (e) => {
     }
     if (!confirm("Відновлення замінить поточні локальні дані. Продовжити?")) return;
     store = checked.store;
-    save();
-    dataNotice = "Резервну копію відновлено локально.";
+    const restoredPersistently = save();
+    dataNotice = restoredPersistently
+      ? "Резервну копію відновлено локально."
+      : "Копію відкрито, але браузер не зберіг її надовго. Не закривайте вкладку.";
     setHash("home");
     route();
   } catch {
