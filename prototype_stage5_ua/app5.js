@@ -18,6 +18,12 @@ const DOMAIN_LABELS_SHORT = {
   movement: "Рух"
 };
 
+const OBSERVATION_LABELS = {
+  yes: "Бачу",
+  not_sure: "Ще спостерігаю",
+  not_yet: "Поки ні"
+};
+
 const STORAGE_KEY = "milestonesMap.stage5.ua";
 
 // ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
@@ -287,11 +293,90 @@ function todaysTask(age) {
   return act ? { day: day.day, domain: domainOf(act.id) || day.domain, act, done: completedActivityToday(age)?.activityId === act.id } : null;
 }
 
+function homeNextStep(age) {
+  const survey = cc().surveys[age];
+  if (!survey || !survey.date) {
+    const ids = (survey && survey.questionIds && survey.questionIds.length)
+      ? survey.questionIds
+      : (MILESTONES_BY_AGE[age] || []).map((m) => m.id);
+    const states = (survey && survey.states) || {};
+    const answered = ids.filter((id) => states[id]).length;
+    if (answered) {
+      return {
+        kind: "continue-observation",
+        label: "Наступний крок",
+        title: "Продовжіть спостереження",
+        body: `Ви відповіли на ${answered} з ${ids.length} питань. Відповіді вже збережені.`,
+        cta: "Продовжити",
+        route: "survey",
+        progress: { value: answered, total: ids.length }
+      };
+    }
+    return {
+      kind: "start-observation",
+      label: "Перший крок",
+      title: "Коротке спостереження",
+      body: "Відповідайте по одному питанню. Наприкінці отримаєте одну просту гру на сьогодні.",
+      cta: "Почати спостереження",
+      route: "survey"
+    };
+  }
+
+  const task = todaysTask(age);
+  if (task && task.done) {
+    return {
+      kind: "done-today",
+      label: "✓ На сьогодні все",
+      title: "Гру виконано",
+      body: `«${task.act.title}» позначено виконаною. Завтра тут з’явиться наступна коротка гра.`,
+      task
+    };
+  }
+  if (task) {
+    return {
+      kind: "play-today",
+      label: `Рекомендовано сьогодні · день ${task.day}`,
+      title: task.act.title,
+      body: `${task.act.time} · ${task.act.materials}`,
+      cta: "Почати гру",
+      route: "program",
+      task
+    };
+  }
+  return {
+    kind: "review-results",
+    label: "Наступний крок",
+    title: "Перегляньте підсумок",
+    body: "Спостереження збережено. У підсумку є спокійний опис і наступна ідея для гри.",
+    cta: "Переглянути підсумок",
+    route: "results"
+  };
+}
+
+function homeNextStepHtml(step) {
+  const progress = step.progress ? `
+    <div class="next-step-progress" aria-label="${step.progress.value} з ${step.progress.total} питань збережено">
+      <span style="width:${step.progress.total ? (step.progress.value / step.progress.total) * 100 : 0}%"></span>
+    </div>` : "";
+  const illustration = step.task ? `<div class="illus mini" aria-hidden="true">${(typeof domainIllus === "function" ? domainIllus(step.task.domain) : "")}</div>` : "";
+  const action = step.route ? `<button type="button" class="btn primary" data-primary-action="${step.kind}" data-go="${step.route}">${step.cta}</button>` : "";
+  return `
+    <article class="card next-step ${step.kind}" aria-labelledby="nextStepTitle">
+      ${illustration}
+      <span class="mini-label">${step.label}</span>
+      <h2 id="nextStepTitle">${esc(step.title)}</h2>
+      <p class="muted">${esc(step.body)}</p>
+      ${progress}
+      ${action}
+    </article>`;
+}
+
 function renderHome() {
   const age = currentAge();
   const c = cc(); const childName = (c && c.name) ? esc(c.name) : "";
   const survey = cc().surveys[age];
   const task = todaysTask(age);
+  const nextStep = homeNextStep(age);
   const next = nextCheckAge(age);
   const tested = survey && survey.date;
   return `
@@ -302,34 +387,27 @@ function renderHome() {
         <div class="profile-meta"><span class="chip">${AGE_LABELS[age]}</span><button type="button" class="profile-edit" id="editProfile">Змінити профіль</button></div>
       </div>
 
-      <article class="card today">
-        ${task ? `
-          <div class="illus mini" aria-hidden="true">${(typeof domainIllus === "function" ? domainIllus(task.domain) : "")}</div>
-          <span class="mini-label">${task.done ? "✓ Виконано сьогодні" : `Гра на сьогодні · день ${task.day}`}</span>
-          <h2>${esc(task.act.title)}</h2>
-          <p class="muted">${esc(task.act.time)} · ${esc(task.act.materials)}</p>
-          <div class="row">
-            <button type="button" class="btn ${task.done ? "ghost" : "primary"}" data-go="program">${task.done ? "Переглянути гру" : "Почати гру"}</button>
-            <button type="button" class="btn ghost" id="addIcs">У календар</button>
-          </div>` : `
-          <span class="mini-label">Перший крок</span>
-          <h2>Коротке спостереження</h2>
-          <p class="muted">Відповідайте по одному питанню. Наприкінці отримаєте одну просту гру на сьогодні.</p>
-          <button type="button" class="btn primary" data-go="survey">Почати</button>`}
-      </article>
+      ${homeNextStepHtml(nextStep)}
 
-      ${tested ? `<div class="tiles">
-        <button type="button" class="tile" data-go="program"><strong>Усі ігри</strong><span class="muted">найближчі сім днів</span></button>
-        <button type="button" class="tile" data-go="progress"><strong>Історія</strong><span class="muted">ваші спостереження</span></button>
-        <button type="button" class="tile" data-go="ask"><strong>Для фахівця</strong><span class="muted">підсумок і нотатки</span></button>
-        <button type="button" class="tile" data-go="survey" data-restart="1"><strong>Оновити</strong><span class="muted">пройти ще раз</span></button>
-      </div>` : ""}
+      ${tested ? `<details class="home-more">
+        <summary>Інші можливості</summary>
+        <div class="tiles">
+          <button type="button" class="tile" data-go="program"><strong>Усі ігри</strong><span class="muted">найближчі сім днів</span></button>
+          <button type="button" class="tile" data-go="progress"><strong>Історія</strong><span class="muted">ваші спостереження</span></button>
+          <button type="button" class="tile" data-go="ask"><strong>Для фахівця</strong><span class="muted">підсумок і нотатки</span></button>
+          <button type="button" class="tile" data-go="survey" data-restart="1"><strong>Оновити</strong><span class="muted">пройти ще раз</span></button>
+          ${task ? `<button type="button" class="tile" id="addIcs"><strong>У календар</strong><span class="muted">нагадування про гру</span></button>` : ""}
+        </div>
+      </details>` : ""}
 
       ${next ? `<p class="note">Наступне вікове спостереження — приблизно у ${next} місяців.</p>` : ""}
-      <div class="home-danger">
-        <button type="button" id="deleteChild" class="linklike danger">Видалити цю дитину</button>
-        <button type="button" id="eraseAll" class="linklike danger">Стерти всі мої дані</button>
-      </div>
+      <details class="data-controls">
+        <summary>Керування профілем і даними</summary>
+        <div class="home-danger">
+          <button type="button" id="deleteChild" class="linklike danger">Видалити цю дитину</button>
+          <button type="button" id="eraseAll" class="linklike danger">Стерти всі мої дані</button>
+        </div>
+      </details>
     </section>`;
 }
 
@@ -557,17 +635,122 @@ function activityDetailHtml(age, id) {
 }
 
 // ---- progress ----
+function snapshotQuestionIds(snap) {
+  const saved = Array.isArray(snap && snap.questionIds) ? snap.questionIds : [];
+  if (saved.length) return saved;
+  const fromStates = Object.keys((snap && snap.states) || {});
+  if (fromStates.length) return fromStates;
+  return ((snap && MILESTONES_BY_AGE[snap.age]) || []).map((m) => m.id);
+}
+
+function snapshotCounts(snap) {
+  const ids = snapshotQuestionIds(snap);
+  const states = (snap && snap.states) || {};
+  if (!Object.keys(states).length && snap && snap.counts) {
+    return {
+      observed: Number(snap.counts.observed) || 0,
+      notSure: Number(snap.counts.notSure) || 0,
+      notYet: Number(snap.counts.notYet) || 0
+    };
+  }
+  return {
+    observed: ids.filter((id) => states[id] === "yes").length,
+    notSure: ids.filter((id) => states[id] === "not_sure").length,
+    notYet: ids.filter((id) => states[id] === "not_yet").length
+  };
+}
+
+function snapshotItems(snap, state) {
+  const states = (snap && snap.states) || {};
+  return snapshotQuestionIds(snap)
+    .filter((id) => states[id] === state)
+    .map((id) => milestoneById(snap.age, id))
+    .filter(Boolean);
+}
+
+function snapshotChanges(current, previous) {
+  if (!current || !previous || current.age !== previous.age) return { hasPrevious: false, newlyObserved: [], changed: [] };
+  const currentStates = current.states || {};
+  const previousStates = previous.states || {};
+  const ids = [...new Set([...snapshotQuestionIds(previous), ...snapshotQuestionIds(current)])];
+  const newlyObserved = [];
+  const changed = [];
+  ids.forEach((id) => {
+    const milestone = milestoneById(current.age, id);
+    if (!milestone) return;
+    const before = previousStates[id];
+    const after = currentStates[id];
+    if (after === "yes" && before !== "yes") newlyObserved.push(milestone);
+    else if (before && after && before !== after) changed.push({ milestone, before, after });
+  });
+  return { hasPrevious: true, newlyObserved, changed };
+}
+
+function historyAnswerGroup(snap, state) {
+  const items = snapshotItems(snap, state);
+  return `
+    <section class="history-answer-group">
+      <h3>${OBSERVATION_LABELS[state]} <span>${items.length}</span></h3>
+      ${items.length ? `<ul>${items.map((m) => `<li>${esc(m.title)}</li>`).join("")}</ul>` : `<p class="muted small">Нічого не позначено.</p>`}
+    </section>`;
+}
+
+function historyComparisonHtml(current, previous) {
+  const change = snapshotChanges(current, previous);
+  if (!change.hasPrevious) return `<p class="history-first-note">Це перше збережене спостереження для цього віку.</p>`;
+  if (!change.newlyObserved.length && !change.changed.length) {
+    return `<div class="history-change"><h3>Що змінилося у відповідях</h3><p>Відповіді збігаються з попереднім спостереженням цього віку.</p></div>`;
+  }
+  return `
+    <div class="history-change">
+      <h3>Що змінилося у відповідях</h3>
+      ${change.newlyObserved.length ? `<div><strong>Тепер позначили «Бачу»</strong><ul>${change.newlyObserved.map((m) => `<li>${esc(m.title)}</li>`).join("")}</ul></div>` : ""}
+      ${change.changed.length ? `<div><strong>Цього разу обрали іншу відповідь</strong><ul>${change.changed.map((item) => `<li>${esc(item.milestone.title)} — «${OBSERVATION_LABELS[item.before]}» → «${OBSERVATION_LABELS[item.after]}»</li>`).join("")}</ul></div>` : ""}
+      <p class="muted small">Зміна відповіді — це нотатка спостереження, а не оцінка розвитку.</p>
+    </div>`;
+}
+
+function historySnapshotHtml(snap, previous, isLatest) {
+  const parsedDate = new Date(snap.date);
+  const date = isNaN(parsedDate) ? "Дата не вказана" : parsedDate.toLocaleString("uk-UA", { dateStyle: "medium", timeStyle: "short" });
+  const counts = snapshotCounts(snap);
+  return `
+    <article class="history-item ${isLatest ? "latest" : ""}">
+      <div class="history-head">
+        <div><span class="mini-label">${isLatest ? "Останнє спостереження" : "Збережене спостереження"}</span><h2>${AGE_LABELS[snap.age] || `${snap.age} міс.`}</h2></div>
+        <time datetime="${esc(snap.date || "")}">${esc(date)}</time>
+      </div>
+      <div class="history-counts" aria-label="Підсумок відповідей">
+        <div><strong>${counts.observed}</strong><span>Бачу</span></div>
+        <div><strong>${counts.notSure}</strong><span>Ще спостерігаю</span></div>
+        <div><strong>${counts.notYet}</strong><span>Поки ні</span></div>
+      </div>
+      ${historyComparisonHtml(snap, previous)}
+      <details class="history-details">
+        <summary>Переглянути всі відповіді</summary>
+        <div class="history-answer-list">
+          ${historyAnswerGroup(snap, "yes")}
+          ${historyAnswerGroup(snap, "not_sure")}
+          ${historyAnswerGroup(snap, "not_yet")}
+        </div>
+      </details>
+    </article>`;
+}
+
 function renderProgress() {
   const snaps = cc().snapshots.slice().reverse();
-  const list = snaps.length ? snaps.map((s) => {
-    const date = new Date(s.date).toLocaleString("uk-UA", { dateStyle: "medium", timeStyle: "short" });
-    return `<article class="history-item"><h2>${AGE_LABELS[s.age]} · ${date}</h2><dl><dt>Бачу</dt><dd>${s.counts.observed}</dd><dt>Ще спостерігаю</dt><dd>${s.counts.notSure}</dd><dt>Поки ні</dt><dd>${s.counts.notYet}</dd></dl></article>`;
-  }).join("") : `<p class="muted">Збережених спостережень ще немає.</p>`;
+  const list = snaps.length ? snaps.map((snap, index) => {
+    const previous = snaps.slice(index + 1).find((candidate) => candidate.age === snap.age) || null;
+    return historySnapshotHtml(snap, previous, index === 0);
+  }).join("") : `<div class="empty-state"><h2>Історія поки порожня</h2><p class="muted">Після першого завершеного спостереження тут з’явиться запис із датою та відповідями.</p><button type="button" class="btn primary" data-go="survey">Почати спостереження</button></div>`;
+  const currentSurvey = cc().surveys[currentAge()];
+  const updateButton = snaps.length ? `<button type="button" class="btn ghost block" data-go="survey" ${currentSurvey && currentSurvey.date ? 'data-restart="1"' : ""}>Оновити спостереження</button>` : "";
   return `
     <section class="screen-pad">
       <h1 tabindex="-1">Історія спостережень</h1>
-      <p class="muted">Тут зберігаються ваші відповіді з різних дат. Вони не є оцінкою розвитку.</p>
+      <p class="muted">Порівнюйте лише власні записи з різних дат. Це не оцінка, рейтинг або діагноз.</p>
       <div class="history-list">${list}</div>
+      ${updateButton}
     </section>`;
 }
 
@@ -613,7 +796,7 @@ function finishSurvey() {
   for (const k of DOMAIN_KEYS) domainYes[k] = { yes: profile.stats[k].yes, total: profile.stats[k].total };
   survey.date = new Date().toISOString();
   cc().surveys[age] = survey;
-  cc().snapshots.push({ id: "snap_" + Date.now(), date: survey.date, age, states: { ...survey.states }, counts, domainYes });
+  cc().snapshots.push({ id: "snap_" + Date.now(), date: survey.date, age, questionIds: [...ids], states: { ...survey.states }, counts, domainYes });
   save();
   setHash("results");
 }

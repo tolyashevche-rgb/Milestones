@@ -143,8 +143,28 @@ function testAppState() {
     store = { consent: { accepted: true }, children: [first, second], activeChildId: first.id };
 
     const ids = questionIdsFor(4);
+    const startStep = homeNextStep(4);
+    const startMarkup = renderHome();
+    first.surveys[4].states[ids[0]] = "yes";
+    const continueStep = homeNextStep(4);
+    const continueMarkup = renderHome();
     first.surveys[4].states = Object.fromEntries(ids.map((id) => [id, "yes"]));
     first.surveys[4].date = "2026-06-20T10:00:00.000Z";
+    const playStep = homeNextStep(4);
+    const playMarkup = renderHome();
+    first.activityCompletions[completionKey(4)] = { activityId: playStep.task.act.id };
+    const doneStep = homeNextStep(4);
+    const doneMarkup = renderHome();
+    const homeNextStepOkay = startStep.kind === "start-observation"
+      && continueStep.kind === "continue-observation"
+      && continueStep.progress.value === 1
+      && playStep.kind === "play-today"
+      && doneStep.kind === "done-today"
+      && (startMarkup.match(/data-primary-action=/g) || []).length === 1
+      && (continueMarkup.match(/data-primary-action=/g) || []).length === 1
+      && (playMarkup.match(/data-primary-action=/g) || []).length === 1
+      && (doneMarkup.match(/data-primary-action=/g) || []).length === 0
+      && doneMarkup.includes('<details class="home-more">');
     first.snapshots.push({ id: "snap_existing" });
     first.programSelections["4"] = { "1": "act_004_language_001" };
     first.activityCompletions[completionKey(4)] = { activityId: "act_004_language_001" };
@@ -177,15 +197,27 @@ function testAppState() {
       && migrated.children[0].notes === "нотатка"
       && migrated.children[0].activityCompletions.sample.activityId === "activity";
 
-    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay };
+    const oldSnapshot = { age: 4, states: { [ids[0]]: "not_sure", [ids[1]]: "yes" } };
+    const newSnapshot = { age: 4, questionIds: ids.slice(0, 3), states: { [ids[0]]: "yes", [ids[1]]: "not_yet", [ids[2]]: "yes" } };
+    const fallbackCounts = snapshotCounts(oldSnapshot);
+    const changes = snapshotChanges(newSnapshot, oldSnapshot);
+    const historyOkay = fallbackCounts.observed === 1
+      && fallbackCounts.notSure === 1
+      && fallbackCounts.notYet === 0
+      && changes.newlyObserved.length === 2
+      && changes.changed.length === 1;
+
+    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay };
   })()`, context);
 
   assert.equal(result.restartOkay, true, "re-test must clear only the active plan and today's completion");
   assert.equal(result.finishIsIdempotent, true, "finishing the same survey twice must not create duplicate snapshots");
   assert.equal(result.childrenIsolated, true, "children must not share surveys, notes, or completions");
   assert.equal(result.migrationOkay, true, "legacy single-child data must migrate losslessly");
+  assert.equal(result.historyOkay, true, "history comparison must support old snapshots and describe answer changes");
+  assert.equal(result.homeNextStepOkay, true, "home must expose one contextual primary action and a calm done state");
 }
 
 testContentAndEngine();
 testAppState();
-console.log("P1 QA passed: 5 ages, content integrity, deterministic plans, re-tests, migration, multi-child isolation.");
+console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, contextual home, re-tests, history comparison, migration, multi-child isolation.");

@@ -107,6 +107,14 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
+- **P2.2 contextual home:** Stage5 now shows one calm next step based on the active child's
+  state: start or continue the observation, play today's game, or stop after today's game is
+  done. Secondary destinations and destructive data controls are collapsed into clearly named
+  disclosures, so the home screen no longer presents every action at equal priority.
+- **P2.1 observation history:** Stage5 now keeps the history descriptive and useful without
+  turning it into a score. Each saved observation shows the date and three answer counts,
+  compares it with the previous record for the same age, calls out newly observed and changed
+  answers, and lets the parent expand the full answer list. Legacy snapshots remain readable.
 - **P1 guided-flow hardening + QA:** the primary Stage5 build shows one observation at a time,
   routes completed observations to a calm summary, exposes the nearest 7 days of the 14-day
   play cycle, and supports a reversible “done today” state. `node tools/test_p1_qa.js` now
@@ -150,8 +158,12 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   ready: a generated, plain-language **review packet**
   ([docs/expert_review_packet_ua.md](docs/expert_review_packet_ua.md) — all 54 milestones + 60
   activities per age, no code; rebuild with `node tools/build_review_packet.js`), a tracker
-  ([docs/expert_review_tracker.md](docs/expert_review_tracker.md)), and the checklist. Needs a
-  live reviewer.
+  ([docs/expert_review_tracker.md](docs/expert_review_tracker.md)), checklist, and an operational
+  [validation launch kit](docs/validation_launch_kit_ua.md) with outreach, scope, sign-off,
+  parent-recruitment, and scheduling templates. A source-checked
+  [E01–E05 shortlist](docs/expert_candidate_shortlist_ua.md) identifies the first outreach
+  routes and reserves; [send-ready drafts](docs/expert_outreach_drafts_ua.md) cover the four
+  first-wave messages and follow-up. Needs live reviewers.
 - Parent test with 5 parents — live sessions not done. The ready-to-run Ukrainian facilitator
   pack (neutral script, short consent, observation sheet, severity rubric, synthesis) is in
   [docs/parent_test_facilitator_pack_ua.md](docs/parent_test_facilitator_pack_ua.md); use only
@@ -195,9 +207,11 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | 6 | Exercise **illustrations** (original/licensed) | **interim done**: original inline-SVG per domain (`illustrations.js`); designer-made art still a later upgrade |
 | 7 | Consent / age-gate screen + data-erasure control | **done** in stage5 (consent + "erase all") |
 | 8 | P1 regression QA + edge-case hardening | **done** — automated five-age suite, idempotent finish, clean re-test state, mobile accessibility audit |
+| 9 | P2.1 descriptive observation history | **done** — dated records, same-age comparison, full answer details, legacy snapshot support, mobile QA |
+| 10 | P2.2 contextual home | **done** — one state-aware next step, resumable observation progress, calm done state, collapsed secondary/data controls, mobile QA |
 
-Stage5 status: working guided flow (welcome → consent → child profile → home/cabinet →
-survey → calm descriptive summary → program → history → ask), local-first storage with **multi-child**
+Stage5 status: working guided flow (welcome → consent → child profile → contextual home/cabinet →
+survey → calm descriptive summary → program → descriptive history with same-age changes → ask), local-first storage with **multi-child**
 (`children[]`, appbar switcher, add/delete, lossless migration), a per-age survey that asks
 **all** milestones for the age (fixed set a re-test reuses), a **curated question pool**
 (multiple phrasings per milestone, reshuffled on re-test), descriptive charts, `.ics`

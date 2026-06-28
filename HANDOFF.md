@@ -34,8 +34,9 @@ you must never cross".)
 - **Run the app:** from repo root `py -m http.server 8000`, then open
   `http://127.0.0.1:8000/prototype_stage5_ua/index.html` (stage5 = the primary build).
 - **Syntax check:** `node --check <file.js>`.
-- **P1 regression suite:** `node tools/test_p1_qa.js` — all 5 ages, content links,
-  deterministic plans, re-tests, legacy migration, and multi-child isolation.
+- **Product regression suite:** `node tools/test_p1_qa.js` — all 5 ages, content links,
+  deterministic plans, re-tests, descriptive history comparison, legacy migration, and
+  multi-child isolation.
 - **Headless logic test:** load `prototype_stage4_ua/data_ua.js` + `engine.js` in a Node `vm`
   (pure, no DOM). For `app5.js`, stub `document`/`localStorage`/`window` (see how earlier
   multi-child / coverage tests were run — vm + fake DOM).
@@ -48,10 +49,15 @@ you must never cross".)
 
 Stage5 UA is a complete MVP loop: onboarding → consent → **multi-child** profile → cabinet →
 survey (full coverage + phrasing variants + WHO windows) → results/vision → 1–2 week program →
-descriptive history → ask/notes → `.ics` export. Local-first (`localStorage`), GDPR-minded
+descriptive history with same-age change details → ask/notes → `.ics` export. Local-first (`localStorage`), GDPR-minded
 (consent + erase). Engine is pure and traceable — it **selects** from curated, sourced content,
 never generates at runtime. P1 now uses one question per screen, a calm descriptive summary,
 the nearest 7 days of the 14-day cycle, a reversible “done today” state, and automated regression QA.
+P2.1 adds dated history cards, previous-observation comparison, expandable full answers, and
+legacy snapshot support without scores, levels, or developmental conclusions.
+P2.2 makes the home contextual: it shows at most one primary action for start/continue/play,
+switches to a calm no-action state after today's game is complete, and collapses secondary
+destinations plus destructive data controls.
 
 ## Key decisions & findings (do NOT re-litigate)
 
@@ -73,14 +79,20 @@ the nearest 7 days of the 14-day cycle, a reversible “done today” state, and
 ## What's next (prioritized)
 
 > **Assistant told only "continue" / "давай продовжимо"? Do this:** the remaining gates need
-> people, not more feature code. The facilitator pack is now ready. First confirm expert approval
-> in `docs/expert_review_tracker.md`; after approval, help the owner recruit and run five sessions
-> using `docs/parent_test_facilitator_pack_ua.md`. Do not simulate parent feedback or call the
-> product validated without those live sessions.
+> people, not more feature code. The operational path and ready-to-send templates are in
+> `docs/validation_launch_kit_ua.md`; the source-checked candidates are in
+> `docs/expert_candidate_shortlist_ua.md`; the four first-wave messages are ready in
+> `docs/expert_outreach_drafts_ua.md`. The registry is populated but nobody has been contacted.
+> Obtain the owner’s sender identity, compensation wording, timeline, and explicit Send approval.
+> After
+> approval in `docs/expert_review_tracker.md`, recruit and run
+> five sessions using `docs/parent_test_facilitator_pack_ua.md`. Do not simulate feedback or call
+> the product validated without live reviewers and parents.
 
 1. **Expert review** (gate before real users) — fully prepped. Hand a clinician
    `docs/expert_review_packet_ua.md`; they review against `docs/expert_review_checklist.md`;
-   record in `docs/expert_review_tracker.md`. **Needs a live reviewer — an assistant cannot do this.**
+   record in `docs/expert_review_tracker.md`. Outreach, scope, follow-up, and sign-off workflow:
+   `docs/validation_launch_kit_ua.md`. **Needs live reviewers — an assistant cannot do this.**
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
@@ -106,6 +118,53 @@ the nearest 7 days of the 14-day cycle, a reversible “done today” state, and
 ---
 
 ## Work log (newest first)
+
+### 2026-06-28 — P2.2 contextual home and action hierarchy
+- Replaced the equal-weight home dashboard with `homeNextStep()`: first observation, resumable
+  in-progress observation with saved-answer progress, today's game, and a calm “done today”
+  state. Start/continue/play states expose exactly one primary action; done exposes none.
+- Moved history, all games, specialist notes, re-observation, and calendar export under
+  “Інші можливості”; moved child deletion and full data erasure under a separate collapsed
+  “Керування профілем і даними” control.
+- Added regression coverage for all four contextual states and primary-action counts. Browser
+  QA at 390×844 found no overflow, undersized visible controls, duplicate ids, or console errors;
+  both disclosures remain keyboard-sized and collapsed by default.
+
+### 2026-06-28 — P2.1 descriptive observation history
+- Rebuilt the Stage5 history screen around dated observation cards with calm counts for
+  “Бачу”, “Ще спостерігаю”, and “Поки ні”; no score or developmental rating is introduced.
+- Added same-age comparison against the previous saved observation, including newly observed
+  items and changed answers, plus an expandable full-answer view. New snapshots retain their
+  milestone ids while legacy snapshots continue to render from stored counts/state.
+- Extended `tools/test_p1_qa.js` with history-comparison and legacy-snapshot coverage. The suite,
+  syntax checks, and `git diff --check` pass. Browser QA at 390×844 found no horizontal overflow,
+  undersized visible controls, duplicate ids, or console errors; full-answer disclosure works.
+
+### 2026-06-28 — First-wave expert outreach drafts ready
+- Added `docs/expert_outreach_drafts_ua.md`: complete Ukrainian emails for UAPS, the Early
+  Intervention Association, the Speech and Language Therapy Society, and the NAES early-
+  development center, plus response snippets, one neutral follow-up, send checklist, and log.
+- Drafts deliberately leave only sender identity, compensation wording, timeframe, and share
+  link unresolved. No external message has been sent; explicit owner approval is still required.
+
+### 2026-06-28 — E01–E05 expert shortlist researched
+- Added `docs/expert_candidate_shortlist_ua.md` using current official sources: UAPS for
+  pediatric safety, the Ukrainian Early Intervention Association for physical therapy and
+  psychology, the Ukrainian Society for Speech and Language Therapy for infant communication,
+  and the NAES early-development center for parent routines/digital clarity.
+- Populated the launch-kit registry with verified-but-not-contacted routes, specific review
+  scopes, public professional channels, personalized opening lines, and reserves.
+- No outreach was sent. Next external step requires the owner’s sender identity, compensation
+  approach, and preferred review timeline.
+
+### 2026-06-28 — Validation launch workflow ready
+- Added `docs/validation_launch_kit_ua.md`: expert-role coverage, candidate registry,
+  short/long outreach templates, scope confirmation, kickoff agenda, issue handling,
+  follow-up, approval gate, gated parent screener, invitation, and definition of done.
+- Updated the expert checklist from stale Stage3 metadata to Stage5 and cross-linked the
+  tracker, facilitator pack, README, and launch kit into one operational path.
+- The remaining work is deliberately human: populate expert candidates, send personalized
+  invitations, obtain sign-off, then recruit five parents. No feedback may be simulated.
 
 ### 2026-06-28 — Stage5 parent-test facilitator pack ready
 - Replaced the Stage4-only testing path with `docs/parent_test_facilitator_pack_ua.md`: a
