@@ -1,5 +1,8 @@
 # Parent Test Script: Stage 4 Prototype
 
+> **Archived starting point.** For the current Stage 5 UA build, use the ready-to-run
+> Ukrainian facilitator pack: [parent_test_facilitator_pack_ua.md](parent_test_facilitator_pack_ua.md).
+
 Version: Stage 4 draft
 Date: 2026-05-05
 
@@ -162,4 +165,3 @@ Top revisions:
 2.
 3.
 ```
-

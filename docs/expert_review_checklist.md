@@ -153,6 +153,10 @@ Approved for parent testing:
 Yes / No / Yes after revisions
 ```
 
+After approval, run the live usability sessions with
+[parent_test_facilitator_pack_ua.md](parent_test_facilitator_pack_ua.md). The pack uses
+fictional child data and does not ask the moderator to interpret development.
+
 ## Files for Review
 
 Record findings in [expert_review_tracker.md](expert_review_tracker.md). **Start with the

@@ -48,7 +48,7 @@ you must never cross".)
 
 Stage5 UA is a complete MVP loop: onboarding → consent → **multi-child** profile → cabinet →
 survey (full coverage + phrasing variants + WHO windows) → results/vision → 1–2 week program →
-progress charts → ask/notes → `.ics` export. Local-first (`localStorage`), GDPR-minded
+descriptive history → ask/notes → `.ics` export. Local-first (`localStorage`), GDPR-minded
 (consent + erase). Engine is pure and traceable — it **selects** from curated, sourced content,
 never generates at runtime. P1 now uses one question per screen, a calm descriptive summary,
 the nearest 7 days of the 14-day cycle, a reversible “done today” state, and automated regression QA.
@@ -72,19 +72,18 @@ the nearest 7 days of the 14-day cycle, a reversible “done today” state, and
 
 ## What's next (prioritized)
 
-> **Assistant told only "continue" / "давай продовжимо"? Do this:** the next *real* milestones
-> (#1 expert review, #2 parent test) need **people, not code** — you cannot run them yourself.
-> The one substantive task you can do now is **prepare #2's parent-test facilitator pack**
-> (turn `docs/parent_test_script.md` into a ready-to-run session guide + observation sheet +
-> short consent, the same way `tools/build_review_packet.js` produced the review packet).
-> **Propose that first.** Do **not** start #3 (high-caution authors) or #5 (low-value) without
-> asking; #4 is the owner's decision. If in doubt, state where we are in one line and offer the pack.
+> **Assistant told only "continue" / "давай продовжимо"? Do this:** the remaining gates need
+> people, not more feature code. The facilitator pack is now ready. First confirm expert approval
+> in `docs/expert_review_tracker.md`; after approval, help the owner recruit and run five sessions
+> using `docs/parent_test_facilitator_pack_ua.md`. Do not simulate parent feedback or call the
+> product validated without those live sessions.
 
 1. **Expert review** (gate before real users) — fully prepped. Hand a clinician
    `docs/expert_review_packet_ua.md`; they review against `docs/expert_review_checklist.md`;
    record in `docs/expert_review_tracker.md`. **Needs a live reviewer — an assistant cannot do this.**
-2. **Parent test, 5 parents** (second gate) — script in `docs/parent_test_script.md`. A
-   facilitator pack can be generated the same way as the review packet. **Needs real parents.**
+2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
+   short consent, observation sheet, severity rubric, and five-session synthesis are in
+   `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
 3. **Author cards** — 8/26 done; the rest are moderate/high-caution authors needing careful,
    gated framing.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
@@ -107,6 +106,15 @@ the nearest 7 days of the 14-day cycle, a reversible “done today” state, and
 ---
 
 ## Work log (newest first)
+
+### 2026-06-28 — Stage5 parent-test facilitator pack ready
+- Replaced the Stage4-only testing path with `docs/parent_test_facilitator_pack_ua.md`: a
+  30–40 minute neutral script, fictional profile/data rules, short consent draft, task sheet,
+  moderator prompts, P0–P3 issue rubric, and synthesis table for five sessions.
+- Explicitly gated live parent testing on expert approval and prohibited real child data in
+  prototype sessions; the old Stage4 script now points to the current pack.
+- Next action changed from “prepare the pack” to “obtain expert approval, then recruit and run
+  five live sessions”; feedback must not be simulated.
 
 ### 2026-06-28 — P1.3 regression QA and edge-case hardening
 - Added `tools/test_p1_qa.js`: covers all 2/4/6/9/12-month content, question/discuss/author

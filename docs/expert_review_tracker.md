@@ -131,3 +131,7 @@ stop, evidence`. The authored fields below (`setup`, `what_to_watch`, `claim_lim
 | Optional improvements |  |
 | **Approved for parent testing?** | ☐ Yes · ☐ Yes after revisions · ☐ No |
 | Sign-off (name / role / date) |  |
+
+When this decision is **Yes** (or all required revisions for **Yes after revisions** are
+closed), use [parent_test_facilitator_pack_ua.md](parent_test_facilitator_pack_ua.md) for the
+five live parent sessions.

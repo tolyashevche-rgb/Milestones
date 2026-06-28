@@ -152,7 +152,10 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   activities per age, no code; rebuild with `node tools/build_review_packet.js`), a tracker
   ([docs/expert_review_tracker.md](docs/expert_review_tracker.md)), and the checklist. Needs a
   live reviewer.
-- Parent test with 5 parents — not done.
+- Parent test with 5 parents — live sessions not done. The ready-to-run Ukrainian facilitator
+  pack (neutral script, short consent, observation sheet, severity rubric, synthesis) is in
+  [docs/parent_test_facilitator_pack_ua.md](docs/parent_test_facilitator_pack_ua.md); use only
+  after the expert-review tracker approves parent testing.
 - Author cards: **8 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
   serve-return, Harvard brain-building-play, Mooney, Marks). Remaining are mostly
   moderate/high-caution authors (Montessori, Doman, Sears, Maté…) needing careful framing.
@@ -178,7 +181,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | B | Surface "when to discuss" in the UI (reuse `discuss_if`) | **done (UA + EN)** |
 | B2 | Fix `allClear` maintenance bug (+ `partialClear`) | **done** |
 | C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (8/26; no-caution authors done) |
-| D | Expert review + parent test (validation gates) | pending |
+| D | Expert review + parent test (validation gates) | **packs ready; live reviews/sessions pending** |
 
 ### Product roadmap (from the 2026-06-08 direction)
 
