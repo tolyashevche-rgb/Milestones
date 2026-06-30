@@ -1,20 +1,21 @@
-const CACHE_NAME = "milestones-stage5-p2-13";
+const CACHE_NAME = "milestones-stage5-p2-16-r1";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles5.css?v=20260629-p2-13",
-  "./app5.js?v=20260629-p2-13",
-  "./pwa.js?v=20260629-p2-13",
-  "./questions_ua.js?v=20260629-p2-13",
-  "./illustrations.js?v=20260629-p2-13",
-  "./authors_ua.js?v=20260629-p2-13",
-  "./who_windows.js?v=20260629-p2-13",
+  "./styles5.css?v=20260630-p2-16-r1",
+  "./app5.js?v=20260630-p2-16-r1",
+  "./pwa.js?v=20260630-p2-16-r1",
+  "./questions_ua.js?v=20260630-p2-16-r1",
+  "./illustrations.js?v=20260630-p2-16-r1",
+  "./authors_ua.js?v=20260630-p2-16-r1",
+  "./who_windows.js?v=20260630-p2-16-r1",
+  "./activity_context_ua.js?v=20260630-p2-16-r1",
   "./manifest.webmanifest",
   "./app-icon.svg",
   "./app-icon-192.png",
   "./app-icon-512.png",
-  "../prototype_stage4_ua/data_ua.js?v=20260629-p2-13",
-  "../prototype_stage4_ua/engine.js?v=20260629-p2-13"
+  "../prototype_stage4_ua/data_ua.js?v=20260630-p2-16-r1",
+  "../prototype_stage4_ua/engine.js?v=20260630-p2-16-r1"
 ];
 
 self.addEventListener("install", (event) => {

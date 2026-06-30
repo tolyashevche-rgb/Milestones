@@ -146,6 +146,36 @@ weekly_plan_day:
   low_energy_version: "Pick one activity for 2 minutes."
 ```
 
+### 7. Stage 5 Local Child Profile
+
+Stage 5 stores only the minimum local profile fields needed for age routing and a calm
+return loop. `expected_due_date` is optional and is used for corrected-age routing only when
+it is more than three weeks after the birth date; it selects the nearest available age block. It never produces
+a score, risk label, or developmental conclusion. The wording and routing remain pending
+the expert-review gate.
+
+```yaml
+child_profile:
+  id: child_local_id
+  name: "optional"
+  date_of_birth: "YYYY-MM-DD"
+  expected_due_date: "YYYY-MM-DD or empty"
+  favorite_activity_ids:
+    - act_004_social_001
+  activity_reactions:
+    "2026-06-29:4": liked # liked | not_today; optional reflection on the game
+  play_context: any # any | quick | no_materials | low_energy
+```
+
+These fields remain per child, local-first, included in the private backup, and isolated
+from other child profiles. Post-play reactions do not alter developmental observations.
+The Stage 5 weekly recap is a derived seven-day view over local completion/reaction entries;
+it is not a stored score, streak, target, or additional child-development field.
+`play_context` is a reversible per-child UI preference. It searches only activities already in
+the personalized plan. Quick/no-material matching uses literal duration/material fields;
+low-energy matching uses only authored, non-`NEEDS_REVIEW` variants mirrored from the canonical
+UA activity CSV. The preference does not alter observations, profile weights, or history.
+
 ## Domains
 
 | Domain ID | Parent Label | Notes |
@@ -213,4 +243,3 @@ Examples:
 2. Use exact CDC age pages only, or add broader activity windows?
 3. Keep source citations visible in the parent UI or behind an "Evidence" drawer?
 4. Make `Discuss with professional` a button/action flow or a simple content block in MVP?
-

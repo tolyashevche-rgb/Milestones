@@ -89,6 +89,24 @@ and no redundant guidance once running standalone.
 P2.12 makes PWA updates user-approved: a new worker waits, the hidden settings expose one
 «Оновити зараз» action, and the app reloads once only after that action. First install does
 not trigger an unsolicited reload.
+P2.16 adds a compact «Підібрати під момент» control inside the existing Game tab. «До 3 хв»
+and «Без речей» use literal duration/material metadata; «Мало сил» selects only among the 33
+authored `low_energy_option` variants mirrored in `activity_context_ua.js` (all remaining
+`NEEDS_REVIEW` rows stay unavailable). The chooser searches only the active child's personalized
+plan, changes today's idea, persists per child, never touches observation answers, and locks after
+completion until the parent explicitly undoes it.
+P2.15 makes the calm shell more ownable without adding navigation or content density: the
+original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
+and teal remains the action/trust color. A derived seven-day recap appears only after at least
+one completed game and says one/several shared moments without exposing a count, streak,
+target, progress bar, or second home-screen action. It uses existing local completion/reaction
+data and stores nothing new.
+P2.14 adds an optional expected due date to the local child profile. When it is more than three
+weeks after the birth date, Stage5 uses corrected age only to choose the nearest available CDC age block; the
+header labels that basis and the UI explicitly says it is not an evaluation. This wording and
+routing are draft pending expert review. The same release adds per-child saved games and an
+optional «Сподобалося / Не сьогодні» reflection after completion, with no streak, score, or
+claim of automatic personalization. Legacy data and version-1 backups receive safe defaults.
 P2.13 guards local storage failures: read/write errors no longer break the active action, a
 rare accessible «Не збережено» status points to backup without discarding in-memory data,
 successful recovery clears it, and erase/restore cannot report false persistence.
@@ -125,7 +143,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 
 1. **Expert review** (gate before real users) — fully prepped. Hand a clinician
    `docs/expert_review_packet_ua.md`; they review against `docs/expert_review_checklist.md`;
-   record in `docs/expert_review_tracker.md`. Outreach, scope, follow-up, and sign-off workflow:
+   record in `docs/expert_review_tracker.md`. P2.14 adds a cross-cutting review item for the
+   corrected-age input/routing and its Ukrainian wording. Outreach, scope, follow-up, and sign-off workflow:
    `docs/validation_launch_kit_ua.md`. **Needs live reviewers — an assistant cannot do this.**
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
@@ -142,7 +161,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ## Key files
 
 - App (primary): `prototype_stage5_ua/` — `app5.js` (UI/nav + storage), `index.html`,
-  `styles5.css`, `questions_ua.js` (phrasings), `authors_ua.js` (Bronze notes), `who_windows.js`.
+  `styles5.css`, `questions_ua.js` (phrasings), `authors_ua.js` (Bronze notes), `who_windows.js`,
+  `activity_context_ua.js` (authored low-energy variants only).
 - Canonical data + logic (reused by stage5): `prototype_stage4_ua/data_ua.js`, `engine.js`.
 - EN reference prototype: `prototype_stage4/`.
 - Content source of truth (not read at runtime): `data/*.csv`, `knowledge_base/`.
@@ -152,6 +172,41 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-06-30 — P2.16 context-aware game choice
+- Added a single optional context picker above today's game: default recommendation, up to
+  three minutes, no materials, or low-energy. It stays inside the Game tab and never creates a
+  competing home action or changes survey observations.
+- Matching is deterministic and limited to activities already present in the personalized
+  14-day plan. Duration/material filters use runtime metadata; low-energy selection and the
+  visible «Коли сил мало» card use only 33 authored CSV variants. Missing `NEEDS_REVIEW`
+  adaptations are not inferred. Manual activity/favorite selection calmly returns to default.
+- Persisted the preference per child, extended backup validation/migration, disabled switching
+  after completion, cached the new context file offline, and added content/coverage/UX regression
+  checks. Validation baseline moved to P2.16 because external review has not started.
+
+### 2026-06-30 — P2.15 warm identity and pressure-free weekly recap
+- Replaced the anonymous gradient square with the existing original kite across the app bar and
+  welcome state. Added a restrained warm palette, subtle page atmosphere, warmer cards, and a
+  small kite-led weekly memory while keeping teal as the only primary interaction color.
+- Added a derived seven-day play summary on Home. It appears only after a completion, uses
+  «one / several moments» instead of a score, contains no progress, streak, target, or action,
+  and reassures that one calm moment is enough. Optional reactions can add a private, neutral note.
+- Added regression coverage for date filtering, reaction aggregation, no competing CTA/progress,
+  original brand markup, warm styles, offline cache P2.15, and old-cache cleanup. Moved the
+  unstarted expert/parent validation baseline to P2.15 and added tone/color review prompts.
+
+### 2026-06-29 — P2.14 corrected-age routing and calm return loop
+- Added an optional expected due date under a collapsed early-birth profile question. A valid
+  date more than three weeks after birth selects the existing age block by corrected age, including a compact
+  «скориг.» header label; it does not change milestone content, score development, or bypass
+  the expert-review gate. Added explicit corrected-age questions to the expert checklist/tracker.
+- Added per-child saved activities, a collapsed saved-games list inside the existing Game tab,
+  and optional «Сподобалося / Не сьогодні» feedback only after a game is completed. Feedback
+  stays local and does not claim to personalize recommendations yet.
+- Extended migration, backup validation, multi-child isolation, one-thumb focus restoration,
+  styling, cache versioning, and regression coverage. Validation baseline moved to P2.14 because
+  expert outreach and parent sessions have not started.
 
 ### 2026-06-29 — P2.13 guarded local storage
 - Replaced throwing `localStorage` reads/writes with safe operations that retain in-memory

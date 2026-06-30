@@ -2,7 +2,7 @@
 
 Version: Stage 5
 Started: 2026-06-16
-Interface review baseline: Stage 5 UA / P2.13 (2026-06-29)
+Interface review baseline: Stage 5 UA / P2.16 (2026-06-30)
 Companion to: [expert_review_checklist.md](expert_review_checklist.md) (the *questions*); this
 file is the *answers + status*. It is the Stage 5 deliverable #1 from
 [action_plan.md](action_plan.md).
@@ -78,6 +78,12 @@ Cross-cutting (review once, not per cell):
 | Item | Status | Reviewer | Note |
 |---|---|---|---|
 | Disclaimers + screening-vs-monitoring framing |  |  |  |
+| Corrected-age input, age-block selection, and parent-facing wording |  |  |  |
+| Optional post-play reactions remain non-evaluative |  |  |  |
+| Weekly play recap remains pressure-free and non-evaluative |  |  |  |
+| Warm visual accents carry no developmental meaning |  |  |  |
+| Context labels and selection behavior remain non-prescriptive |  |  |  |
+| 33 surfaced low-energy variants remain safe as standalone short options |  |  |  |
 | `discuss_if` / "when to discuss" wording (calm, not alarming) |  |  |  |
 | Survey phrasings (`questions_ua.js`) inherit milestone meaning |  |  |  |
 | Author "approach" notes (`authors_ua.js`) stay inspiration-only |  |  |  |

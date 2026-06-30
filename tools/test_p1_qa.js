@@ -14,6 +14,7 @@ function contentContext() {
   run(context, "prototype_stage5_ua/questions_ua.js");
   run(context, "prototype_stage5_ua/authors_ua.js");
   run(context, "prototype_stage5_ua/who_windows.js");
+  run(context, "prototype_stage5_ua/activity_context_ua.js");
   return context;
 }
 
@@ -26,8 +27,10 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260629-p2-13"), "Stage5 assets must use the P2.13 cache key");
+  assert.ok(stage5Index.includes("20260630-p2-16-r1"), "Stage5 assets must use the P2.16 cache key");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
+  assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
+  assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
   assert.ok(stage5Styles.includes("@media (forced-colors: active)"), "high-contrast mode needs explicit active-state support");
   assert.ok(stage5Styles.includes("@media (prefers-reduced-motion: reduce)"), "reduced-motion preference must stay supported");
   assert.ok(stage5App.includes('document.getElementById("toggleTodayDone")?.focus'), "program updates must restore focus to the thumb action");
@@ -41,7 +44,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-13"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-16-r1"'), "service worker cache must be versioned");
   assert.ok(serviceWorker.includes('caches.match("./index.html")'), "offline navigation needs an app-shell fallback");
   assert.ok(pwaScript.includes('navigator.serviceWorker.register("./sw.js")'), "the app must register its service worker");
   assert.ok(pwaScript.includes('window.addEventListener("beforeinstallprompt"'), "supported browsers need a deferred native install action");
@@ -59,7 +62,7 @@ function testContentAndEngine() {
   const context = contentContext();
   const api = vm.runInContext(`({
     AGES, DOMAIN_KEYS, ENGINE_CONFIG, MILESTONES_BY_AGE, ACTIVITIES_BY_AGE, DISCUSS_BY_ID,
-    QUESTION_VARIANTS_UA, ACTIVITY_AUTHOR_NOTES, WHO_WINDOW_BY_ID,
+    QUESTION_VARIANTS_UA, ACTIVITY_AUTHOR_NOTES, WHO_WINDOW_BY_ID, ACTIVITY_LOW_ENERGY_UA,
     buildProfile, buildProgram, domainOf
   })`, context);
 
@@ -130,6 +133,11 @@ function testContentAndEngine() {
     }
   }
   Object.keys(api.WHO_WINDOW_BY_ID).forEach((id) => assert.ok(milestoneIds.has(id), `WHO window points to unknown milestone ${id}`));
+  assert.equal(Object.keys(api.ACTIVITY_LOW_ENERGY_UA).length, 33, "only authored low-energy variants may ship");
+  Object.entries(api.ACTIVITY_LOW_ENERGY_UA).forEach(([id, text]) => {
+    assert.ok(activityIds.has(id), `low-energy variant points to unknown activity ${id}`);
+    assert.ok(text && text !== "NEEDS_REVIEW", `low-energy variant ${id} must be authored`);
+  });
 }
 
 function appContext(options = {}) {
@@ -172,6 +180,7 @@ function appContext(options = {}) {
   run(context, "prototype_stage4_ua/data_ua.js");
   run(context, "prototype_stage4_ua/engine.js");
   run(context, "prototype_stage5_ua/questions_ua.js");
+  run(context, "prototype_stage5_ua/activity_context_ua.js");
   run(context, "prototype_stage5_ua/app5.js");
   return context;
 }
@@ -219,7 +228,7 @@ async function testServiceWorker() {
     fetch: async () => { throw new Error("offline"); },
     caches: {
       open: async () => cache,
-      keys: async () => ["milestones-stage5-p2-12", "milestones-stage5-p2-13", "unrelated-cache"],
+      keys: async () => ["milestones-stage5-p2-12", "milestones-stage5-p2-13", "milestones-stage5-p2-14", "milestones-stage5-p2-15", "milestones-stage5-p2-15-r1", "milestones-stage5-p2-16", "milestones-stage5-p2-16-r1", "unrelated-cache"],
       delete: async (key) => { deletedCaches.push(key); return true; },
       match: async (request) => request === "./index.html" ? offlineDocument : null
     },
@@ -238,7 +247,8 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260629-p2-13"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260630-p2-16-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260630-p2-16-r1"), "offline shell must cache authored activity context variants");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
   assert.equal(skipWaitingCalled, true, "approved update must tell the waiting worker to activate");
@@ -246,7 +256,7 @@ async function testServiceWorker() {
   let activateWork;
   listeners.activate({ waitUntil: (promise) => { activateWork = promise; } });
   await activateWork;
-  assert.deepEqual(deletedCaches, ["milestones-stage5-p2-12"], "activation must delete only older Stage5 caches");
+  assert.deepEqual(deletedCaches, ["milestones-stage5-p2-12", "milestones-stage5-p2-13", "milestones-stage5-p2-14", "milestones-stage5-p2-15", "milestones-stage5-p2-15-r1", "milestones-stage5-p2-16"], "activation must delete only older Stage5 caches");
   assert.equal(clientsClaimed, true, "new service worker must claim the app after activation");
 
   let navigationResponse;
@@ -357,6 +367,30 @@ function testAppState() {
     const second = freshChild("Друга", "2025-09-28");
     store = { consent: { accepted: true }, children: [first, second], activeChildId: first.id };
 
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setDate(1);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const preterm = freshChild("Передчасно", localDateString(sixMonthsAgo), localDateString(fourMonthsAgo));
+    const twoWeeksAfterBirth = new Date(sixMonthsAgo);
+    twoWeeksAfterBirth.setDate(twoWeeksAfterBirth.getDate() + 14);
+    const nearTerm = freshChild("Майже в термін", localDateString(sixMonthsAgo), localDateString(twoWeeksAfterBirth));
+    const thirteenMonthsAgo = new Date();
+    thirteenMonthsAgo.setDate(1);
+    thirteenMonthsAgo.setMonth(thirteenMonthsAgo.getMonth() - 13);
+    const nearTermOldDue = new Date(thirteenMonthsAgo);
+    nearTermOldDue.setDate(nearTermOldDue.getDate() + 14);
+    const profileMarkup = renderProfile();
+    const correctedAgeOkay = usesCorrectedAge(preterm)
+      && ageWindowFor(developmentalMonths(preterm)) === 4
+      && validateProfileDates(preterm.dob, preterm.expectedDueDate).corrected
+      && !validateProfileDates(preterm.dob, preterm.expectedDueDate).error
+      && validateProfileDates(preterm.dob, preterm.dob).field === "expectedDueDate"
+      && !usesCorrectedAge(nearTerm)
+      && validateProfileDates(nearTerm.dob, nearTerm.expectedDueDate).earlyButNotCorrected
+      && Boolean(validateProfileDates(localDateString(thirteenMonthsAgo), localDateString(nearTermOldDue)).error)
+      && profileMarkup.includes('id="expectedDueDate"')
+      && profileMarkup.includes("не оцінка розвитку");
+
     renderNav("home");
     const navMarkup = document.getElementById("bottomNav").innerHTML;
     const navIconsOkay = (navMarkup.match(/class="nav-icon"/g) || []).length === 4
@@ -371,6 +405,8 @@ function testAppState() {
     const restoredBackup = validateBackupPayload(backup);
     const tamperedBackup = JSON.parse(JSON.stringify(backup));
     tamperedBackup.data.children[0].surveys[4].states[ids[0]] = "diagnosis";
+    const tamperedContextBackup = JSON.parse(JSON.stringify(backup));
+    tamperedContextBackup.data.children[0].playContext = "score_child";
     const dataBackupOkay = startMarkup.includes('id="exportBackup"')
       && startMarkup.includes('id="chooseBackup"')
       && startMarkup.includes('id="importBackup"')
@@ -379,7 +415,8 @@ function testAppState() {
       && restoredBackup.ok
       && restoredBackup.store.children.length === 2
       && !validateBackupPayload({ schema: "other", version: 1, data: {} }).ok
-      && !validateBackupPayload(tamperedBackup).ok;
+      && !validateBackupPayload(tamperedBackup).ok
+      && !validateBackupPayload(tamperedContextBackup).ok;
     const emotionalCopyOkay = OBSERVATION_LABELS.not_yet === "Ще не помічаю"
       && surveyMarkup.includes("Ще не помічаю")
       && !surveyMarkup.includes("Поки ні")
@@ -417,15 +454,55 @@ function testAppState() {
     first.surveys[4].date = "2026-06-20T10:00:00.000Z";
     const playStep = homeNextStep(4);
     const playMarkup = renderHome();
+    const programMarkup = renderProgram();
+    const quickContextId = contextActivityId(4, "quick");
+    const noMaterialsContextId = contextActivityId(4, "no_materials");
+    const lowEnergyContextId = contextActivityId(4, "low_energy");
+    const contextPickerMarkup = playContextHtml(4);
+    const lowEnergyMarkup = activityDetailHtml(4, lowEnergyContextId, true);
+    const contextFilterOkay = PLAY_CONTEXT_IDS.join(",") === "any,quick,no_materials,low_energy"
+      && AGES.every((age) => ["quick", "no_materials", "low_energy"].every((context) =>
+        (ACTIVITIES_BY_AGE[age] || []).some((activity) => activityFitsContext(activity, context))))
+      && activityFitsContext(activityById(4, quickContextId), "quick")
+      && activityFitsContext(activityById(4, noMaterialsContextId), "no_materials")
+      && activityFitsContext(activityById(4, lowEnergyContextId), "low_energy")
+      && (contextPickerMarkup.match(/data-play-context=/g) || []).length === 4
+      && contextPickerMarkup.includes("не відповіді спостереження")
+      && lowEnergyMarkup.includes("Коли сил мало")
+      && lowEnergyMarkup.includes("Повні кроки й умова зупинки")
+      && lowEnergyMarkup.includes(ACTIVITY_LOW_ENERGY_UA[lowEnergyContextId]);
     first.activityCompletions[completionKey(4)] = { activityId: playStep.task.act.id };
+    first.favoriteActivities.push(playStep.task.act.id);
+    first.activityReactions[completionKey(4)] = "liked";
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = localDateString(yesterday) + ":4";
+    first.activityCompletions[yesterdayKey] = { activityId: playStep.task.act.id };
+    first.activityReactions[yesterdayKey] = "not_today";
+    const eightDaysAgo = new Date();
+    eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
+    first.activityCompletions[localDateString(eightDaysAgo) + ":4"] = { activityId: playStep.task.act.id };
+    const weekly = weeklyPlaySummary(first);
+    const weeklyMarkup = weeklyRecapHtml(weekly);
+    const weeklyRecapOkay = weekly.count === 2 && weekly.liked === 1 && weekly.notToday === 1
+      && weeklyMarkup.includes("Кілька теплих моментів гри")
+      && weeklyMarkup.includes("немає обов'язкової серії")
+      && !weeklyMarkup.includes('role="progressbar"')
+      && !weeklyMarkup.includes("data-go=");
     const doneStep = homeNextStep(4);
     const doneMarkup = renderHome();
-    const programMarkup = renderProgram();
     const currentProgramDay = programState.program[programState.currentIndex];
     const upcomingProgramDay = programState.program[(programState.currentIndex + 1) % programState.program.length];
     const todayMarkup = todayActivityHtml(4, currentProgramDay);
     const upcomingMarkup = dayAccordionHtml(4, upcomingProgramDay);
+    const savedMarkup = savedGamesHtml(4);
+    const gentleEngagementOkay = todayMarkup.includes('data-favorite-id="' + playStep.task.act.id + '"')
+      && todayMarkup.includes("Збережено")
+      && todayMarkup.includes('data-activity-reaction="liked" aria-pressed="true"')
+      && todayMarkup.includes("Не сьогодні")
+      && savedMarkup.includes('data-saved-game="' + playStep.task.act.id + '"');
     const programUiOkay = programMarkup.includes('<div id="programToday"></div>')
+      && programMarkup.includes('<div id="playContext"></div>')
       && programMarkup.includes('<details class="week-plan">')
       && todayMarkup.includes('class="day-acc open today-game"')
       && todayMarkup.includes('class="activity-switcher"')
@@ -456,7 +533,9 @@ function testAppState() {
       && Object.keys(first.surveys[4].states).length === 0
       && first.snapshots.length === 1
       && !first.programSelections["4"]
-      && !first.activityCompletions[completionKey(4)];
+      && !first.activityCompletions[completionKey(4)]
+      && !first.activityReactions[completionKey(4)]
+      && first.favoriteActivities.includes(playStep.task.act.id);
 
     first.surveys[4].states = Object.fromEntries(ids.map((id) => [id, "yes"]));
     finishSurvey();
@@ -480,7 +559,9 @@ function testAppState() {
       && specialistSummary.includes(first.specialistPrep.questions);
 
     store.activeChildId = second.id;
-    const childrenIsolated = cc().notes === "" && specialistPrepFor().noticed === "" && !cc().surveys[4] && !completedActivityToday(4);
+    const childrenIsolated = cc().notes === "" && specialistPrepFor().noticed === "" && !cc().surveys[4]
+      && !completedActivityToday(4) && cc().favoriteActivities.length === 0 && Object.keys(cc().activityReactions).length === 0
+      && cc().playContext === "any";
 
     const migrated = migrate({
       consent: { accepted: true }, child: { name: "Старий профіль", dob: "2026-02-28" },
@@ -492,7 +573,11 @@ function testAppState() {
       && migrated.children[0].snapshots.length === 1
       && migrated.children[0].notes === "нотатка"
       && migrated.children[0].specialistPrep.noticed === "нотатка"
-      && migrated.children[0].activityCompletions.sample.activityId === "activity";
+      && migrated.children[0].activityCompletions.sample.activityId === "activity"
+      && migrated.children[0].expectedDueDate === ""
+      && migrated.children[0].favoriteActivities.length === 0
+      && Object.keys(migrated.children[0].activityReactions).length === 0
+      && migrated.children[0].playContext === "any";
 
     const oldSnapshot = { age: 4, states: { [ids[0]]: "not_sure", [ids[1]]: "yes" } };
     const newSnapshot = { age: 4, questionIds: ids.slice(0, 3), states: { [ids[0]]: "yes", [ids[1]]: "not_yet", [ids[2]]: "yes" } };
@@ -504,7 +589,7 @@ function testAppState() {
       && changes.newlyObserved.length === 2
       && changes.changed.length === 1;
 
-    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay };
+    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, gentleEngagementOkay, weeklyRecapOkay, contextFilterOkay };
   })()`, context);
 
   assert.equal(result.restartOkay, true, "re-test must clear only the active plan and today's completion");
@@ -520,6 +605,10 @@ function testAppState() {
   assert.equal(result.navIconsOkay, true, "bottom navigation must use one consistent four-icon SVG set");
   assert.equal(result.accessibilityOkay, true, "survey and home must expose focused, concise accessibility semantics");
   assert.equal(result.dataBackupOkay, true, "local backup must round-trip valid data and reject malformed answers");
+  assert.equal(result.correctedAgeOkay, true, "optional expected due date must select the corrected-age window without exposing a score");
+  assert.equal(result.gentleEngagementOkay, true, "favorites and optional post-play feedback must stay calm and local per child");
+  assert.equal(result.weeklyRecapOkay, true, "weekly recap must describe recent play without a streak, progress bar, or competing action");
+  assert.equal(result.contextFilterOkay, true, "context picker must use honest activity attributes and authored low-energy variants across all ages");
 }
 
 (async () => {
@@ -528,7 +617,7 @@ function testAppState() {
   testStorageFailureRecovery();
   await testServiceWorker();
   await testPwaInstallUi();
-  console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, contextual home, guarded local storage, installable offline shell, deferred install UX, user-approved PWA updates, service-worker lifecycle, safe local backup/restore, unified SVG navigation, one-thumb survey, accessible focus/status semantics, emotion-aware copy, today-first game, specialist prep, re-tests, history comparison, migration, multi-child isolation.");
+  console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, corrected-age profile support, honest context-aware game choice, 33 authored low-energy variants, calm favorites, post-play feedback and weekly recap, warm kite visual layer, contextual home, guarded local storage, installable offline shell, deferred install UX, user-approved PWA updates, service-worker lifecycle, safe local backup/restore, unified SVG navigation, one-thumb survey, accessible focus/status semantics, emotion-aware copy, today-first game, specialist prep, re-tests, history comparison, migration, multi-child isolation.");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

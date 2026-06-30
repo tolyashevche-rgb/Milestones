@@ -71,6 +71,9 @@ professional. This positioning is the product's main asset — do not erode it.
   `who_windows.js` holds `WHO_WINDOW_BY_ID` — a calm "typical range" note (WHO windows of
   achievement, 1st–99th percentile) on the 3 mapped gross-motor milestones; reassurance only,
   never a deadline or score. Sourced from `data/who_motor_windows_0_12.csv`; draft pending review.
+  `activity_context_ua.js` mirrors the 33 already-authored `low_energy_option` values from the
+  canonical UA activity CSV. Rows still marked `NEEDS_REVIEW` are intentionally absent; the UI
+  may select or display these authored variants but must never generate a missing adaptation.
 - **Docs:** [docs/](docs/) — `safety_rules.md` (rules), `router_logic.md` (documents the
   engine), `product_data_model.md`, `research_foundation.md`, etc.
 

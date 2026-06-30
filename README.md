@@ -107,6 +107,22 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
+- **P2.16 context-aware game choice:** the Game tab adds one compact, optional control for
+  «До 3 хв», «Без речей», or «Мало сил» without adding a navigation destination. Selection
+  stays inside the personalized 14-day plan, changes only today's activity, and persists per
+  child. Quick/no-material filters use literal activity metadata; low-energy mode exposes only
+  the 33 already-authored short variants and never invents missing content. Completed games lock
+  the chooser until completion is explicitly undone.
+- **P2.15 warm identity + pressure-free weekly recap:** the original kite now anchors the app
+  bar and welcome screen, while a restrained apricot/blush layer warms cards without assigning
+  evaluative colors to developmental domains. The home screen derives a private seven-day play
+  memory from local completions and describes one or several shared moments without counts,
+  streaks, progress bars, targets, or a competing call to action.
+- **P2.14 corrected-age routing + calm return loop:** an optional expected due date can select
+  the nearest CDC age block by corrected age for a child born more than three weeks early; it never creates a score
+  or conclusion and is explicitly pending expert review. Games can be saved per child, reopened
+  from the Game screen, and given an optional local «Сподобалося / Не сьогодні» reflection after
+  completion. Legacy profiles/backups migrate safely and the offline shell includes the update.
 - **P2.13 guarded local storage:** blocked, corrupt, or full browser storage no longer throws
   through the parent’s active action. A rare “Not saved” appbar status explains that the tab
   should stay open and points to local backup; a later successful write clears it automatically.
@@ -265,6 +281,9 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | 19 | P2.11 calm install guidance | **done** — fallback home-screen instructions, user-triggered native prompt when supported, dismissal/installed states, install-flow regression QA |
 | 20 | P2.12 user-approved PWA updates | **done** — waiting service worker, hidden update action, explicit activation, one controlled reload, first-install protection, lifecycle regression QA |
 | 21 | P2.13 guarded local storage | **done** — non-throwing read/write failures, accessible unsaved status, backup recovery path, accurate erase/restore feedback, recovery regression QA |
+| 22 | P2.14 corrected-age routing + calm favorites | **done** — optional expected due date, expert-gated corrected-age block selection, per-child saved games and optional post-play reflection, migration/backup/offline QA |
+| 23 | P2.15 warm identity + weekly recap | **done** — original kite brand mark, restrained warm accent system, seven-day local play memory without counts/streaks/targets, responsive and regression QA |
+| 24 | P2.16 context-aware game choice | **done** — compact quick/no-material/low-energy modes, personalized-plan-only matching, 33 authored low-energy variants, per-child persistence, completion lock, offline and regression QA |
 
 Stage5 status: working guided flow (welcome → consent → child profile → contextual home/cabinet →
 survey → calm descriptive summary → today-first game → descriptive history with same-age changes → visit-ready specialist prep), local-first storage with **multi-child**

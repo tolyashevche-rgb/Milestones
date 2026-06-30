@@ -1,6 +1,6 @@
 # Expert Review Checklist: CDC x Europe Milestones
 
-Version: Stage 5 / P2.13 review baseline
+Version: Stage 5 / P2.16 review baseline
 Date: 2026-06-29
 
 ## Purpose
@@ -129,7 +129,7 @@ If yes, revise toward calm observation and one small next step.
 
 ## Current Interface Tone and Safety
 
-Review the exact parent-facing wording in the **Stage 5 UA / P2.13** prototype:
+Review the exact parent-facing wording in the **Stage 5 UA / P2.16** prototype:
 
 - Does «Ще не помічаю» feel gentler than pass/fail language while still describing the observation clearly?
 - Is the difference between «Ще спостерігаю» and «Ще не помічаю» meaningful enough for a parent?
@@ -138,6 +138,15 @@ Review the exact parent-facing wording in the **Stage 5 UA / P2.13** prototype:
 - Is the copied specialist summary neutral, concise, and clinically useful without implying a diagnosis?
 - Could one-tap survey auto-advance make an accidental answer look more certain than it is, despite the available Back action?
 - Do optional personal notes remain clearly optional and separate from automatically generated observations?
+- Is the optional expected-due-date question appropriate and understandable for families of children born more than three weeks early?
+- Does using the expected due date solely to select a CDC age block reflect accepted corrected-age practice without implying a developmental verdict?
+- Is the phrase «скоригований вік» calm and clear, including when the expected due date is still in the future?
+- Are «Сподобалося» and «Не сьогодні» neutral reflections on the activity rather than judgments about the child or parent?
+- Does the seven-day play recap feel supportive rather than like a streak, target, or judgment about caregiver effort?
+- Do the warm apricot/blush accents read as decorative warmth rather than safety, risk, or developmental status colors?
+- Are «До 3 хв», «Без речей», and «Мало сил» accurate, calm context labels rather than implied developmental prescriptions?
+- Does each surfaced «Коли сил мало» variant remain safe when read without the full activity steps?
+- Is it clear that context selection changes only the play idea and never the observation result?
 
 ## Review Output Format
 

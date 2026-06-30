@@ -24,10 +24,19 @@ const OBSERVATION_LABELS = {
   not_yet: "Ще не помічаю"
 };
 
+const PLAY_CONTEXTS = [
+  { id: "any", label: "Будь-яка" },
+  { id: "quick", label: "До 3 хв" },
+  { id: "no_materials", label: "Без речей" },
+  { id: "low_energy", label: "Мало сил" }
+];
+const PLAY_CONTEXT_IDS = PLAY_CONTEXTS.map((context) => context.id);
+
 const STORAGE_KEY = "milestonesMap.stage5.ua";
 const BACKUP_SCHEMA = "milestones.stage5.ua.backup";
 const BACKUP_VERSION = 1;
 const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
+const CORRECTED_AGE_MIN_DAYS = 21;
 let storageProblem = "";
 
 // ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
@@ -44,10 +53,11 @@ function specialistPrepFor(child = cc()) {
   child.specialistPrep.questions = child.specialistPrep.questions || "";
   return child.specialistPrep;
 }
-function freshChild(name, dob) {
+function freshChild(name, dob, expectedDueDate = "") {
   return { id: "child_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-           name: name || "", dob: dob || "",
+           name: name || "", dob: dob || "", expectedDueDate: expectedDueDate || "",
            surveys: {}, snapshots: [], programSelections: {}, activityCompletions: {}, triedActivities: [], notes: "",
+           favoriteActivities: [], activityReactions: {}, playContext: "any",
            specialistPrep: emptySpecialistPrep() };
 }
 function freshStore() { return { consent: null, children: [], activeChildId: null }; }
@@ -58,11 +68,14 @@ function migrate(s) {
   const st = freshStore();
   st.consent = s.consent || null;
   if (s.child) {
-    const c = freshChild(s.child.name, s.child.dob);
+    const c = freshChild(s.child.name, s.child.dob, s.child.expectedDueDate || "");
     c.surveys = s.surveys || {}; c.snapshots = s.snapshots || [];
     c.programSelections = s.programSelections || {};
     c.activityCompletions = s.activityCompletions || {};
     c.triedActivities = s.triedActivities || []; c.notes = s.notes || "";
+    c.favoriteActivities = s.favoriteActivities || [];
+    c.activityReactions = s.activityReactions || {};
+    c.playContext = PLAY_CONTEXT_IDS.includes(s.playContext) ? s.playContext : "any";
     c.specialistPrep = s.specialistPrep || emptySpecialistPrep(c.notes);
     st.children.push(c); st.activeChildId = c.id;
   }
@@ -107,6 +120,16 @@ function backupPayload(source = store) {
   };
 }
 function isRecord(value) { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
+function normalizeChild(child) {
+  child.expectedDueDate = typeof child.expectedDueDate === "string" ? child.expectedDueDate : "";
+  child.programSelections = isRecord(child.programSelections) ? child.programSelections : {};
+  child.activityCompletions = isRecord(child.activityCompletions) ? child.activityCompletions : {};
+  child.triedActivities = Array.isArray(child.triedActivities) ? child.triedActivities : [];
+  child.favoriteActivities = Array.isArray(child.favoriteActivities) ? child.favoriteActivities : [];
+  child.activityReactions = isRecord(child.activityReactions) ? child.activityReactions : {};
+  child.playContext = PLAY_CONTEXT_IDS.includes(child.playContext) ? child.playContext : "any";
+  return child;
+}
 function validateBackupPayload(payload) {
   const fail = (error) => ({ ok: false, error });
   if (!isRecord(payload) || payload.schema !== BACKUP_SCHEMA || payload.version !== BACKUP_VERSION || !isRecord(payload.data)) {
@@ -123,8 +146,9 @@ function validateBackupPayload(payload) {
       return fail("У файлі є пошкоджений профіль.");
     }
     childIds.add(child.id);
-    const parsedDob = typeof child.dob === "string" ? parseLocalDate(child.dob) : null;
-    if (typeof child.name !== "string" || child.name.length > 200 || !parsedDob || parsedDob > new Date()) {
+    const profileCheck = validateProfileDates(child.dob, child.expectedDueDate || "");
+    if (typeof child.name !== "string" || child.name.length > 200
+      || (child.expectedDueDate != null && typeof child.expectedDueDate !== "string") || profileCheck.error) {
       return fail("У файлі є некоректні дані профілю.");
     }
     if (!isRecord(child.surveys) || !Array.isArray(child.snapshots) || !isRecord(child.programSelections)
@@ -137,6 +161,17 @@ function validateBackupPayload(payload) {
       || child.snapshots.some((snapshot) => !isRecord(snapshot) || !isRecord(snapshot.states || {})
         || (snapshot.questionIds != null && !Array.isArray(snapshot.questionIds)))) {
       return fail("У файлі є пошкоджена історія або план.");
+    }
+    if (child.favoriteActivities != null && (!Array.isArray(child.favoriteActivities)
+      || child.favoriteActivities.length > 500 || child.favoriteActivities.some((id) => typeof id !== "string"))) {
+      return fail("У файлі є пошкоджені збережені ігри.");
+    }
+    if (child.activityReactions != null && (!isRecord(child.activityReactions)
+      || Object.values(child.activityReactions).some((reaction) => !["liked", "not_today"].includes(reaction)))) {
+      return fail("У файлі є пошкоджені відгуки про ігри.");
+    }
+    if (child.playContext != null && !PLAY_CONTEXT_IDS.includes(child.playContext)) {
+      return fail("У файлі є пошкоджені налаштування гри.");
     }
     for (const survey of Object.values(child.surveys)) {
       if (!isRecord(survey) || !isRecord(survey.states || {})
@@ -154,6 +189,7 @@ function validateBackupPayload(payload) {
       return fail("У файлі є пошкоджені нотатки для фахівця.");
     }
     child.notes = child.notes || "";
+    normalizeChild(child);
     child.specialistPrep = child.specialistPrep || emptySpecialistPrep(child.notes);
     specialistPrepFor(child);
   }
@@ -164,8 +200,7 @@ function validateBackupPayload(payload) {
 function cc() { return store.children.find((c) => c.id === store.activeChildId) || store.children[0] || null; }
 let store = load();
 store.children.forEach((c) => {
-  c.programSelections = c.programSelections || {};
-  c.activityCompletions = c.activityCompletions || {};
+  normalizeChild(c);
   specialistPrepFor(c);
 });
 let profileEditing = false;
@@ -194,14 +229,53 @@ function monthsSince(dobStr) {
   if (now.getDate() < dob.getDate()) m -= 1;
   return m;
 }
-function validateDob(dobStr) {
+function completedMonthsBetween(start, end = new Date()) {
+  let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+  if (months > 0 && end.getDate() < start.getDate()) months -= 1;
+  if (months < 0 && end.getDate() > start.getDate()) months += 1;
+  return months;
+}
+function usesCorrectedAge(child) {
+  const dob = parseLocalDate(child && child.dob);
+  const due = parseLocalDate(child && child.expectedDueDate);
+  return Boolean(dob && due && due > dob && (due - dob) / 86400000 > CORRECTED_AGE_MIN_DAYS);
+}
+function developmentalMonths(child) {
+  if (!child || !child.dob) return null;
+  if (usesCorrectedAge(child)) return completedMonthsBetween(parseLocalDate(child.expectedDueDate), new Date());
+  return monthsSince(child.dob);
+}
+function validateProfileDates(dobStr, expectedDueDate = "") {
   if (!dobStr) return { months: null, error: "Вкажіть дату народження." };
   const dob = parseLocalDate(dobStr);
-  if (!dob) return { months: null, error: "Вкажіть коректну дату народження." };
-  if (dob > new Date()) return { months: null, error: "Дата народження не може бути в майбутньому." };
-  const months = monthsSince(dobStr);
-  if (months > 12) return { months, error: "Зараз застосунок підтримує вік від народження до 12 місяців." };
-  return { months, error: "" };
+  if (!dob) return { months: null, error: "Вкажіть коректну дату народження.", field: "dob" };
+  if (dob > new Date()) return { months: null, error: "Дата народження не може бути в майбутньому.", field: "dob" };
+  let months = monthsSince(dobStr);
+  let corrected = false;
+  let earlyButNotCorrected = false;
+  if (expectedDueDate) {
+    const due = parseLocalDate(expectedDueDate);
+    if (!due) return { months, error: "Вкажіть коректну очікувану дату пологів.", field: "expectedDueDate" };
+    if (due <= dob) return { months, error: "Очікувана дата пологів має бути пізнішою за дату народження.", field: "expectedDueDate" };
+    const daysEarly = (due - dob) / 86400000;
+    if (daysEarly > CORRECTED_AGE_MIN_DAYS) {
+      months = completedMonthsBetween(due, new Date());
+      corrected = true;
+    } else {
+      earlyButNotCorrected = true;
+    }
+  }
+  if (months > 12) return { months, corrected, error: "Зараз застосунок підтримує вік до 12 місяців.", field: corrected ? "expectedDueDate" : "dob" };
+  return { months, corrected, earlyButNotCorrected, error: "", field: "" };
+}
+function validateDob(dobStr) { return validateProfileDates(dobStr); }
+function profileAgeHint(check) {
+  if (!check || check.months == null || check.error) return "";
+  const label = AGE_LABELS[ageWindowFor(check.months)];
+  if (check.corrected && check.months < 0) return `Очікувана дата пологів ще попереду. Найближчий доступний віковий блок — ${label}.`;
+  if (check.corrected) return `Показуватимемо питання для віку ${label} за скоригованим віком.`;
+  if (check.earlyButNotCorrected) return `Різниця не перевищує 3 тижні, тому показуватимемо питання для віку ${label} за датою народження.`;
+  return `Показуватимемо питання для віку ${label}.`;
 }
 // Snap real age to the nearest available CDC window (2/4/6/9/12).
 function ageWindowFor(months) {
@@ -248,6 +322,7 @@ function restartSurvey(age) {
   cc().surveys[age] = s;
   delete cc().programSelections[String(age)];
   delete cc().activityCompletions[completionKey(age)];
+  delete cc().activityReactions[completionKey(age)];
   surveyUi = { age, index: 0 };
   surveyAdvancePending = false;
   surveyAdvanceToken += 1;
@@ -264,7 +339,7 @@ function askedStats(age) {
   return stats;
 }
 
-function currentAge() { const c = cc(); return c && c.dob ? ageWindowFor(monthsSince(c.dob)) : 6; }
+function currentAge() { const c = cc(); return c && c.dob ? ageWindowFor(developmentalMonths(c)) : 6; }
 function profileForSurvey(survey, age) {
   const s = survey || { states: {}, questionIds: [] };
   return buildProfile(s.states || {}, age, ENGINE_CONFIG, s.questionIds || null);
@@ -273,6 +348,36 @@ function calendarDayNumber(value) {
   const date = value instanceof Date ? value : new Date(value);
   if (isNaN(date)) return null;
   return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
+}
+function weeklyPlaySummary(child = cc(), now = new Date()) {
+  const summary = { count: 0, liked: 0, notToday: 0 };
+  if (!child) return summary;
+  const today = calendarDayNumber(now);
+  for (const [key, completion] of Object.entries(child.activityCompletions || {})) {
+    const match = /^(\d{4}-\d{2}-\d{2}):\d+$/.exec(key);
+    const date = match ? parseLocalDate(match[1]) : null;
+    const day = date ? calendarDayNumber(date) : null;
+    const ageInDays = today == null || day == null ? null : today - day;
+    if (ageInDays == null || ageInDays < 0 || ageInDays > 6 || !completion || !completion.activityId) continue;
+    summary.count += 1;
+    if (child.activityReactions?.[key] === "liked") summary.liked += 1;
+    if (child.activityReactions?.[key] === "not_today") summary.notToday += 1;
+  }
+  return summary;
+}
+function weeklyRecapHtml(summary) {
+  if (!summary || !summary.count) return "";
+  const title = summary.count === 1 ? "Один теплий момент гри" : "Кілька теплих моментів гри";
+  const memory = summary.count === 1
+    ? "За останні 7 днів ви зберегли один короткий момент разом."
+    : "За останні 7 днів ви кілька разів поверталися до короткої гри разом.";
+  const liked = summary.liked ? `<p class="week-recap-note">Є гра, яку ви відзначили як приємну. Вона залишиться у вашому профілі.</p>` : "";
+  const notToday = summary.notToday ? `<p class="week-recap-note">«Не сьогодні» — теж нормальна відповідь. Тут немає обов'язкової серії.</p>` : "";
+  return `<aside class="week-recap" aria-labelledby="weekRecapTitle">
+    <div class="week-recap-mark" aria-hidden="true">${navIcon("play")}</div>
+    <div><span class="mini-label">Ваш тиждень</span><h2 id="weekRecapTitle">${title}</h2>
+      <p>${memory} Немає мінімуму: навіть один спокійний момент уже достатній.</p>${liked}${notToday}</div>
+  </aside>`;
 }
 function currentProgramDayIndex(survey, programLength) {
   if (!programLength) return 0;
@@ -358,16 +463,17 @@ function renderAppbar(screen) {
   const active = cc();
   const opts = store.children.map((c, i) =>
     `<option value="${c.id}"${c.id === active.id ? " selected" : ""}>${esc(c.name || ("Дитина " + (i + 1)))}</option>`).join("");
+  const ageTag = usesCorrectedAge(active) ? `${currentAge()} міс · скориг.` : AGE_LABELS[currentAge()];
   slot.innerHTML =
     `<select id="childSwitch" class="appbar-select" aria-label="Активна дитина">${opts}<option value="__add">+ Додати дитину</option></select>` +
-    `<span class="appbar-tag">${AGE_LABELS[currentAge()]}</span>`;
+    `<span class="appbar-tag"${usesCorrectedAge(active) ? ' title="Віковий блок за скоригованим віком"' : ""}>${ageTag}</span>`;
 }
 
 // ---- onboarding screens ----
 function renderWelcome() {
   return `
     <section class="screen-pad center">
-      <div class="logo-dot" aria-hidden="true"></div>
+      <div class="logo-dot" aria-hidden="true">${navIcon("play")}</div>
       <h1 tabindex="-1">Перший рік — спокійніше</h1>
       <p class="lead">Короткі спостереження, прості ігри та зрозумілі підказки для розмови з фахівцем.</p>
       <button type="button" class="btn primary block" data-go="consent">Почати</button>
@@ -389,17 +495,23 @@ function renderConsent() {
 
 function renderProfile() {
   const c = profileEditing ? (cc() || {}) : {};
-  const dobCheck = c.dob ? validateDob(c.dob) : { months: null, error: "" };
-  const ageHint = dobCheck.months == null || dobCheck.error ? "" : `Показуватимемо питання для віку ${AGE_LABELS[ageWindowFor(dobCheck.months)]}.`;
+  const profileCheck = c.dob ? validateProfileDates(c.dob, c.expectedDueDate || "") : { months: null, error: "" };
+  const ageHint = profileAgeHint(profileCheck);
   return `
     <section class="screen-pad">
       <h1 tabindex="-1">Профіль дитини</h1>
       <p class="muted">Дата народження потрібна, щоб показати питання за віком. Ім'я можна не вказувати.</p>
       <label class="field"><span>Ім'я (необов'язково)</span><input id="childName" type="text" value="${esc(c.name || "")}" placeholder="Напр., Софія"></label>
       <label class="field"><span>Дата народження</span><input id="childDob" type="date" value="${esc(c.dob || "")}" max="${localDateString()}" required aria-describedby="ageHint profileError"></label>
+      <details class="preterm-details" ${c.expectedDueDate ? "open" : ""}>
+        <summary>Дитина народилася раніше очікуваного терміну?</summary>
+        <p class="muted small">Якщо дитина народилася більш ніж на 3 тижні раніше, фахівці можуть враховувати скоригований вік. Вкажіть очікувану дату пологів — це необов'язково.</p>
+        <label class="field"><span>Очікувана дата пологів</span><input id="expectedDueDate" type="date" value="${esc(c.expectedDueDate || "")}" aria-describedby="correctedAgeNote ageHint profileError"></label>
+        <p id="correctedAgeNote" class="corrected-age-note">Дата допомагає лише обрати віковий блок. Це не оцінка розвитку дитини.</p>
+      </details>
       <div id="ageHint" class="age-hint">${ageHint}</div>
-      <div id="profileError" class="field-error" role="alert">${esc(dobCheck.error)}</div>
-      <button type="button" id="profileSave" class="btn primary block" ${dobCheck.error || !c.dob ? "disabled" : ""}>${profileEditing ? "Зберегти зміни" : "Зберегти і продовжити"}</button>
+      <div id="profileError" class="field-error" role="alert">${esc(profileCheck.error)}</div>
+      <button type="button" id="profileSave" class="btn primary block" ${profileCheck.error || !c.dob ? "disabled" : ""}>${profileEditing ? "Зберегти зміни" : "Зберегти і продовжити"}</button>
     </section>`;
 }
 
@@ -499,6 +611,7 @@ function renderHome() {
   const survey = cc().surveys[age];
   const task = todaysTask(age);
   const nextStep = homeNextStep(age);
+  const weekly = weeklyPlaySummary();
   const next = nextCheckAge(age);
   const tested = survey && survey.date;
   return `
@@ -506,6 +619,8 @@ function renderHome() {
       <h1 tabindex="-1">Сьогодні</h1>
 
       ${homeNextStepHtml(nextStep)}
+
+      ${weeklyRecapHtml(weekly)}
 
       ${tested ? `<details class="home-more">
         <summary>Інші можливості</summary>
@@ -684,7 +799,56 @@ function renderResults() {
 }
 
 // ---- program (today first; alternatives and future days stay available but secondary) ----
-let programState = { age: null, program: null, openDay: null, currentDay: null, selected: {} };
+let programState = { age: null, program: null, openDay: null, currentDay: null, selected: {}, context: "any", contextNotice: "" };
+
+function activityMaxMinutes(value) {
+  const text = String(value || "").toLowerCase();
+  const match = /(\d+)(?:\s*-\s*(\d+))?\s*хв/.exec(text);
+  if (!match) return Infinity;
+  return Number(match[2] || match[1]);
+}
+function activityFitsContext(activity, context) {
+  if (!activity || context === "any") return Boolean(activity);
+  if (context === "quick") return activityMaxMinutes(activity.time) <= 3;
+  if (context === "no_materials") return String(activity.materials || "").toLowerCase().includes("без матеріалів");
+  if (context === "low_energy") return Boolean(typeof ACTIVITY_LOW_ENERGY_UA !== "undefined" && ACTIVITY_LOW_ENERGY_UA[activity.id]);
+  return false;
+}
+function personalizedActivityIds(program, currentIndex = 0) {
+  if (!Array.isArray(program) || !program.length) return [];
+  const orderedDays = Array.from({ length: program.length }, (_, offset) => program[(currentIndex + offset) % program.length]);
+  const ids = [];
+  for (const day of orderedDays) {
+    for (const id of day.options || []) if (!ids.includes(id)) ids.push(id);
+    for (const bonus of day.bonus || []) if (bonus && bonus.id && !ids.includes(bonus.id)) ids.push(bonus.id);
+  }
+  return ids;
+}
+function contextActivityId(age, context) {
+  return personalizedActivityIds(programState.program, programState.currentIndex)
+    .find((id) => activityFitsContext(activityById(age, id), context)) || null;
+}
+function contextStatusText(context, found = true, done = false) {
+  if (done) return "Гру на сьогодні вже збережено. Щоб змінити вибір, спершу скасуйте позначку «Виконано».";
+  if (!found) return "У персональному плані зараз немає такої гри. Залишили поточну ідею.";
+  if (context === "quick") return "Показуємо коротку гру тривалістю до 3 хвилин.";
+  if (context === "no_materials") return "Показуємо гру без підготовки речей.";
+  if (context === "low_energy") return "Показуємо полегшений варіант. Одного маленького кроку достатньо.";
+  return "Показуємо основну рекомендацію для сьогодні.";
+}
+function playContextHtml(age) {
+  const done = Boolean(completedActivityToday(age));
+  const active = programState.context || "any";
+  const status = done ? contextStatusText(active, true, true) : (programState.contextNotice || contextStatusText(active));
+  return `<section class="play-context" aria-labelledby="playContextTitle">
+    <div class="play-context-head"><strong id="playContextTitle">Підібрати під момент</strong><span>необов'язково</span></div>
+    <p class="play-context-copy">Змінює лише сьогоднішню ідею, не відповіді спостереження.</p>
+    <div class="play-context-options" role="group" aria-label="Контекст гри">${PLAY_CONTEXTS.map((context) =>
+      `<button type="button" data-play-context="${context.id}" aria-pressed="${active === context.id}" class="${active === context.id ? "active" : ""}" ${done ? "disabled" : ""}>${context.label}</button>`
+    ).join("")}</div>
+    <p id="playContextStatus" class="play-context-status" role="status" aria-live="polite" aria-atomic="true">${esc(status)}</p>
+  </section>`;
+}
 
 function renderProgram() {
   const age = currentAge();
@@ -696,12 +860,29 @@ function renderProgram() {
   const program = buildProgram(profile, age);
   const currentIndex = currentProgramDayIndex(survey, program.length);
   const currentDay = program[currentIndex];
-  programState = { age, program, openDay: null, currentDay: currentDay ? currentDay.day : null, currentIndex, selected: { ...(cc().programSelections[String(age)] || {}) } };
+  const context = PLAY_CONTEXT_IDS.includes(cc().playContext) ? cc().playContext : "any";
+  programState = { age, program, openDay: null, currentDay: currentDay ? currentDay.day : null, currentIndex, selected: { ...(cc().programSelections[String(age)] || {}) }, context, contextNotice: "" };
+  if (currentDay && context !== "any") {
+    const selectedId = programState.selected[currentDay.day] || currentDay.options[0];
+    if (!activityFitsContext(activityById(age, selectedId), context)) {
+      const replacement = contextActivityId(age, context);
+      if (replacement) {
+        programState.selected[currentDay.day] = replacement;
+        cc().programSelections[String(age)] = cc().programSelections[String(age)] || {};
+        cc().programSelections[String(age)][String(currentDay.day)] = replacement;
+        save();
+      } else {
+        programState.contextNotice = contextStatusText(context, false);
+      }
+    }
+  }
   return `
     <section class="screen-pad has-thumb-action">
       <h1 tabindex="-1">Гра на сьогодні</h1>
       <p class="muted">Одна коротка ідея — цього достатньо. Зупиніться раніше, якщо дитина втомилася або втратила інтерес.</p>
+      <div id="playContext"></div>
       <div id="programToday"></div>
+      <div id="savedGames"></div>
       <details class="week-plan">
         <summary><span>Наступні 6 днів</span><span class="muted small">Переглянути план</span></summary>
         <div class="program-list" id="programList"></div>
@@ -719,6 +900,10 @@ function renderProgramList() {
     programState.program[(programState.currentIndex + offset) % programState.program.length]);
   today.innerHTML = visibleDays[0] ? todayActivityHtml(programState.age, visibleDays[0]) : "";
   list.innerHTML = visibleDays.slice(1).map((d) => dayAccordionHtml(programState.age, d)).join("");
+  const context = document.getElementById("playContext");
+  if (context) context.innerHTML = playContextHtml(programState.age);
+  const saved = document.getElementById("savedGames");
+  if (saved) saved.innerHTML = savedGamesHtml(programState.age);
 }
 
 function dayChip(age, dayNum, id, sel) {
@@ -740,7 +925,8 @@ function dayChoiceHtml(age, d, sel) {
 
 function dayBodyHtml(age, d) {
   const sel = programState.selected[d.day] || d.options[0];
-  return `${activityDetailHtml(age, sel)}${dayChoiceHtml(age, d, sel)}`;
+  const showLowEnergy = d.day === programState.currentDay && programState.context === "low_energy";
+  return `${activityDetailHtml(age, sel, showLowEnergy)}${dayChoiceHtml(age, d, sel)}`;
 }
 
 function todayActivityHtml(age, d) {
@@ -753,9 +939,38 @@ function todayActivityHtml(age, d) {
         <span class="day-num">Сьогодні</span>
         <span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span>
       </div>
-      <div class="day-acc-body">${dayBodyHtml(age, d)}</div>
+      <div class="day-acc-body">${dayBodyHtml(age, d)}${done ? activityReactionHtml(age, sel) : ""}</div>
     </article>
     <div class="thumb-action"><button type="button" id="toggleTodayDone" class="btn ${done ? "ghost" : "primary"}" data-activity-id="${sel}" aria-pressed="${done}">${done ? "✓ Виконано сьогодні" : "Позначити виконаним"}</button></div>`;
+}
+
+function favoriteIcon(filled = false) {
+  return `<svg class="favorite-icon" viewBox="0 0 20 20" ${filled ? 'fill="currentColor"' : 'fill="none"'} stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16.4 3.8 10.6C.7 7.7 2.3 3 6.3 3c1.7 0 2.9.9 3.7 2 0.8-1.1 2-2 3.7-2 4 0 5.6 4.7 2.5 7.6Z"/></svg>`;
+}
+function favoriteActivityIds(age) {
+  return cc().favoriteActivities.filter((id) => activityById(age, id));
+}
+function savedGamesHtml(age) {
+  const ids = favoriteActivityIds(age);
+  if (!ids.length) return "";
+  return `<details class="saved-games"><summary><span>Збережені ігри</span><span class="saved-count">${ids.length}</span></summary>
+    <div class="saved-game-list">${ids.map((id) => {
+      const activity = activityById(age, id);
+      return `<button type="button" class="saved-game" data-saved-game="${id}"><strong>${esc(activity.title)}</strong><span>${esc(activity.time)} · ${esc(activity.materials)}</span></button>`;
+    }).join("")}</div></details>`;
+}
+function activityReactionHtml(age, activityId) {
+  const completion = completedActivityToday(age);
+  if (!completion || completion.activityId !== activityId) return "";
+  const reaction = cc().activityReactions[completionKey(age)] || "";
+  return `<div class="activity-feedback" aria-labelledby="activityFeedbackTitle">
+    <strong id="activityFeedbackTitle">Як вам ця гра сьогодні?</strong>
+    <p>Необов'язково — відповідь збережеться лише у цьому профілі.</p>
+    <div class="feedback-options">
+      <button type="button" data-activity-reaction="liked" aria-pressed="${reaction === "liked"}" class="${reaction === "liked" ? "active" : ""}">Сподобалося</button>
+      <button type="button" data-activity-reaction="not_today" aria-pressed="${reaction === "not_today"}" class="${reaction === "not_today" ? "active" : ""}">Не сьогодні</button>
+    </div>
+  </div>`;
 }
 
 function dayAccordionHtml(age, d) {
@@ -786,11 +1001,13 @@ function sourceFriendly(source) {
   return String(source || "").replace(/WHO motor/gi, "WHO — руховий розвиток");
 }
 
-function activityDetailHtml(age, id) {
+function activityDetailHtml(age, id, showLowEnergy = false) {
   const a = activityById(age, id);
   if (!a) return "";
   if (!cc().triedActivities.includes(id)) { cc().triedActivities.push(id); save(); }
   const note = (typeof authorNoteFor === "function") ? authorNoteFor(a.id) : null;
+  const favorite = cc().favoriteActivities.includes(id);
+  const lowEnergy = showLowEnergy && typeof ACTIVITY_LOW_ENERGY_UA !== "undefined" ? ACTIVITY_LOW_ENERGY_UA[id] : "";
   // Plain-language note: keep author + the actionable idea; the internal mechanism mapping
   // stays in data for traceability but is not shown as jargon to parents.
   const basis = a.why || a.evidence || note ? `<details class="evidence-details"><summary>Чому ця гра тут</summary>
@@ -799,8 +1016,11 @@ function activityDetailHtml(age, id) {
     ${note ? `<p><strong>Ідея ${esc(note.author)}:</strong> ${esc(note.idea)}.</p>` : ""}
   </details>` : "";
   return `
-    <h2 class="activity-title">${esc(a.title)}</h2>
+    <div class="activity-title-row"><h2 class="activity-title">${esc(a.title)}</h2>
+      <button type="button" class="favorite-toggle ${favorite ? "active" : ""}" data-favorite-id="${id}" aria-pressed="${favorite}" aria-label="${favorite ? "Прибрати гру зі збережених" : "Зберегти гру"}">${favoriteIcon(favorite)}<span>${favorite ? "Збережено" : "Зберегти"}</span></button>
+    </div>
     <div class="tag-row activity-quick-meta"><span class="chip">${esc(a.time)}</span><span class="chip">${esc(a.materials)}</span></div>
+    ${lowEnergy ? `<div class="low-energy-option"><strong>Коли сил мало</strong><span>${esc(lowEnergy)}</span><small>Повні кроки й умова зупинки залишаються нижче.</small></div>` : ""}
     <div class="steps"><strong>Кроки</strong><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>
     <div class="stop"><strong>Коли зупинитися:</strong> ${esc(a.stop)}</div>
     ${basis}`;
@@ -1041,9 +1261,10 @@ document.addEventListener("click", async (e) => {
   if (e.target.id === "profileSave") {
     const name = document.getElementById("childName").value.trim();
     const dob = document.getElementById("childDob").value;
-    const checked = validateDob(dob);
+    const expectedDueDate = document.getElementById("expectedDueDate")?.value || "";
+    const checked = validateProfileDates(dob, expectedDueDate);
     const error = document.getElementById("profileError");
-    const input = document.getElementById("childDob");
+    const input = document.getElementById(checked.field === "expectedDueDate" ? "expectedDueDate" : "childDob");
     if (checked.error) {
       if (error) error.textContent = checked.error;
       if (input) { input.setAttribute("aria-invalid", "true"); input.focus(); }
@@ -1053,8 +1274,9 @@ document.addEventListener("click", async (e) => {
     if (profileEditing && cc()) {
       cc().name = name;
       cc().dob = dob;
+      cc().expectedDueDate = expectedDueDate;
     } else {
-      const child = freshChild(name, dob);
+      const child = freshChild(name, dob, expectedDueDate);
       store.children.push(child);
       store.activeChildId = child.id;
     }
@@ -1093,13 +1315,80 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (e.target.id === "finishSurvey") { finishSurvey(); return; }
+  const contextButton = e.target.closest("[data-play-context]");
+  if (contextButton) {
+    const requested = contextButton.dataset.playContext;
+    if (!PLAY_CONTEXT_IDS.includes(requested) || contextButton.disabled) return;
+    const currentDay = programState.program.find((day) => day.day === programState.currentDay);
+    const replacement = requested === "any" ? (currentDay && currentDay.options[0]) : contextActivityId(programState.age, requested);
+    if (!replacement) {
+      programState.contextNotice = contextStatusText(requested, false);
+      renderProgramList();
+      document.querySelector(`[data-play-context="${programState.context}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+    programState.context = requested;
+    programState.contextNotice = contextStatusText(requested);
+    cc().playContext = requested;
+    programState.selected[programState.currentDay] = replacement;
+    cc().programSelections[String(programState.age)] = cc().programSelections[String(programState.age)] || {};
+    cc().programSelections[String(programState.age)][String(programState.currentDay)] = replacement;
+    save();
+    renderProgramList();
+    document.querySelector(`[data-play-context="${requested}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  const favoriteButton = e.target.closest("[data-favorite-id]");
+  if (favoriteButton) {
+    const id = favoriteButton.dataset.favoriteId;
+    const index = cc().favoriteActivities.indexOf(id);
+    if (index >= 0) cc().favoriteActivities.splice(index, 1);
+    else cc().favoriteActivities.push(id);
+    save();
+    renderProgramList();
+    document.querySelector(`[data-favorite-id="${id}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  const savedGameButton = e.target.closest("[data-saved-game]");
+  if (savedGameButton) {
+    const id = savedGameButton.dataset.savedGame;
+    const day = programState.currentDay;
+    if (!activityById(programState.age, id) || day == null) return;
+    programState.context = "any";
+    programState.contextNotice = "";
+    cc().playContext = "any";
+    programState.selected[day] = id;
+    cc().programSelections[String(programState.age)] = cc().programSelections[String(programState.age)] || {};
+    cc().programSelections[String(programState.age)][String(day)] = id;
+    save();
+    renderProgramList();
+    document.querySelector(`[data-favorite-id="${id}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  const reactionButton = e.target.closest("[data-activity-reaction]");
+  if (reactionButton) {
+    const key = completionKey(programState.age);
+    const reaction = reactionButton.dataset.activityReaction;
+    if (!["liked", "not_today"].includes(reaction) || !completedActivityToday(programState.age)) return;
+    if (cc().activityReactions[key] === reaction) delete cc().activityReactions[key];
+    else cc().activityReactions[key] = reaction;
+    save();
+    renderProgramList();
+    document.querySelector(`[data-activity-reaction="${reaction}"]`)?.focus({ preventScroll: true });
+    return;
+  }
   const completionButton = e.target.closest("#toggleTodayDone");
   if (completionButton) {
     const key = completionKey(programState.age);
     const activityId = completionButton.dataset.activityId;
     const current = cc().activityCompletions[key];
-    if (current && current.activityId === activityId) delete cc().activityCompletions[key];
-    else cc().activityCompletions[key] = { activityId, completedAt: new Date().toISOString() };
+    if (current && current.activityId === activityId) {
+      delete cc().activityCompletions[key];
+      delete cc().activityReactions[key];
+    } else {
+      cc().activityCompletions[key] = { activityId, completedAt: new Date().toISOString() };
+      delete cc().activityReactions[key];
+    }
     save();
     renderProgramList();
     document.getElementById("toggleTodayDone")?.focus({ preventScroll: true });
@@ -1177,6 +1466,11 @@ document.addEventListener("click", async (e) => {
   const dayOpt = e.target.closest("[data-day-opt]");
   if (dayOpt) {
     const day = Number(dayOpt.dataset.dayOpt);
+    if (day === programState.currentDay) {
+      programState.context = "any";
+      programState.contextNotice = "";
+      cc().playContext = "any";
+    }
     programState.selected[day] = dayOpt.dataset.opt;
     cc().programSelections[String(programState.age)] = cc().programSelections[String(programState.age)] || {};
     cc().programSelections[String(programState.age)][String(day)] = dayOpt.dataset.opt;
@@ -1202,15 +1496,18 @@ document.addEventListener("input", (e) => {
     store.activeChildId = v; save(); route();
     return;
   }
-  if (e.target.id === "childDob") {
+  if (e.target.id === "childDob" || e.target.id === "expectedDueDate") {
+    const dobInput = document.getElementById("childDob");
+    const dueInput = document.getElementById("expectedDueDate");
     const hint = document.getElementById("ageHint");
     const error = document.getElementById("profileError");
     const button = document.getElementById("profileSave");
-    const checked = validateDob(e.target.value);
-    if (hint) hint.textContent = checked.error || checked.months == null ? "" : `Показуватимемо питання для віку ${AGE_LABELS[ageWindowFor(checked.months)]}.`;
+    const checked = validateProfileDates(dobInput?.value || "", dueInput?.value || "");
+    if (hint) hint.textContent = profileAgeHint(checked);
     if (error) error.textContent = checked.error;
-    if (button) button.disabled = Boolean(checked.error);
-    e.target.toggleAttribute("aria-invalid", Boolean(checked.error));
+    if (button) button.disabled = Boolean(checked.error || !dobInput?.value);
+    dobInput?.toggleAttribute("aria-invalid", checked.field === "dob");
+    dueInput?.toggleAttribute("aria-invalid", checked.field === "expectedDueDate");
   }
   const prepField = e.target.dataset.prepField;
   if (prepField && ["noticed", "tried", "questions"].includes(prepField)) {
