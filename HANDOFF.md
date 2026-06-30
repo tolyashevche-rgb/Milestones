@@ -155,7 +155,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 12/26 done; Jill Stamm, Maria Montessori, Lise Eliot, and John Medina are moderate-caution review-only cards. The
+3. **Author cards** — 14/26 done; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
+   joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards. The
    rest are moderate/high-caution authors needing careful,
    gated framing.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
@@ -181,6 +182,15 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-06-30 — Siegel + Bryson infant-safe co-regulation audit (14/26)
+- Added one joint review-only card for *The Whole-Brain Child* and *No-Drama Discipline* after
+  checking both local OCR sources and relevant page images. Retained only a relationship-first
+  caregiver pause, reframed through current WHO responsive-care and Harvard serve-and-return
+  guidance: an infant’s crying or fussing is a signal, not misbehavior.
+- Explicitly excluded discipline, correction, redirection, tantrum framing, left/right and
+  upstairs/downstairs brain metaphors, integration/rewiring claims, attachment or outcome
+  guarantees, and caregiver blame. The card has no activity IDs and changes no runtime content.
 
 ### 2026-06-30 — John Medina good-enough caregiver-support card (12/26)
 - Added a paraphrased review-only card from *Brain Rules for Baby*, checked against local page

@@ -66,13 +66,18 @@ function testContentAndEngine() {
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
-  assert.equal(authorCardFiles.length, 12, "author-card roadmap count must match the twelve review records");
+  assert.equal(authorCardFiles.length, 13, "author-card roadmap count must match the thirteen review records");
+  const coveredAuthorIds = new Set();
   authorCardFiles.forEach((name) => {
     const card = read(`knowledge_base/author_source_cards/${name}`);
     assert.ok(card.includes("status: draft") || card.includes("status: expert_reviewed"), `${name} needs a review status`);
     assert.ok(card.includes("copyright: paraphrase"), `${name} must stay paraphrase-only`);
     assert.ok(card.includes("## Not allowed wording / claim limit"), `${name} needs an explicit claim limit`);
+    const authorId = card.match(/^author_id:\s*(.+)$/m);
+    assert.ok(authorId, `${name} needs an author_id`);
+    authorId[1].split("|").map((id) => id.trim()).filter(Boolean).forEach((id) => coveredAuthorIds.add(id));
   });
+  assert.equal(coveredAuthorIds.size, 14, "author-card roadmap must cover fourteen distinct authors");
   assert.ok(authorMap.includes("amap_007;early_brain_development_daily_interaction;Jill Stamm"), "Stamm review card needs a traceable recommendation-map row");
   assert.ok(stammCard.includes("evidence_level: secondary_synthesis")
     && stammCard.includes("Do not claim that this “wires the brain correctly”")
@@ -94,6 +99,13 @@ function testContentAndEngine() {
     && medinaCard.includes("Milestones") && medinaCard.includes("must not act as crisis care")
     && medinaCard.includes("Do not blame a caregiver")
     && !stage5Authors.includes('author: "John Medina"'), "Medina must remain a blame-free cross-cutting review card outside runtime");
+  const siegelBrysonCard = read("knowledge_base/author_source_cards/auth_siegel-bryson_infant-connect-before-correct.md");
+  assert.ok(authorMap.includes("amap_011;infant_distress_caregiver_reactivity;Daniel J. Siegel|Tina Payne Bryson")
+    && siegelBrysonCard.includes("nothing to\ndiscipline or redirect")
+    && siegelBrysonCard.includes("Crying and fussing are signals, not misbehavior")
+    && siegelBrysonCard.includes("Do not present left/right brain, upstairs/downstairs brain, integration, rewiring")
+    && !stage5Authors.includes('author: "Daniel J. Siegel"')
+    && !stage5Authors.includes('author: "Tina Payne Bryson"'), "Siegel and Bryson must stay infant-safe, metaphor-free, and outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),
