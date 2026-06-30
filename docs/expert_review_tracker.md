@@ -3,6 +3,7 @@
 Version: Stage 5
 Started: 2026-06-16
 Interface review baseline: Stage 5 UA / P2.16 (2026-06-30)
+Frozen app commit: `74d7f11` (`feat: add corrected-age and contextual play guidance`)
 Companion to: [expert_review_checklist.md](expert_review_checklist.md) (the *questions*); this
 file is the *answers + status*. It is the Stage 5 deliverable #1 from
 [action_plan.md](action_plan.md).
@@ -12,7 +13,8 @@ recruitment templates, use [validation_launch_kit_ua.md](validation_launch_kit_u
 
 ## How to use
 
-1. A reviewer reads the checklist, then reviews the **current files** below.
+1. A reviewer opens the prototype from commit `74d7f11`, reads the checklist, then reviews
+   the **current files** below.
 2. They sign off per domain × age in the matrix, log blocking issues, and give a verdict.
 3. Nothing reaches real parents until every relevant cell is **Approved** (or
    *Approved after revisions* with the revisions done) — see `safety_rules.md` §9.

@@ -1,6 +1,7 @@
 # Expert Review Checklist: CDC x Europe Milestones
 
 Version: Stage 5 / P2.16 review baseline
+App commit: `74d7f11`
 Date: 2026-06-29
 
 ## Purpose
