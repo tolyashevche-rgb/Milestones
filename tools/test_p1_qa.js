@@ -66,7 +66,7 @@ function testContentAndEngine() {
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
-  assert.equal(authorCardFiles.length, 13, "author-card roadmap count must match the thirteen review records");
+  assert.equal(authorCardFiles.length, 15, "author-card roadmap count must match the fifteen review records");
   const coveredAuthorIds = new Set();
   authorCardFiles.forEach((name) => {
     const card = read(`knowledge_base/author_source_cards/${name}`);
@@ -77,7 +77,7 @@ function testContentAndEngine() {
     assert.ok(authorId, `${name} needs an author_id`);
     authorId[1].split("|").map((id) => id.trim()).filter(Boolean).forEach((id) => coveredAuthorIds.add(id));
   });
-  assert.equal(coveredAuthorIds.size, 14, "author-card roadmap must cover fourteen distinct authors");
+  assert.equal(coveredAuthorIds.size, 16, "author-card roadmap must cover sixteen distinct authors");
   assert.ok(authorMap.includes("amap_007;early_brain_development_daily_interaction;Jill Stamm"), "Stamm review card needs a traceable recommendation-map row");
   assert.ok(stammCard.includes("evidence_level: secondary_synthesis")
     && stammCard.includes("Do not claim that this “wires the brain correctly”")
@@ -106,6 +106,18 @@ function testContentAndEngine() {
     && siegelBrysonCard.includes("Do not present left/right brain, upstairs/downstairs brain, integration, rewiring")
     && !stage5Authors.includes('author: "Daniel J. Siegel"')
     && !stage5Authors.includes('author: "Tina Payne Bryson"'), "Siegel and Bryson must stay infant-safe, metaphor-free, and outside runtime");
+  const luriaCard = read("knowledge_base/author_source_cards/auth_luria_internal-functional-systems.md");
+  assert.ok(authorMap.includes("amap_012;internal_language_neuropsychology;A. R. Luria")
+    && luriaCard.includes("There is no direct caregiver action from this card")
+    && luriaCard.includes("Do not infer brain location, lesion, dysfunction, immaturity, delay, or diagnosis")
+    && luriaCard.includes("used_in_activities: []")
+    && !stage5Authors.includes('author: "A. R. Luria"'), "Luria must remain a non-diagnostic internal theory guardrail outside runtime");
+  const bernsteinCard = read("knowledge_base/author_source_cards/auth_bernstein_internal-motor-control.md");
+  assert.ok(authorMap.includes("amap_013;internal_motor_control;N. A. Bernstein")
+    && bernsteinCard.includes("There is no direct caregiver action from this card")
+    && bernsteinCard.includes("Do not prescribe passive limb manipulation, forced positions, restraint, fatigue")
+    && bernsteinCard.includes("used_in_activities: []")
+    && !stage5Authors.includes('author: "N. A. Bernstein"'), "Bernstein must remain a no-force internal motor-theory guardrail outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),

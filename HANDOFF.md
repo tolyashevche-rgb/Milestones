@@ -155,8 +155,9 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 14/26 done; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
-   joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards. The
+3. **Author cards** — 16/26 done; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
+   joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards; A. R.
+   Luria and N. A. Bernstein are historical internal-only guardrails with no activities. The
    rest are moderate/high-caution authors needing careful,
    gated framing.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
@@ -182,6 +183,15 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-06-30 — Luria + Bernstein internal-theory boundary cards (16/26)
+- Added separate review records for A. R. Luria and N. A. Bernstein after confirming that no
+  local full books are available. Bibliographic records support only historical internal context;
+  neither author supplies a new parent action, activity ID, milestone, or runtime claim.
+- Luria now blocks brain-location, lesion-to-infant, speech-causation, diagnosis, and acceleration
+  claims. Bernstein blocks perfect-pattern grading, forced movement, unsupported practice/dose,
+  diagnosis, and motor-acceleration claims. Current WHO guidance remains the parent-facing
+  boundary for responsive interaction and supervised infant activity.
 
 ### 2026-06-30 — Siegel + Bryson infant-safe co-regulation audit (14/26)
 - Added one joint review-only card for *The Whole-Brain Child* and *No-Drama Discipline* after
