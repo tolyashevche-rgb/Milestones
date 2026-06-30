@@ -22,10 +22,15 @@ function testContentAndEngine() {
   const stage5Index = read("prototype_stage5_ua/index.html");
   const stage5Styles = read("prototype_stage5_ua/styles5.css");
   const stage5App = read("prototype_stage5_ua/app5.js");
+  const stage5Authors = read("prototype_stage5_ua/authors_ua.js");
   const pwaScript = read("prototype_stage5_ua/pwa.js");
   const serviceWorker = read("prototype_stage5_ua/sw.js");
   const pagesWorkflow = read(".github/workflows/pages.yml");
   const pagesIndex = read(".github/pages-index.html");
+  const authorCardFiles = fs.readdirSync(path.join(root, "knowledge_base/author_source_cards"))
+    .filter((name) => name.startsWith("auth_") && name.endsWith(".md"));
+  const authorMap = read("knowledge_base/recommendation_author_map.csv");
+  const stammCard = read("knowledge_base/author_source_cards/auth_stamm_everyday-responsive-interaction.md");
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
@@ -55,11 +60,28 @@ function testContentAndEngine() {
   assert.ok(stage5Index.includes('id="offlineStatus"'), "the app shell needs a quiet offline status");
   assert.ok(stage5Index.includes('id="storageStatus"'), "storage failures need a persistent visible status");
   assert.ok(pagesWorkflow.includes("node tools/test_p1_qa.js"), "public preview must pass regression checks before deployment");
+  assert.ok(pagesWorkflow.includes("workflow_dispatch:") && !pagesWorkflow.includes("\n  push:"), "paused public preview must remain manual-only");
   assert.ok(pagesWorkflow.includes("pages: write") && pagesWorkflow.includes("id-token: write"), "Pages deployment needs only the documented deployment permissions");
   assert.ok(pagesWorkflow.includes("cp -R prototype_stage5_ua/. _site/prototype_stage5_ua/")
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
+  assert.equal(authorCardFiles.length, 10, "author-card roadmap count must match the ten review records");
+  authorCardFiles.forEach((name) => {
+    const card = read(`knowledge_base/author_source_cards/${name}`);
+    assert.ok(card.includes("status: draft") || card.includes("status: expert_reviewed"), `${name} needs a review status`);
+    assert.ok(card.includes("copyright: paraphrase"), `${name} must stay paraphrase-only`);
+    assert.ok(card.includes("## Not allowed wording / claim limit"), `${name} needs an explicit claim limit`);
+  });
+  assert.ok(authorMap.includes("amap_007;early_brain_development_daily_interaction;Jill Stamm"), "Stamm review card needs a traceable recommendation-map row");
+  assert.ok(stammCard.includes("evidence_level: secondary_synthesis")
+    && stammCard.includes("Do not claim that this “wires the brain correctly”")
+    && !stage5Authors.includes("Jill Stamm"), "moderate-caution Stamm framing must remain review-only and outside runtime");
+  const montessoriCard = read("knowledge_base/author_source_cards/auth_montessori_prepared-environment.md");
+  assert.ok(authorMap.includes("amap_008;prepared_environment_everyday_exploration;Maria Montessori")
+    && montessoriCard.includes("evidence_level: bronze")
+    && montessoriCard.includes("Child-led never") && montessoriCard.includes("means unattended")
+    && !stage5Authors.includes('author: "Maria Montessori"'), "Montessori must remain form-only, supervised, and outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),

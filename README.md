@@ -107,11 +107,10 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
-- **Validation preview delivery:** `.github/workflows/pages.yml` runs the full Stage 5 QA suite
-  and deploys a deliberately narrow GitHub Pages artifact: only Stage 5 UA plus the two canonical
-  Stage 4 UA engine/data files it imports. The repository’s research folders, review notes, and
-  local child data are not part of the site artifact. GitHub Pages still has to complete its first
-  successful deployment before the public URL is handed to reviewers.
+- **Validation preview delivery is paused:** `.github/workflows/pages.yml` is manual-only and
+  GitHub Pages remains disabled by owner decision. If public review is approved later, the workflow
+  will run the full Stage 5 QA suite and deploy only Stage 5 UA plus the two canonical Stage 4 UA
+  engine/data files it imports; it cannot run on an ordinary push.
 - **P2.16 context-aware game choice:** the Game tab adds one compact, optional control for
   «До 3 хв», «Без речей», or «Мало сил» without adding a navigation destination. Selection
   stays inside the personalized 14-day plan, changes only today's activity, and persists per
@@ -234,9 +233,13 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   pack (neutral script, short consent, observation sheet, severity rubric, synthesis) is in
   [docs/parent_test_facilitator_pack_ua.md](docs/parent_test_facilitator_pack_ua.md); use only
   after the expert-review tracker approves parent testing.
-- Author cards: **8 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
-  serve-return, Harvard brain-building-play, Mooney, Marks). Remaining are mostly
-  moderate/high-caution authors (Montessori, Doman, Sears, Maté…) needing careful framing.
+- Author cards: **10 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
+  serve-return, Harvard brain-building-play, Mooney, Marks, Stamm, Montessori). Stamm and
+  Montessori remain review-only: Stamm’s everyday-interaction wrapper is mapped to Harvard/WHO,
+  while Montessori contributes only the form of a safe, accessible setup and room for the child’s
+  response. Brain-wiring, IQ, attention-span, attachment, sensitive-period deadlines, method
+  superiority, and acceleration claims are explicitly excluded. Remaining authors are mostly
+  moderate/high-caution authors (Doman, Sears, Maté…) needing careful framing.
 - `discuss_if` surfaced in **both UA and EN** — `DISCUSS_BY_ID` (54 entries, pulled from the
   canonical `mvp_0_12_months_map.csv`) now in `prototype_stage4/data.js`, with `#discussList`
   + `renderDiscuss()` in the EN Ask tab, mirroring the UA prototype.
@@ -258,7 +261,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | A | Integrate inventory + verify author names | **done** |
 | B | Surface "when to discuss" in the UI (reuse `discuss_if`) | **done (UA + EN)** |
 | B2 | Fix `allClear` maintenance bug (+ `partialClear`) | **done** |
-| C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (8/26; no-caution authors done) |
+| C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (10/26; no-caution authors done; Stamm + Montessori moderate-caution review-only) |
 | D | Expert review + parent test (validation gates) | **packs ready; live reviews/sessions pending** |
 
 ### Product roadmap (from the 2026-06-08 direction)
@@ -289,7 +292,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | 22 | P2.14 corrected-age routing + calm favorites | **done** — optional expected due date, expert-gated corrected-age block selection, per-child saved games and optional post-play reflection, migration/backup/offline QA |
 | 23 | P2.15 warm identity + weekly recap | **done** — original kite brand mark, restrained warm accent system, seven-day local play memory without counts/streaks/targets, responsive and regression QA |
 | 24 | P2.16 context-aware game choice | **done** — compact quick/no-material/low-energy modes, personalized-plan-only matching, 33 authored low-energy variants, per-child persistence, completion lock, offline and regression QA |
-| 25 | Public validation preview | **configured** — QA-gated GitHub Pages workflow publishes only the app/runtime subset; first deployment and public URL verification pending |
+| 25 | Public validation preview | **paused by owner** — workflow retained as manual-only, Pages disabled, no automatic deployment on push |
 
 Stage5 status: working guided flow (welcome → consent → child profile → contextual home/cabinet →
 survey → calm descriptive summary → today-first game → descriptive history with same-age changes → visit-ready specialist prep), local-first storage with **multi-child**

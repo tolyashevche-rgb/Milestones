@@ -1,15 +1,6 @@
 name: Deploy Stage 5 UA preview
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/pages-index.html"
-      - ".github/workflows/pages.yml"
-      - "prototype_stage4_ua/data_ua.js"
-      - "prototype_stage4_ua/engine.js"
-      - "prototype_stage5_ua/**"
-      - "tools/test_p1_qa.js"
   workflow_dispatch:
 
 permissions:

@@ -44,10 +44,10 @@ you must never cross".)
   `node tools/build_review_packet.js` (writes `docs/expert_review_packet_ua.md`).
 - **Git:** solo repo; commit to **main** directly (no feature branches — owner's choice).
   `sources/`, `Book and Articals/`, `Apps/`, `archive/` are gitignored (copyright) — never commit them.
-- **Public validation preview:** `.github/workflows/pages.yml` runs `tools/test_p1_qa.js`, then
-  publishes only `prototype_stage5_ua/` plus the two required Stage 4 UA runtime files. Expected
-  URL after GitHub Pages is enabled and the workflow succeeds:
-  `https://tolyashevche-rgb.github.io/Milestones/prototype_stage5_ua/`.
+- **Public validation preview is paused by owner decision (2026-06-30):** GitHub Pages remains
+  disabled and `.github/workflows/pages.yml` is `workflow_dispatch` only, so a push cannot publish
+  the app. If the owner re-authorizes public review later, it runs `tools/test_p1_qa.js` and uploads
+  only `prototype_stage5_ua/` plus the two required Stage 4 UA runtime files.
 
 ## Current state (what works now)
 
@@ -134,8 +134,9 @@ successful recovery clears it, and erase/restore cannot report false persistence
 
 ## What's next (prioritized)
 
-> **Assistant told only "continue" / "давай продовжимо"? Do this:** first verify the GitHub Pages
-> workflow has completed and record its public URL in the validation tracker. Then the remaining gates need
+> **Assistant told only "continue" / "давай продовжимо"? Do this:** do not enable GitHub Pages;
+> public preview is paused. Continue the author-card backlog as review-only source work, without
+> adding moderate/high-caution claims to the parent-facing app. The remaining validation gates need
 > people, not more feature code. The operational path and ready-to-send templates are in
 > `docs/validation_launch_kit_ua.md`; the source-checked candidates are in
 > `docs/expert_candidate_shortlist_ua.md`; the four first-wave messages are ready in
@@ -154,7 +155,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 8/26 done; the rest are moderate/high-caution authors needing careful,
+3. **Author cards** — 10/26 done; Jill Stamm and Maria Montessori are moderate-caution review-only cards. The
+   rest are moderate/high-caution authors needing careful,
    gated framing.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
 5. **Deferred / low-value:** IndexedDB backend; EN parity for WHO windows + coverage fix;
@@ -179,6 +181,29 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-06-30 — Montessori prepared-environment review card (10/26)
+- Added one paraphrased Bronze source card from *The Secret of Childhood*, checked against local
+  page images and current AMI/Montessori work records. The usable idea is limited to a simple,
+  safe, accessible setup, slow minimal demonstration, observation, and room for the child’s response.
+- Mapped the form to existing cognitive-play activities but kept it outside the runtime. Explicitly
+  prohibited intelligence, concentration, early-independence, sensitive-period deadline,
+  method-superiority, developmental-acceleration, and unattended “child-led” claims.
+
+### 2026-06-30 — Jill Stamm review-only author card (9/26)
+- Added one paraphrased source card from *Bright from the Start*, verified against local page
+  images and the publisher record. It uses Stamm only as a low-pressure wrapper for ordinary
+  attention, warm response, and communication; Harvard serve-and-return and WHO nurturing care
+  remain the mechanism/guideline boundary.
+- Explicitly prohibited brain-wiring, IQ, attention-span, attachment-security, milestone-speed,
+  and parent-perfection claims found or implied in stronger popular-neuroscience framing. Added a
+  draft recommendation-map row but did not add Stamm to the parent-facing runtime.
+
+### 2026-06-30 — public preview paused; internal source work resumes
+- Owner chose not to make the prototype public yet. Removed the push trigger from the Pages
+  workflow; it is now manual-only and Pages remains disabled, so future commits cannot publish it.
+- Kept the narrow allowlisted workflow as dormant infrastructure. Next internal work moves to the
+  author-card backlog, with all moderate/high-caution additions kept review-only until expert sign-off.
 
 ### 2026-06-30 — QA-gated public validation preview
 - Added a GitHub Pages workflow for the external-review build. Every deployment runs the full
