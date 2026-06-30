@@ -233,12 +233,14 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   pack (neutral script, short consent, observation sheet, severity rubric, synthesis) is in
   [docs/parent_test_facilitator_pack_ua.md](docs/parent_test_facilitator_pack_ua.md); use only
   after the expert-review tracker approves parent testing.
-- Author cards: **10 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
-  serve-return, Harvard brain-building-play, Mooney, Marks, Stamm, Montessori). Stamm and
-  Montessori remain review-only: Stamm’s everyday-interaction wrapper is mapped to Harvard/WHO,
+- Author cards: **11 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
+  serve-return, Harvard brain-building-play, Mooney, Marks, Stamm, Montessori, Eliot). Stamm,
+  Montessori, and Eliot remain review-only: Stamm’s everyday-interaction wrapper is mapped to Harvard/WHO,
   while Montessori contributes only the form of a safe, accessible setup and room for the child’s
-  response. Brain-wiring, IQ, attention-span, attachment, sensitive-period deadlines, method
-  superiority, and acceleration claims are explicitly excluded. Remaining authors are mostly
+  response, and Eliot only a wide-range-resilience rationale for ordinary experience. Brain-wiring,
+  precise neurotimelines, animal-to-child enrichment transfer, permanence, IQ, attention-span,
+  attachment, sensitive-period deadlines, method superiority, and acceleration claims are
+  explicitly excluded. Remaining authors are mostly
   moderate/high-caution authors (Doman, Sears, Maté…) needing careful framing.
 - `discuss_if` surfaced in **both UA and EN** — `DISCUSS_BY_ID` (54 entries, pulled from the
   canonical `mvp_0_12_months_map.csv`) now in `prototype_stage4/data.js`, with `#discussList`
@@ -261,7 +263,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | A | Integrate inventory + verify author names | **done** |
 | B | Surface "when to discuss" in the UI (reuse `discuss_if`) | **done (UA + EN)** |
 | B2 | Fix `allClear` maintenance bug (+ `partialClear`) | **done** |
-| C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (10/26; no-caution authors done; Stamm + Montessori moderate-caution review-only) |
+| C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (11/26; no-caution authors done; Stamm + Montessori + Eliot moderate-caution review-only) |
 | D | Expert review + parent test (validation gates) | **packs ready; live reviews/sessions pending** |
 
 ### Product roadmap (from the 2026-06-08 direction)

@@ -155,7 +155,7 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 10/26 done; Jill Stamm and Maria Montessori are moderate-caution review-only cards. The
+3. **Author cards** — 11/26 done; Jill Stamm, Maria Montessori, and Lise Eliot are moderate-caution review-only cards. The
    rest are moderate/high-caution authors needing careful,
    gated framing.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
@@ -181,6 +181,14 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-06-30 — Lise Eliot dated-claim audit and review card (11/26)
+- Added a paraphrased, review-only card from *What's Going On in There?* after checking the local
+  scan and publisher metadata. Retained only the low-pressure maturation-plus-experience and
+  wide-range-resilience framing; WHO nurturing care remains the current evidence boundary.
+- Explicitly excluded precise synapse/pruning numbers, neurotimelines, direct animal-to-child
+  enrichment claims, permanence, critical-window loss, IQ, early-reading, sex-difference, and
+  parent-guilt framing. The map row is draft and Lise Eliot was not added to the runtime.
 
 ### 2026-06-30 — Montessori prepared-environment review card (10/26)
 - Added one paraphrased Bronze source card from *The Secret of Childhood*, checked against local

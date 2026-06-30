@@ -66,7 +66,7 @@ function testContentAndEngine() {
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
-  assert.equal(authorCardFiles.length, 10, "author-card roadmap count must match the ten review records");
+  assert.equal(authorCardFiles.length, 11, "author-card roadmap count must match the eleven review records");
   authorCardFiles.forEach((name) => {
     const card = read(`knowledge_base/author_source_cards/${name}`);
     assert.ok(card.includes("status: draft") || card.includes("status: expert_reviewed"), `${name} needs a review status`);
@@ -82,6 +82,12 @@ function testContentAndEngine() {
     && montessoriCard.includes("evidence_level: bronze")
     && montessoriCard.includes("Child-led never") && montessoriCard.includes("means unattended")
     && !stage5Authors.includes('author: "Maria Montessori"'), "Montessori must remain form-only, supervised, and outside runtime");
+  const eliotCard = read("knowledge_base/author_source_cards/auth_eliot_ordinary-experience-resilience.md");
+  assert.ok(authorMap.includes("amap_009;ordinary_sensory_relational_experience;Lise Eliot")
+    && eliotCard.includes("evidence_level: secondary_synthesis")
+    && eliotCard.includes("Do not transfer enriched-versus-deprived animal findings directly to a child")
+    && eliotCard.includes("More input is not always better")
+    && !stage5Authors.includes('author: "Lise Eliot"'), "dated Eliot neuroclaims must be blocked and remain outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),
