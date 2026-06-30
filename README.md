@@ -107,6 +107,11 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
+- **Validation preview delivery:** `.github/workflows/pages.yml` runs the full Stage 5 QA suite
+  and deploys a deliberately narrow GitHub Pages artifact: only Stage 5 UA plus the two canonical
+  Stage 4 UA engine/data files it imports. The repository’s research folders, review notes, and
+  local child data are not part of the site artifact. GitHub Pages still has to complete its first
+  successful deployment before the public URL is handed to reviewers.
 - **P2.16 context-aware game choice:** the Game tab adds one compact, optional control for
   «До 3 хв», «Без речей», or «Мало сил» without adding a navigation destination. Selection
   stays inside the personalized 14-day plan, changes only today's activity, and persists per
@@ -284,6 +289,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | 22 | P2.14 corrected-age routing + calm favorites | **done** — optional expected due date, expert-gated corrected-age block selection, per-child saved games and optional post-play reflection, migration/backup/offline QA |
 | 23 | P2.15 warm identity + weekly recap | **done** — original kite brand mark, restrained warm accent system, seven-day local play memory without counts/streaks/targets, responsive and regression QA |
 | 24 | P2.16 context-aware game choice | **done** — compact quick/no-material/low-energy modes, personalized-plan-only matching, 33 authored low-energy variants, per-child persistence, completion lock, offline and regression QA |
+| 25 | Public validation preview | **configured** — QA-gated GitHub Pages workflow publishes only the app/runtime subset; first deployment and public URL verification pending |
 
 Stage5 status: working guided flow (welcome → consent → child profile → contextual home/cabinet →
 survey → calm descriptive summary → today-first game → descriptive history with same-age changes → visit-ready specialist prep), local-first storage with **multi-child**

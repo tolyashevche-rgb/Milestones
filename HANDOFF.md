@@ -44,6 +44,10 @@ you must never cross".)
   `node tools/build_review_packet.js` (writes `docs/expert_review_packet_ua.md`).
 - **Git:** solo repo; commit to **main** directly (no feature branches — owner's choice).
   `sources/`, `Book and Articals/`, `Apps/`, `archive/` are gitignored (copyright) — never commit them.
+- **Public validation preview:** `.github/workflows/pages.yml` runs `tools/test_p1_qa.js`, then
+  publishes only `prototype_stage5_ua/` plus the two required Stage 4 UA runtime files. Expected
+  URL after GitHub Pages is enabled and the workflow succeeds:
+  `https://tolyashevche-rgb.github.io/Milestones/prototype_stage5_ua/`.
 
 ## Current state (what works now)
 
@@ -130,7 +134,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 
 ## What's next (prioritized)
 
-> **Assistant told only "continue" / "давай продовжимо"? Do this:** the remaining gates need
+> **Assistant told only "continue" / "давай продовжимо"? Do this:** first verify the GitHub Pages
+> workflow has completed and record its public URL in the validation tracker. Then the remaining gates need
 > people, not more feature code. The operational path and ready-to-send templates are in
 > `docs/validation_launch_kit_ua.md`; the source-checked candidates are in
 > `docs/expert_candidate_shortlist_ua.md`; the four first-wave messages are ready in
@@ -168,10 +173,23 @@ successful recovery clears it, and erase/restore cannot report false persistence
 - Content source of truth (not read at runtime): `data/*.csv`, `knowledge_base/`.
 - Review gate: `docs/expert_review_packet_ua.md` (+ `_checklist` / `_tracker`),
   `tools/build_review_packet.js`.
+- Public preview: `.github/workflows/pages.yml` + `.github/pages-index.html`; its artifact allowlist
+  intentionally excludes the rest of the repository.
 
 ---
 
 ## Work log (newest first)
+
+### 2026-06-30 — QA-gated public validation preview
+- Added a GitHub Pages workflow for the external-review build. Every deployment runs the full
+  Stage 5 regression suite before upload and uses the documented `pages: write` / `id-token: write`
+  permissions and `github-pages` environment.
+- The artifact is assembled from an explicit allowlist: the Stage 5 UA app, the canonical UA data
+  and engine it imports, and a small root redirect. It does not publish the repository root,
+  research inputs, competitor screenshots, internal review docs, or local browser data.
+- Added regression assertions for the deployment allowlist and root route. Pages was previously
+  unconfigured (public URL returned 404); the first successful workflow run still needs verification
+  before the URL is placed in expert outreach.
 
 ### 2026-06-30 — P2.16 context-aware game choice
 - Added a single optional context picker above today's game: default recommendation, up to

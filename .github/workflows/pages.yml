@@ -1,0 +1,55 @@
+name: Deploy Stage 5 UA preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/pages-index.html"
+      - ".github/workflows/pages.yml"
+      - "prototype_stage4_ua/data_ua.js"
+      - "prototype_stage4_ua/engine.js"
+      - "prototype_stage5_ua/**"
+      - "tools/test_p1_qa.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the frozen source
+        uses: actions/checkout@v6
+
+      - name: Run Stage 5 regression checks
+        run: node tools/test_p1_qa.js
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Assemble the public-only artifact
+        shell: bash
+        run: |
+          mkdir -p _site/prototype_stage4_ua _site/prototype_stage5_ua
+          cp .github/pages-index.html _site/index.html
+          cp prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js _site/prototype_stage4_ua/
+          cp -R prototype_stage5_ua/. _site/prototype_stage5_ua/
+
+      - name: Upload the GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
