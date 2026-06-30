@@ -155,7 +155,7 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 11/26 done; Jill Stamm, Maria Montessori, and Lise Eliot are moderate-caution review-only cards. The
+3. **Author cards** — 12/26 done; Jill Stamm, Maria Montessori, Lise Eliot, and John Medina are moderate-caution review-only cards. The
    rest are moderate/high-caution authors needing careful,
    gated framing.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
@@ -181,6 +181,14 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-06-30 — John Medina good-enough caregiver-support card (12/26)
+- Added a paraphrased review-only card from *Brain Rules for Baby*, checked against local page
+  images and the author’s book record. Retained only the limits of one-size-fits-all advice,
+  good-enough responsiveness, and the need for caregiver support; WHO/Harvard remain the boundary.
+- Explicitly blocked one “proven” parenting style, IQ/genetic percentages, academic predictors,
+  brain optimization, family-structure prescriptions, causal household claims, and caregiver blame.
+  The cross-cutting map row has no activity IDs and John Medina was not added to the runtime.
 
 ### 2026-06-30 — Lise Eliot dated-claim audit and review card (11/26)
 - Added a paraphrased, review-only card from *What's Going On in There?* after checking the local

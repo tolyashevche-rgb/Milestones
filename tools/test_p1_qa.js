@@ -66,7 +66,7 @@ function testContentAndEngine() {
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
-  assert.equal(authorCardFiles.length, 11, "author-card roadmap count must match the eleven review records");
+  assert.equal(authorCardFiles.length, 12, "author-card roadmap count must match the twelve review records");
   authorCardFiles.forEach((name) => {
     const card = read(`knowledge_base/author_source_cards/${name}`);
     assert.ok(card.includes("status: draft") || card.includes("status: expert_reviewed"), `${name} needs a review status`);
@@ -88,6 +88,12 @@ function testContentAndEngine() {
     && eliotCard.includes("Do not transfer enriched-versus-deprived animal findings directly to a child")
     && eliotCard.includes("More input is not always better")
     && !stage5Authors.includes('author: "Lise Eliot"'), "dated Eliot neuroclaims must be blocked and remain outside runtime");
+  const medinaCard = read("knowledge_base/author_source_cards/auth_medina_good-enough-supported-caregiving.md");
+  assert.ok(authorMap.includes("amap_010;caregiver_stress_parent_anxiety;John Medina")
+    && medinaCard.includes("evidence_level: secondary_synthesis")
+    && medinaCard.includes("Milestones") && medinaCard.includes("must not act as crisis care")
+    && medinaCard.includes("Do not blame a caregiver")
+    && !stage5Authors.includes('author: "John Medina"'), "Medina must remain a blame-free cross-cutting review card outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),
