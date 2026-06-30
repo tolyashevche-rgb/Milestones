@@ -155,7 +155,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 16/26 done; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
+3. **Author cards** — 18/26 done; Michelle Macias and Jennifer Poon complete the no-caution
+   clinical boundary set; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
    joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards; A. R.
    Luria and N. A. Bernstein are historical internal-only guardrails with no activities. The
    rest are moderate/high-caution authors needing careful,
@@ -183,6 +184,15 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-06-30 — Macias + Poon clinical workflow boundaries (18/26)
+- Added separate no-caution boundary cards using the AAP report (reaffirmed with updates in 2024),
+  current CDC monitoring/screening guidance, and the verified professional-handbook record.
+  Macias keeps informal longitudinal observation strictly separate from validated screening;
+  Poon limits summaries to factual, editable preparation and continuity.
+- Explicitly blocked scores, risk/pass-fail labels, “all clear”, clinical impressions, referral or
+  eligibility conclusions, and claims that saving/exporting a note completes follow-up or care.
+  Both cards have no activity IDs and introduce no runtime changes.
 
 ### 2026-06-30 — Luria + Bernstein internal-theory boundary cards (16/26)
 - Added separate review records for A. R. Luria and N. A. Bernstein after confirming that no

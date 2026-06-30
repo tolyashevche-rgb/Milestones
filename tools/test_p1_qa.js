@@ -66,7 +66,7 @@ function testContentAndEngine() {
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
-  assert.equal(authorCardFiles.length, 15, "author-card roadmap count must match the fifteen review records");
+  assert.equal(authorCardFiles.length, 17, "author-card roadmap count must match the seventeen review records");
   const coveredAuthorIds = new Set();
   authorCardFiles.forEach((name) => {
     const card = read(`knowledge_base/author_source_cards/${name}`);
@@ -77,7 +77,7 @@ function testContentAndEngine() {
     assert.ok(authorId, `${name} needs an author_id`);
     authorId[1].split("|").map((id) => id.trim()).filter(Boolean).forEach((id) => coveredAuthorIds.add(id));
   });
-  assert.equal(coveredAuthorIds.size, 16, "author-card roadmap must cover sixteen distinct authors");
+  assert.equal(coveredAuthorIds.size, 18, "author-card roadmap must cover eighteen distinct authors");
   assert.ok(authorMap.includes("amap_007;early_brain_development_daily_interaction;Jill Stamm"), "Stamm review card needs a traceable recommendation-map row");
   assert.ok(stammCard.includes("evidence_level: secondary_synthesis")
     && stammCard.includes("Do not claim that this “wires the brain correctly”")
@@ -118,6 +118,18 @@ function testContentAndEngine() {
     && bernsteinCard.includes("Do not prescribe passive limb manipulation, forced positions, restraint, fatigue")
     && bernsteinCard.includes("used_in_activities: []")
     && !stage5Authors.includes('author: "N. A. Bernstein"'), "Bernstein must remain a no-force internal motor-theory guardrail outside runtime");
+  const maciasCard = read("knowledge_base/author_source_cards/auth_macias_monitoring-screening-boundary.md");
+  assert.ok(authorMap.includes("amap_014;developmental_monitoring_screening_boundary;Michelle M. Macias")
+    && maciasCard.includes("This is developmental monitoring, not a screening or diagnostic test")
+    && maciasCard.includes("Do not call the Milestones observation flow a screen, screening tool, test")
+    && maciasCard.includes("used_in_activities: []")
+    && !stage5Authors.includes('author: "Michelle M. Macias"'), "Macias must keep app monitoring distinct from validated screening and outside runtime");
+  const poonCard = read("knowledge_base/author_source_cards/auth_poon_professional-followup-boundary.md");
+  assert.ok(authorMap.includes("amap_015;professional_summary_followup_boundary;Jennifer K. Poon")
+    && poonCard.includes("Do not generate a clinical impression, suspected condition, urgency level")
+    && poonCard.includes("Saving an observation helps preserve context; it is not a clinical conclusion")
+    && poonCard.includes("used_in_activities: []")
+    && !stage5Authors.includes('author: "Jennifer K. Poon"'), "Poon must limit summaries to factual preparation and remain outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),
