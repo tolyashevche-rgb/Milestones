@@ -155,11 +155,11 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 19/26 done; Michelle Macias and Jennifer Poon complete the no-caution
+3. **Author cards** — 20/26 done; Michelle Macias and Jennifer Poon complete the no-caution
    clinical boundary set; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
    joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards; A. R.
    Luria and N. A. Bernstein are historical internal-only guardrails with no activities;
-   Margaret Sassé is high-caution review-only with no activity IDs. The
+   Margaret Sassé and Shinichi Suzuki are high-caution review-only with no activity IDs. The
    rest are moderate/high-caution authors needing careful,
    gated framing.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
@@ -185,6 +185,17 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-02 — Suzuki full-source audit and caution escalation (20/26)
+- Reviewed both complete local OCR sets and selected source images for *Nurtured by Love* and
+  *Ability Development from Age Zero*. The earlier moderate label was raised to high caution after
+  confirming training-from-birth, constant repetition, talent/memorization, family-environment
+  causation, caregiver blame, bottle-versus-breast, and unsupported treatment claims.
+- Added a review-only card that retains only an optional short shared song as responsive enjoyment
+  under current WHO/Harvard boundaries. Blocked repertoire/dose, response testing, pitch or talent
+  judgment, early-achievement pressure, character/brain/language outcomes, health treatment,
+  passive playback replacing interaction, and all caregiver blame. No activity ID or runtime
+  content was added.
 
 ### 2026-07-02 — How Babies Talk integration + Smart Start safety audit (19/26)
 - Reviewed the complete 272-page *How Babies Talk* OCR and selected scans. Expanded the existing

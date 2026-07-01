@@ -233,9 +233,9 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   pack (neutral script, short consent, observation sheet, severity rubric, synthesis) is in
   [docs/parent_test_facilitator_pack_ua.md](docs/parent_test_facilitator_pack_ua.md); use only
   after the expert-review tracker approves parent testing.
-- Author cards: **19 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
+- Author cards: **20 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
   serve-return, Harvard brain-building-play, Mooney, Marks, Stamm, Montessori, Eliot, Medina,
-  Siegel & Bryson, Luria, Bernstein, Macias, Poon, Sassé).
+  Siegel & Bryson, Luria, Bernstein, Macias, Poon, Sassé, Suzuki).
   Stamm, Montessori, Eliot, Medina, and the joint Siegel–Bryson card remain review-only: Stamm’s everyday-interaction wrapper is mapped to Harvard/WHO,
   while Montessori contributes only the form of a safe, accessible setup and room for the child’s
   response, Eliot only a wide-range-resilience rationale for ordinary experience, and Medina only
@@ -251,7 +251,10 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   2–12 months; its observational experiments are not tests. Sassé remains high-caution and
   review-only: only a safe, awake, supervised, infant-led floor-play setup survives, while the
   book’s assisted exercises, movement-stage correction, reflex, brain-pathway, and learning claims
-  are excluded. Brain-wiring,
+  are excluded. The full Suzuki sources raised his caution level from moderate to high: only an
+  optional responsive shared song remains review-only, while training from birth, repetition
+  doses, talent, memorization, treatment, character, family-environment causation, and caregiver
+  blame are excluded. Brain-wiring,
   precise neurotimelines, animal-to-child enrichment transfer, permanence, IQ, attention-span,
   attachment, sensitive-period deadlines, method superiority, and acceleration claims are
   explicitly excluded. Remaining authors are mostly
@@ -277,7 +280,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | A | Integrate inventory + verify author names | **done** |
 | B | Surface "when to discuss" in the UI (reuse `discuss_if`) | **done (UA + EN)** |
 | B2 | Fix `allClear` maintenance bug (+ `partialClear`) | **done** |
-| C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (19/26; How Babies Talk integrated; Sassé high-caution review-only; remaining authors moderate/high caution) |
+| C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (20/26; Suzuki + Sassé high-caution review-only; Neufeld moderate; all other remaining authors high caution) |
 | D | Expert review + parent test (validation gates) | **packs ready; live reviews/sessions pending** |
 
 ### Product roadmap (from the 2026-06-08 direction)

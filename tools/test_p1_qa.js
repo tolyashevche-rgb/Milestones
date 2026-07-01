@@ -66,7 +66,7 @@ function testContentAndEngine() {
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
-  assert.equal(authorCardFiles.length, 18, "author-card roadmap count must match the eighteen review records");
+  assert.equal(authorCardFiles.length, 19, "author-card roadmap count must match the nineteen review records");
   const coveredAuthorIds = new Set();
   authorCardFiles.forEach((name) => {
     const card = read(`knowledge_base/author_source_cards/${name}`);
@@ -77,7 +77,7 @@ function testContentAndEngine() {
     assert.ok(authorId, `${name} needs an author_id`);
     authorId[1].split("|").map((id) => id.trim()).filter(Boolean).forEach((id) => coveredAuthorIds.add(id));
   });
-  assert.equal(coveredAuthorIds.size, 19, "author-card roadmap must cover nineteen distinct authors");
+  assert.equal(coveredAuthorIds.size, 20, "author-card roadmap must cover twenty distinct authors");
   assert.ok(authorMap.includes("amap_007;early_brain_development_daily_interaction;Jill Stamm"), "Stamm review card needs a traceable recommendation-map row");
   assert.ok(stammCard.includes("evidence_level: secondary_synthesis")
     && stammCard.includes("Do not claim that this “wires the brain correctly”")
@@ -143,6 +143,17 @@ function testContentAndEngine() {
     && sasseCard.includes("Do not say crawling is required, bottom shuffling is a problem")
     && sasseCard.includes("Sleep is always on the back")
     && !stage5Authors.includes('author: "Margaret Sassé"'), "Smart Start must remain no-force, no-brain-claim, review-only, and outside runtime");
+  const suzukiCard = read("knowledge_base/author_source_cards/auth_suzuki_shared-music-without-training.md");
+  const authorRegistry = read("knowledge_base/authors_registry.csv");
+  const authorWorks = read("knowledge_base/author_works_inventory.csv");
+  assert.ok(authorMap.includes("amap_017;shared_music_without_training;Shinichi Suzuki")
+    && authorRegistry.includes("suzuki;Shinichi Suzuki;pedagogy_method;pedagogy_method;medium;high")
+    && authorWorks.includes("work_suzuki_001;suzuki;Shinichi Suzuki;Nurtured by Love: The Classic Approach to Talent Education;book;core;Optional shared-music form only;inspiration_form_only;high")
+    && suzukiCard.includes("caution: high") && suzukiCard.includes("used_in_activities: []")
+    && suzukiCard.includes("Do not prescribe training from birth")
+    && suzukiCard.includes("Do not blame a mother, father or caregiver’s voice")
+    && suzukiCard.includes("Do not claim violin, music, memorization or persistent practice treats")
+    && !stage5Authors.includes('author: "Shinichi Suzuki"'), "Suzuki must remain blame-free, treatment-free, training-free, and outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),
