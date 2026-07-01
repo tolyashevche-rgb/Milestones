@@ -155,10 +155,11 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 18/26 done; Michelle Macias and Jennifer Poon complete the no-caution
+3. **Author cards** — 19/26 done; Michelle Macias and Jennifer Poon complete the no-caution
    clinical boundary set; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
    joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards; A. R.
-   Luria and N. A. Bernstein are historical internal-only guardrails with no activities. The
+   Luria and N. A. Bernstein are historical internal-only guardrails with no activities;
+   Margaret Sassé is high-caution review-only with no activity IDs. The
    rest are moderate/high-caution authors needing careful,
    gated framing.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
@@ -184,6 +185,18 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-02 — How Babies Talk integration + Smart Start safety audit (19/26)
+- Reviewed the complete 272-page *How Babies Talk* OCR and selected scans. Expanded the existing
+  Hirsh-Pasek/Golinkoff card from 2–12 months around natural sound, gaze, gesture, response, and
+  pause; explicitly converted the book’s “Try This” experiments into non-testable observations
+  and blocked deliberate ignoring, misunderstanding, frustration, performance, or eye contact.
+- Reviewed the complete 162-page *Smart Start* OCR and selected scans. Added Sassé as high-caution
+  review-only: retained only a WHO/AAP-bounded awake, supervised, infant-led floor-play setup.
+  Blocked pull-ups, passive/forced movement, balls, swings, spinning, ladders, assisted standing,
+  crawling correction, reflex/brain-pathway claims, critical periods, flash cards, and diagnosis.
+- No Smart Start activity entered runtime. Existing language activities remain unchanged; only
+  their traceable supporting-source mapping expanded. Source wording is paraphrased, never copied.
 
 ### 2026-06-30 — Macias + Poon clinical workflow boundaries (18/26)
 - Added separate no-caution boundary cards using the AAP report (reaffirmed with updates in 2024),

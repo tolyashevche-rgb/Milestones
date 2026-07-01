@@ -66,7 +66,7 @@ function testContentAndEngine() {
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
-  assert.equal(authorCardFiles.length, 17, "author-card roadmap count must match the seventeen review records");
+  assert.equal(authorCardFiles.length, 18, "author-card roadmap count must match the eighteen review records");
   const coveredAuthorIds = new Set();
   authorCardFiles.forEach((name) => {
     const card = read(`knowledge_base/author_source_cards/${name}`);
@@ -77,7 +77,7 @@ function testContentAndEngine() {
     assert.ok(authorId, `${name} needs an author_id`);
     authorId[1].split("|").map((id) => id.trim()).filter(Boolean).forEach((id) => coveredAuthorIds.add(id));
   });
-  assert.equal(coveredAuthorIds.size, 18, "author-card roadmap must cover eighteen distinct authors");
+  assert.equal(coveredAuthorIds.size, 19, "author-card roadmap must cover nineteen distinct authors");
   assert.ok(authorMap.includes("amap_007;early_brain_development_daily_interaction;Jill Stamm"), "Stamm review card needs a traceable recommendation-map row");
   assert.ok(stammCard.includes("evidence_level: secondary_synthesis")
     && stammCard.includes("Do not claim that this “wires the brain correctly”")
@@ -130,6 +130,19 @@ function testContentAndEngine() {
     && poonCard.includes("Saving an observation helps preserve context; it is not a clinical conclusion")
     && poonCard.includes("used_in_activities: []")
     && !stage5Authors.includes('author: "Jennifer K. Poon"'), "Poon must limit summaries to factual preparation and remain outside runtime");
+  const hpgCard = read("knowledge_base/author_source_cards/auth_hirsh-pasek-golinkoff_playful-language.md");
+  assert.ok(authorMap.includes("amap_002;language_communication;Hirsh-Pasek and Golinkoff;How Babies Talk")
+    && hpgCard.includes("work: How Babies Talk")
+    && hpgCard.includes("Do not deliberately ignore, interrupt, misunderstand, frustrate")
+    && hpgCard.includes("Do not demand eye contact, imitation, a word, a gesture")
+    && hpgCard.includes("act_002_language_001") && hpgCard.includes("act_012_language_003"), "How Babies Talk must support the full infant conversational form without becoming a test");
+  const sasseCard = read("knowledge_base/author_source_cards/auth_sasse_safe-floor-play-form.md");
+  assert.ok(authorMap.includes("amap_016;safe_infant_floor_play_form;Margaret Sassé;Smart Start")
+    && sasseCard.includes("caution: high") && sasseCard.includes("used_in_activities: []")
+    && sasseCard.includes("Do not copy or recommend the book’s pull-ups, push-ups")
+    && sasseCard.includes("Do not say crawling is required, bottom shuffling is a problem")
+    && sasseCard.includes("Sleep is always on the back")
+    && !stage5Authors.includes('author: "Margaret Sassé"'), "Smart Start must remain no-force, no-brain-claim, review-only, and outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),
