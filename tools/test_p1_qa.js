@@ -66,7 +66,7 @@ function testContentAndEngine() {
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
-  assert.equal(authorCardFiles.length, 22, "author-card roadmap count must match the twenty-two review records");
+  assert.equal(authorCardFiles.length, 23, "author-card roadmap count must match the twenty-three review records");
   const coveredAuthorIds = new Set();
   authorCardFiles.forEach((name) => {
     const card = read(`knowledge_base/author_source_cards/${name}`);
@@ -77,7 +77,7 @@ function testContentAndEngine() {
     assert.ok(authorId, `${name} needs an author_id`);
     authorId[1].split("|").map((id) => id.trim()).filter(Boolean).forEach((id) => coveredAuthorIds.add(id));
   });
-  assert.equal(coveredAuthorIds.size, 24, "author-card roadmap must cover twenty-four distinct authors");
+  assert.equal(coveredAuthorIds.size, 25, "author-card roadmap must cover twenty-five distinct authors");
   assert.ok(authorMap.includes("amap_007;early_brain_development_daily_interaction;Jill Stamm"), "Stamm review card needs a traceable recommendation-map row");
   assert.ok(stammCard.includes("evidence_level: secondary_synthesis")
     && stammCard.includes("Do not claim that this “wires the brain correctly”")
@@ -186,6 +186,17 @@ function testContentAndEngine() {
     && shichidaCard.includes("Do not claim the method changes facial muscles")
     && shichidaCard.includes("Do not blame a caregiver's pace")
     && !stage5Authors.includes('author: "Makoto Shichida"'), "Shichida must remain right-brain-free, flash-card-free, treatment-free, and outside runtime");
+  const domanCard = read("knowledge_base/author_source_cards/auth_doman_shared-reading-without-intelligence-training.md");
+  assert.ok(authorMap.includes("amap_021;shared_reading_without_intelligence_training;Glenn Doman")
+    && authorRegistry.includes("doman;Glenn Doman;pedagogy_method;pedagogy_method;low-medium;high;inspiration_form_only;enjoyable shared-reading form only")
+    && authorWorks.includes("work_doman_001;doman;Glenn Doman, Janet Doman;How to Teach Your Baby to Read;book/course material;supporting;Optional enjoyable shared-reading form only;inspiration_form_only;high")
+    && domanCard.includes("caution: high") && domanCard.includes("used_in_activities: []")
+    && domanCard.includes("Do not say an infant reads words, understands print")
+    && domanCard.includes("Do not prescribe word cards, dot cards")
+    && domanCard.includes("Do not transfer theories or practices from brain injury")
+    && domanCard.includes("patterning, passive limb sequences, forced crawling or creeping")
+    && domanCard.includes("Do not privilege mothers as natural or full-time teachers")
+    && !stage5Authors.includes('author: "Glenn Doman"'), "Doman must remain card-free, early-academics-free, treatment-free, and outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),
