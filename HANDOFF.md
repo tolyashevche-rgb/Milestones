@@ -155,12 +155,12 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 22/26 done; Michelle Macias and Jennifer Poon complete the no-caution
+3. **Author cards** — 23/26 done; Michelle Macias and Jennifer Poon complete the no-caution
    clinical boundary set; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
    joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards; A. R.
    Luria and N. A. Bernstein are historical internal-only guardrails with no activities;
-   Margaret Sassé, Shinichi Suzuki, Gordon Neufeld, and Gabor Maté are high-caution review-only
-   with no activity IDs. The four remaining authors are high-caution and need careful,
+   Margaret Sassé, Shinichi Suzuki, Gordon Neufeld, Gabor Maté, and William Sears are high-caution
+   review-only with no activity IDs. The three remaining authors are high-caution and need careful,
    gated framing.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
 5. **Deferred / low-value:** IndexedDB backend; EN parity for WHO windows + coverage fix;
@@ -185,6 +185,17 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-02 — William Sears full-source safety boundary (23/26)
+- Searched the complete local 1,611-page *The Baby Book* text, reviewed its attachment-parenting,
+  carrying, sleep, SIDS, feeding, vaccination, and medicine sections, and visually checked PDF
+  pages 16, 20, 31–32, 253–254, and 755–756. Current AAP, CPSC, CDC, WHO, and Harvard guidance
+  replaces the book wherever safety, health, or developmental evidence is involved.
+- Added one high-caution review-only card retaining only a warm cue-responsive tone. Blocked the
+  seven-B checklist, bed-sharing and outdated adult-bed precautions, attachment parenting as SIDS
+  prevention, carrier/feeding/sleep prescriptions, attachment assessment, intelligence or
+  development outcomes, medical advice, gendered care roles, and caregiver blame. No activity ID
+  or runtime content was added.
 
 ### 2026-07-02 — Neufeld + Maté full-source boundary audit (22/26)
 - Reviewed the complete local *Hold On to Your Kids* OCR and checked pages 113–118 against source
