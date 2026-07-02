@@ -15,6 +15,7 @@ function contentContext() {
   run(context, "prototype_stage5_ua/authors_ua.js");
   run(context, "prototype_stage5_ua/who_windows.js");
   run(context, "prototype_stage5_ua/activity_context_ua.js");
+  run(context, "prototype_stage5_ua/library_ua.js");
   return context;
 }
 
@@ -34,7 +35,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260702-p2-22-r1"), "Stage5 assets must use the P2.22 cache key");
+  assert.ok(stage5Index.includes("20260702-p2-23-r1"), "Stage5 assets must use the P2.23 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260702-p2-23-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -51,7 +53,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-22-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-23-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 30, "two Motion Cards batches must contain exactly 30 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -221,12 +223,15 @@ function testContentAndEngine() {
   const context = contentContext();
   const api = vm.runInContext(`({
     AGES, DOMAIN_KEYS, ENGINE_CONFIG, MILESTONES_BY_AGE, ACTIVITIES_BY_AGE, DISCUSS_BY_ID,
-    QUESTION_VARIANTS_UA, ACTIVITY_AUTHOR_NOTES, WHO_WINDOW_BY_ID, ACTIVITY_LOW_ENERGY_UA,
+    QUESTION_VARIANTS_UA, ACTIVITY_AUTHOR_NOTES, WHO_WINDOW_BY_ID, ACTIVITY_LOW_ENERGY_UA, LIBRARY_MATERIALS, LIBRARY_TOPICS,
     buildProfile, buildProgram, domainOf
   })`, context);
 
   assert.deepEqual(Array.from(api.AGES), [2, 4, 6, 9, 12]);
   assert.equal(api.ENGINE_CONFIG.cycleDays, 14);
+  assert.equal(api.LIBRARY_MATERIALS.length, 12, "E4 pilot needs twelve concise materials");
+  assert.ok(api.LIBRARY_MATERIALS.every((item) => item.reviewStatus === "draft" && item.lastChecked === "2026-07-02" && item.source.url.startsWith("https://")), "library materials need honest review status, check date, and source");
+  assert.ok(api.LIBRARY_TOPICS.some((topic) => topic.id === "safety") && api.LIBRARY_TOPICS.some((topic) => topic.id === "parent"), "library filters must cover safety and caregiver wellbeing");
 
   const milestoneIds = new Set();
   const activityIds = new Set();
@@ -341,6 +346,7 @@ function appContext(options = {}) {
   run(context, "prototype_stage5_ua/questions_ua.js");
   run(context, "prototype_stage5_ua/illustrations.js");
   run(context, "prototype_stage5_ua/activity_context_ua.js");
+  run(context, "prototype_stage5_ua/library_ua.js");
   run(context, "prototype_stage5_ua/app5.js");
   return context;
 }
@@ -407,8 +413,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260702-p2-22-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260702-p2-22-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260702-p2-23-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260702-p2-23-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260702-p2-23-r1"), "offline shell must cache the sourced library");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -658,6 +665,18 @@ function testAppState() {
       && motionReviewMarkup.includes("Відповіді зберігаються лише в цьому браузері")
       && MOTION_REVIEW_CRITERIA.parent.length === 3
       && MOTION_REVIEW_CRITERIA.expert.length === 4;
+    libraryUi = { query: "сон", topic: "all" };
+    const librarySearchResults = filteredLibraryItems();
+    libraryUi = { query: "", topic: "safety" };
+    const librarySafetyResults = filteredLibraryItems();
+    const libraryMarkup = renderLibrary();
+    const libraryOkay = librarySearchResults.some((item) => item.id === "sleep-routine")
+      && librarySafetyResults.length === 2
+      && librarySafetyResults.every((item) => item.topic === "safety")
+      && libraryMarkup.includes('id="librarySearch"')
+      && libraryMarkup.includes('data-library-topic="safety"')
+      && libraryMarkup.includes("Експертне рев’ю ще не завершено")
+      && !NAV.some((item) => item.route === "library");
     first.activityCompletions[completionKey(4)] = { activityId: playStep.task.act.id };
     first.favoriteActivities.push(playStep.task.act.id);
     first.activityReactions[completionKey(4)] = "liked";
@@ -778,7 +797,7 @@ function testAppState() {
       && changes.newlyObserved.length === 2
       && changes.changed.length === 1;
 
-    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, gentleEngagementOkay, weeklyRecapOkay, contextFilterOkay, visualGuideOkay, motionReviewOkay };
+    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, gentleEngagementOkay, weeklyRecapOkay, contextFilterOkay, visualGuideOkay, motionReviewOkay, libraryOkay };
   })()`, context);
 
   assert.equal(result.restartOkay, true, "re-test must clear only the active plan and today's completion");
@@ -800,6 +819,7 @@ function testAppState() {
   assert.equal(result.contextFilterOkay, true, "context picker must use honest activity attributes and authored low-energy variants across all ages");
   assert.equal(result.visualGuideOkay, true, "the visual pilot and 15 Motion Cards need four-frame guides and unchanged detailed safety steps");
   assert.equal(result.motionReviewOkay, true, "Motion Cards need five isolated parent sessions and one expert safety review session");
+  assert.equal(result.libraryOkay, true, "E4 library must stay searchable, source-visible, draft-labelled, and secondary to the four-item navigation");
 }
 
 (async () => {
@@ -808,7 +828,7 @@ function testAppState() {
   testStorageFailureRecovery();
   await testServiceWorker();
   await testPwaInstallUi();
-  console.log("P1/P2 QA passed: 5 ages, content integrity, deterministic plans, corrected-age profile support, honest context-aware game choice, 33 authored low-energy variants, calm favorites, post-play feedback and weekly recap, warm kite visual layer, contextual home, guarded local storage, installable offline shell, deferred install UX, user-approved PWA updates, service-worker lifecycle, safe local backup/restore, unified SVG navigation, one-thumb survey, accessible focus/status semantics, emotion-aware copy, today-first game, specialist prep, re-tests, history comparison, migration, multi-child isolation.");
+  console.log("P1/P2/E4 QA passed: 5 ages, content integrity, deterministic plans, corrected-age profile support, honest context-aware game choice, 33 authored low-energy variants, calm favorites, post-play feedback and weekly recap, warm kite visual layer, contextual home, guarded local storage, installable offline shell, deferred install UX, user-approved PWA updates, service-worker lifecycle, safe local backup/restore, unified SVG navigation, one-thumb survey, accessible focus/status semantics, emotion-aware copy, today-first game, specialist prep, searchable sourced library, re-tests, history comparison, migration, multi-child isolation.");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

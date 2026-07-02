@@ -476,7 +476,7 @@ function route() {
   // Onboarding gate: welcome first, then consent, then child profile.
   if (!store.consent || !store.consent.accepted) return show(r === "consent" ? "consent" : "welcome");
   if (!store.children.length) return show("profile");
-  const known = ["home", "survey", "results", "program", "progress", "ask", "visual-pilot", "profile", "consent", "welcome"];
+  const known = ["home", "survey", "results", "program", "progress", "ask", "library", "visual-pilot", "profile", "consent", "welcome"];
   show(known.includes(r) ? r : "home");
 }
 
@@ -485,7 +485,7 @@ function show(screen) {
   const renderers = {
     welcome: renderWelcome, consent: renderConsent, profile: renderProfile,
     home: renderHome, survey: renderSurvey, results: renderResults,
-    program: renderProgram, progress: renderProgress, ask: renderAsk,
+    program: renderProgram, progress: renderProgress, ask: renderAsk, library: renderLibrary,
     "visual-pilot": renderVisualPilot
   };
   root.innerHTML = (renderers[screen] || renderHome)();
@@ -684,16 +684,19 @@ function renderHome() {
 
       ${weeklyRecapHtml(weekly)}
 
-      ${tested ? `<details class="home-more">
-        <summary>Інші можливості</summary>
+      <details class="home-more">
+        <summary>Ще корисне</summary>
         <div class="tiles">
+          <button type="button" class="tile" data-go="library"><strong>Бібліотека</strong><span class="muted">короткі перевірювані відповіді</span></button>
+          ${tested ? `
           <button type="button" class="tile" data-go="program"><strong>Усі ігри</strong><span class="muted">найближчі сім днів</span></button>
           <button type="button" class="tile" data-go="progress"><strong>Історія</strong><span class="muted">ваші спостереження</span></button>
           <button type="button" class="tile" data-go="ask"><strong>Для фахівця</strong><span class="muted">підсумок і нотатки</span></button>
           <button type="button" class="tile" data-go="survey" data-restart="1"><strong>Оновити</strong><span class="muted">пройти ще раз</span></button>
           ${task ? `<button type="button" class="tile" id="addIcs"><strong>У календар</strong><span class="muted">нагадування про гру</span></button>` : ""}
+          ` : ""}
         </div>
-      </details>` : ""}
+      </details>
 
       ${next ? `<p class="note">Наступне вікове спостереження — приблизно у ${next} місяців.</p>` : ""}
       <details class="data-controls">
@@ -724,6 +727,62 @@ function renderHome() {
         </div>
       </details>
     </section>`;
+}
+
+// ---- concise sourced library (E4 pilot) ----
+let libraryUi = { query: "", topic: "all" };
+
+function libraryItems() {
+  return typeof LIBRARY_MATERIALS !== "undefined" && Array.isArray(LIBRARY_MATERIALS) ? LIBRARY_MATERIALS : [];
+}
+
+function filteredLibraryItems() {
+  const query = libraryUi.query.trim().toLocaleLowerCase("uk-UA");
+  const age = currentAge();
+  return libraryItems().filter((item) => {
+    if (libraryUi.topic !== "all" && item.topic !== libraryUi.topic) return false;
+    if (!query) return true;
+    return [item.title, item.answer, item.doNow, item.topicLabel, item.source?.publisher]
+      .filter(Boolean).join(" ").toLocaleLowerCase("uk-UA").includes(query);
+  }).sort((a, b) => Number(b.ages.includes(age)) - Number(a.ages.includes(age)));
+}
+
+function libraryCardHtml(item) {
+  const age = currentAge();
+  const ageLabel = item.ages.includes(age) ? `Для ${AGE_LABELS[age]}` : `Вік: ${item.ages.join(", ")} міс.`;
+  return `<article class="library-card">
+    <div class="library-card-head"><span class="chip">${esc(item.topicLabel)}</span><span class="library-age">${esc(ageLabel)}</span></div>
+    <h2>${esc(item.title)}</h2>
+    <p>${esc(item.answer)}</p>
+    <div class="library-now"><strong>Що можна зробити зараз</strong><span>${esc(item.doNow)}</span></div>
+    <details class="library-source">
+      <summary>Джерело й статус</summary>
+      <div>
+        <p><span class="review-status">Чернетка</span> Джерело звірено 2 липня 2026 року. Експертне рев’ю ще не завершено.</p>
+        <a href="${esc(item.source.url)}" target="_blank" rel="noreferrer">${esc(item.source.publisher)} · ${esc(item.source.title)}</a>
+        <p class="muted small">${esc(item.boundary)}</p>
+      </div>
+    </details>
+  </article>`;
+}
+
+function libraryResultsHtml() {
+  const items = filteredLibraryItems();
+  return `<p id="libraryCount" class="library-count" role="status" aria-live="polite">Знайдено: ${items.length}</p>
+    <div class="library-list">${items.length ? items.map(libraryCardHtml).join("") : `<div class="empty-state"><h2>Нічого не знайшлося</h2><p class="muted">Спробуйте коротше слово або оберіть «Усі».</p></div>`}</div>`;
+}
+
+function renderLibrary() {
+  const topics = typeof LIBRARY_TOPICS !== "undefined" && Array.isArray(LIBRARY_TOPICS) ? LIBRARY_TOPICS : [];
+  return `<section class="screen-pad library-screen">
+    <button type="button" class="pilot-back" data-go="home">← На головну</button>
+    <span class="pilot-kicker">Пілот · 12 матеріалів</span>
+    <h1 tabindex="-1">Короткі відповіді</h1>
+    <p class="muted">Одне питання — одна практична відповідь на 2–3 хвилини. Матеріали освітні й поки мають статус чернетки.</p>
+    <label class="library-search"><span>Пошук</span><input id="librarySearch" type="search" value="${esc(libraryUi.query)}" placeholder="Наприклад: сон або плач" autocomplete="off"></label>
+    <div class="library-topics" role="group" aria-label="Фільтр за темою">${topics.map((topic) => `<button type="button" data-library-topic="${topic.id}" class="${libraryUi.topic === topic.id ? "active" : ""}" aria-pressed="${libraryUi.topic === topic.id}">${esc(topic.label)}</button>`).join("")}</div>
+    <div id="libraryResults">${libraryResultsHtml()}</div>
+  </section>`;
 }
 
 // ---- survey ----
@@ -1437,6 +1496,16 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
+  const libraryTopic = e.target.closest("[data-library-topic]");
+  if (libraryTopic) {
+    const requested = libraryTopic.dataset.libraryTopic;
+    if (typeof LIBRARY_TOPICS === "undefined" || !LIBRARY_TOPICS.some((topic) => topic.id === requested)) return;
+    libraryUi.topic = requested;
+    route();
+    document.querySelector(`[data-library-topic="${requested}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+
   const reviewSessionButton = e.target.closest("[data-review-session]");
   if (reviewSessionButton) {
     const requested = reviewSessionButton.dataset.reviewSession;
@@ -1711,6 +1780,12 @@ document.addEventListener("click", async (e) => {
 });
 
 document.addEventListener("input", (e) => {
+  if (e.target.id === "librarySearch") {
+    libraryUi.query = e.target.value.slice(0, 120);
+    const results = document.getElementById("libraryResults");
+    if (results) results.innerHTML = libraryResultsHtml();
+    return;
+  }
   const motionNoteId = e.target.dataset.motionReviewNote;
   if (motionNoteId && typeof ACTIVITY_RASTER_GUIDES === "object" && ACTIVITY_RASTER_GUIDES[motionNoteId]) {
     const { data } = activeMotionReviewSession();
