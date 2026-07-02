@@ -164,7 +164,22 @@ const ACTIVITY_RASTER_GUIDES = {
   act_009_movement_001: { image: "assets/motion_cards/act_009_movement_001.jpg", imageAlt: "Дев’ятимісячна дитина сидячи перекладає велике кільце з однієї руки в іншу під наглядом." },
   act_012_social_002: { image: "assets/motion_cards/act_012_social_002.jpg", imageAlt: "Дорослий повільно плескає, дванадцятимісячна дитина наслідує у власний спосіб, а гра завершується без тиску." },
   act_012_language_003: { image: "assets/motion_cards/act_012_language_003.jpg", imageAlt: "Дорослий показує велику улюблену іграшку, чекає на будь-який сигнал і відразу дає її дитині." },
-  act_012_movement_003: { image: "assets/motion_cards/act_012_movement_003.jpg", imageAlt: "Дванадцятимісячна дитина робить кілька кроків зі стійкою каталкою, а дорослий підтримує тулуб і завершує при втомі." }
+  act_012_movement_003: { image: "assets/motion_cards/act_012_movement_003.jpg", imageAlt: "Дванадцятимісячна дитина робить кілька кроків зі стійкою каталкою, а дорослий підтримує тулуб і завершує при втомі." },
+  act_002_language_002: { image: "assets/motion_cards/act_002_language_002.jpg", imageAlt: "Дорослий допомагає двомісячній дитині помітити тихий звук тканини, робить паузу й завершує при втомі." },
+  act_002_cognitive_001: { image: "assets/motion_cards/act_002_cognitive_001.jpg", imageAlt: "Дорослий повільно переміщує обличчя в полі зору двомісячної дитини та зупиняється, коли вона відвертається." },
+  act_002_social_003: { image: "assets/motion_cards/act_002_social_003.jpg", imageAlt: "Повністю одягнену двомісячну дитину спокійно тримають біля грудей із підтримкою голови й тулуба." },
+  act_002_language_003: { image: "assets/motion_cards/act_002_language_003.jpg", imageAlt: "Дорослий тихо наспівує під час догляду за двомісячною дитиною, робить паузу й стежить за її станом." },
+  act_002_cognitive_003: { image: "assets/motion_cards/act_002_cognitive_003.jpg", imageAlt: "Чорно-білий візерунок показують двомісячній дитині нерухомо й прибирають, коли вона відвертається." },
+  act_004_social_002: { image: "assets/motion_cards/act_004_social_002.jpg", imageAlt: "Дорослий показує чотиримісячній дитині кумедну міміку, робить паузу й спокійно завершує гру." },
+  act_004_language_002: { image: "assets/motion_cards/act_004_language_002.jpg", imageAlt: "Дорослий подає тихий голос збоку від чотиримісячної дитини, чекає на її реакцію й не примушує повертатися." },
+  act_004_cognitive_001: { image: "assets/motion_cards/act_004_cognitive_001.jpg", imageAlt: "Чотиримісячна дитина розглядає власні ручки, а дорослий спокійно спостерігає без примусу." },
+  act_004_social_003: { image: "assets/motion_cards/act_004_social_003.jpg", imageAlt: "Дорослий повільно наслідує простий рух чотиримісячної дитини, робить паузу й чекає на відповідь." },
+  act_004_language_003: { image: "assets/motion_cards/act_004_language_003.jpg", imageAlt: "Дорослий тихо співає коротку потішку чотиримісячній дитині, робить паузу й завершує при втомі." },
+  act_004_movement_003: { image: "assets/motion_cards/act_004_movement_003.jpg", imageAlt: "Чотиримісячна дитина напівлежить на колінах дорослого з постійною підтримкою голови, шиї й тулуба." },
+  act_006_social_001: { image: "assets/motion_cards/act_006_social_001.jpg", imageAlt: "Знайомий дорослий вітає шестимісячну дитину, робить паузу для її реакції й не вимагає відповіді." },
+  act_006_language_002: { image: "assets/motion_cards/act_006_language_002.jpg", imageAlt: "Дорослий один раз повторює кумедний звук шестимісячної дитини, залишає їй чергу й завершує при втомі." },
+  act_006_movement_001: { image: "assets/motion_cards/act_006_movement_001.jpg", imageAlt: "Неспляча шестимісячна дитина тягнеться до великої іграшки на животику під постійним близьким наглядом." },
+  act_006_social_003: { image: "assets/motion_cards/act_006_social_003.jpg", imageAlt: "Дорослий робить паузу перед легким дотиком крізь одяг і відразу зупиняється, коли дитина відвертається." }
 };
 
 function activityVisualGuide(id) {
