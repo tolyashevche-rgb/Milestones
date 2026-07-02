@@ -38,8 +38,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260702-p2-27-r1"), "Stage5 assets must use the P2.27 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260702-p2-27-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260703-p2-28-r1"), "Stage5 assets must use the P2.28 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260703-p2-28-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -56,9 +56,9 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-27-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-28-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
-  assert.equal(motionCardFiles.length, 45, "three Motion Cards batches must contain exactly 45 optimized illustrations");
+  assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
   assert.ok(serviceWorker.includes('caches.match("./index.html")'), "offline navigation needs an app-shell fallback");
   assert.ok(pwaScript.includes('navigator.serviceWorker.register("./sw.js")'), "the app must register its service worker");
@@ -422,9 +422,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260702-p2-27-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260702-p2-27-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260702-p2-27-r1"), "offline shell must cache the sourced library");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260703-p2-28-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260703-p2-28-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260703-p2-28-r1"), "offline shell must cache the sourced library");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -687,13 +687,13 @@ function testAppState() {
         && markup.includes("Спостерігайте")
         && markup.includes("Детальні кроки")
         && markup.includes("Не треба домагатися певної реакції");
-    }) && rasterVisualIds.length === 45 && activityVisualGuideHtml("act_004_language_003").includes("act_004_language_003.jpg");
+    }) && rasterVisualIds.length === 59 && visualPilotIds.length === 60 && activityVisualGuideHtml("act_012_cognitive_003").includes("act_012_cognitive_003.jpg");
     motionReview.active = "parent_1";
     motionReview.sessions.parent_1 = { cards: { [rasterVisualIds[0]]: { action: "yes", hands: "yes", stop: "yes", note: "зрозуміло" } } };
     const motionReviewMarkup = renderVisualPilot();
-    const motionReviewOkay = motionReviewProgressText() === "Перевірено 1 із 45"
+    const motionReviewOkay = motionReviewProgressText() === "Перевірено 1 із 59"
       && (motionReviewMarkup.match(/data-review-session=/g) || []).length === 6
-      && (motionReviewMarkup.match(/class="pilot-review"/g) || []).length === 45
+      && (motionReviewMarkup.match(/class="pilot-review"/g) || []).length === 59
       && motionReviewMarkup.includes('data-motion-review="' + rasterVisualIds[0] + '"')
       && motionReviewMarkup.includes("Відповіді зберігаються лише в цьому браузері")
       && MOTION_REVIEW_CRITERIA.parent.length === 3
@@ -876,7 +876,7 @@ function testAppState() {
   assert.equal(result.gentleEngagementOkay, true, "favorites and optional post-play feedback must stay calm and local per child");
   assert.equal(result.weeklyRecapOkay, true, "weekly recap must describe recent play without a streak, progress bar, or competing action");
   assert.equal(result.contextFilterOkay, true, "context picker must use honest activity attributes and authored low-energy variants across all ages");
-  assert.equal(result.visualGuideOkay, true, "the visual pilot and 45 Motion Cards need four-frame guides and unchanged detailed safety steps");
+  assert.equal(result.visualGuideOkay, true, "all 60 activities need four-frame guides and unchanged detailed safety steps");
   assert.equal(result.motionReviewOkay, true, "Motion Cards need five isolated parent sessions and one expert safety review session");
   assert.equal(result.libraryOkay, true, "E4 library must stay searchable, source-visible, draft-labelled, and secondary to the four-item navigation");
   assert.equal(result.followUpRoutingOkay, true, "not-yet must route to discussion while not-sure gets a 7–14 day re-observation window");

@@ -179,7 +179,21 @@ const ACTIVITY_RASTER_GUIDES = {
   act_006_social_001: { image: "assets/motion_cards/act_006_social_001.jpg", imageAlt: "Знайомий дорослий вітає шестимісячну дитину, робить паузу для її реакції й не вимагає відповіді." },
   act_006_language_002: { image: "assets/motion_cards/act_006_language_002.jpg", imageAlt: "Дорослий один раз повторює кумедний звук шестимісячної дитини, залишає їй чергу й завершує при втомі." },
   act_006_movement_001: { image: "assets/motion_cards/act_006_movement_001.jpg", imageAlt: "Неспляча шестимісячна дитина тягнеться до великої іграшки на животику під постійним близьким наглядом." },
-  act_006_social_003: { image: "assets/motion_cards/act_006_social_003.jpg", imageAlt: "Дорослий робить паузу перед легким дотиком крізь одяг і відразу зупиняється, коли дитина відвертається." }
+  act_006_social_003: { image: "assets/motion_cards/act_006_social_003.jpg", imageAlt: "Дорослий робить паузу перед легким дотиком крізь одяг і відразу зупиняється, коли дитина відвертається." },
+  act_006_language_003: { image: "assets/motion_cards/act_006_language_003.jpg", imageAlt: "Дорослий називає те, на що дивиться шестимісячна дитина, робить паузу й завершує при втомі." },
+  act_006_cognitive_003: { image: "assets/motion_cards/act_006_cognitive_003.jpg", imageAlt: "Шестимісячна дитина під наглядом досліджує три великі безпечні предмети з різними текстурами." },
+  act_009_social_002: { image: "assets/motion_cards/act_009_social_002.jpg", imageAlt: "Дорослий один раз тепло називає ім’я дев’ятимісячної дитини, чекає й приймає будь-яку реакцію." },
+  act_009_language_001: { image: "assets/motion_cards/act_009_language_001.jpg", imageAlt: "Дорослий повторює лепет дев’ятимісячної дитини, додає просте слово й залишає паузу." },
+  act_009_language_002: { image: "assets/motion_cards/act_009_language_002.jpg", imageAlt: "Дорослий показує відкриті руки, чекає на сигнал дев’ятимісячної дитини й не тягне її до себе." },
+  act_009_language_003: { image: "assets/motion_cards/act_009_language_003.jpg", imageAlt: "Дорослий і дев’ятимісячна дитина розглядають міцну картонну книжку, називають малюнок і перегортають сторінку." },
+  act_009_cognitive_003: { image: "assets/motion_cards/act_009_cognitive_003.jpg", imageAlt: "Дев’ятимісячна дитина пробує вкладати один великий безпечний стаканчик в інший під наглядом." },
+  act_009_movement_003: { image: "assets/motion_cards/act_009_movement_003.jpg", imageAlt: "Дев’ятимісячна дитина сидячи трохи тягнеться до великого м’якого кубика, а дорослий страхує тулуб." },
+  act_012_social_001: { image: "assets/motion_cards/act_012_social_001.jpg", imageAlt: "Дорослий повільно плескає, робить паузу для дванадцятимісячної дитини й завершує без тиску." },
+  act_012_language_001: { image: "assets/motion_cards/act_012_language_001.jpg", imageAlt: "Знайомий дорослий махає на прощання, чекає на будь-яку реакцію дитини й не зникає різко, якщо вона засмучена." },
+  act_012_language_002: { image: "assets/motion_cards/act_012_language_002.jpg", imageAlt: "Під час звичайної гри дорослий називає знайому людину, чекає й не вимагає від дитини повторити слово." },
+  act_012_movement_002: { image: "assets/motion_cards/act_012_movement_002.jpg", imageAlt: "Дитина безпечно сидить у стільчику й під прямим наглядом пробує взяти один м’який плаский шматочок їжі." },
+  act_012_social_003: { image: "assets/motion_cards/act_012_social_003.jpg", imageAlt: "Дорослий і дитина сидячи наслідують простий рух та спокійно зупиняються при перевтомі." },
+  act_012_cognitive_003: { image: "assets/motion_cards/act_012_cognitive_003.jpg", imageAlt: "Дванадцятимісячна дитина пробує опустити велику суцільну форму у стійкий сортер під наглядом дорослого." }
 };
 
 function activityVisualGuide(id) {
