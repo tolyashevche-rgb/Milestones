@@ -792,11 +792,14 @@ function libraryCardHtml(item) {
     <h2>${esc(item.title)}</h2>
     <p>${esc(item.answer)}</p>
     <div class="library-now"><strong>Що можна зробити зараз</strong><span>${esc(item.doNow)}</span></div>
+    <div class="library-source-link">
+      <span>Джерело</span>
+      <a href="${esc(item.source.url)}" target="_blank" rel="noreferrer">${esc(item.source.publisher)} · ${esc(item.source.title)}</a>
+    </div>
     <details class="library-source">
-      <summary>Джерело й статус</summary>
+      <summary>Статус і застереження</summary>
       <div>
         <p><span class="review-status">Чернетка</span> Джерело звірено 2 липня 2026 року. Експертне рев’ю ще не завершено.</p>
-        <a href="${esc(item.source.url)}" target="_blank" rel="noreferrer">${esc(item.source.publisher)} · ${esc(item.source.title)}</a>
         <p class="muted small">${esc(item.boundary)}</p>
       </div>
     </details>

@@ -362,11 +362,13 @@ main {
 .library-now { display: grid; gap: 3px; margin-top: 12px; padding: 11px 12px; border-radius: 11px; background: var(--mint); }
 .library-now strong { color: var(--teal-dark); font-size: 12px; }
 .library-now span { color: #40504d; font-size: 14px; }
-.library-source { margin-top: 10px; border-top: 1px solid var(--line); }
+.library-source-link { display: grid; gap: 3px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); }
+.library-source-link span { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+.library-source-link a { color: var(--teal-dark); font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.library-source { margin-top: 2px; }
 .library-source summary { min-height: 44px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-size: 13px; font-weight: 700; }
 .library-source div { padding: 0 2px 4px; }
 .library-source p { margin: 3px 0 8px; font-size: 13px; }
-.library-source a { color: var(--teal-dark); font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
 .review-status { display: inline-block; margin-right: 4px; padding: 2px 7px; border-radius: 999px; color: var(--apricot-dark); background: var(--apricot-soft); font-size: 11px; font-weight: 800; }
 
 /* stakeholder review screen for the original raster illustration pilot */
