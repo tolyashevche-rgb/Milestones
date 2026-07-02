@@ -66,7 +66,7 @@ function testContentAndEngine() {
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
-  assert.equal(authorCardFiles.length, 19, "author-card roadmap count must match the nineteen review records");
+  assert.equal(authorCardFiles.length, 20, "author-card roadmap count must match the twenty review records");
   const coveredAuthorIds = new Set();
   authorCardFiles.forEach((name) => {
     const card = read(`knowledge_base/author_source_cards/${name}`);
@@ -77,7 +77,7 @@ function testContentAndEngine() {
     assert.ok(authorId, `${name} needs an author_id`);
     authorId[1].split("|").map((id) => id.trim()).filter(Boolean).forEach((id) => coveredAuthorIds.add(id));
   });
-  assert.equal(coveredAuthorIds.size, 20, "author-card roadmap must cover twenty distinct authors");
+  assert.equal(coveredAuthorIds.size, 22, "author-card roadmap must cover twenty-two distinct authors");
   assert.ok(authorMap.includes("amap_007;early_brain_development_daily_interaction;Jill Stamm"), "Stamm review card needs a traceable recommendation-map row");
   assert.ok(stammCard.includes("evidence_level: secondary_synthesis")
     && stammCard.includes("Do not claim that this “wires the brain correctly”")
@@ -154,6 +154,16 @@ function testContentAndEngine() {
     && suzukiCard.includes("Do not blame a mother, father or caregiver’s voice")
     && suzukiCard.includes("Do not claim violin, music, memorization or persistent practice treats")
     && !stage5Authors.includes('author: "Shinichi Suzuki"'), "Suzuki must remain blame-free, treatment-free, training-free, and outside runtime");
+  const neufeldMateCard = read("knowledge_base/author_source_cards/auth_neufeld-mate_warm-presence-without-collecting.md");
+  assert.ok(authorMap.includes("amap_018;warm_presence_without_collecting;Gordon Neufeld|Gabor Maté")
+    && authorRegistry.includes("neufeld;Gordon Neufeld;attachment_emotional;expert_model;high;high;inspiration_form_only")
+    && authorWorks.includes("work_neufeld_mate_001;neufeld|mate;Gordon Neufeld, Gabor Maté")
+    && neufeldMateCard.includes("caution: high") && neufeldMateCard.includes("used_in_activities: []")
+    && neufeldMateCard.includes("Do not use “collect the child”, “woo”, “get in the child’s face”")
+    && neufeldMateCard.includes("Do not try to elicit or require eye contact, a smile, nod, grasp")
+    && neufeldMateCard.includes("Babies can form relationships with multiple safe caregivers")
+    && !stage5Authors.includes('author: "Gordon Neufeld"')
+    && !stage5Authors.includes('author: "Gabor Maté"'), "Neufeld and Maté must remain reciprocity-free, assessment-free, blame-free, and outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),

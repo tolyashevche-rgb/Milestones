@@ -233,9 +233,9 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   pack (neutral script, short consent, observation sheet, severity rubric, synthesis) is in
   [docs/parent_test_facilitator_pack_ua.md](docs/parent_test_facilitator_pack_ua.md); use only
   after the expert-review tracker approves parent testing.
-- Author cards: **20 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
+- Author cards: **22 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
   serve-return, Harvard brain-building-play, Mooney, Marks, Stamm, Montessori, Eliot, Medina,
-  Siegel & Bryson, Luria, Bernstein, Macias, Poon, Sassé, Suzuki).
+  Siegel & Bryson, Luria, Bernstein, Macias, Poon, Sassé, Suzuki, Neufeld & Maté).
   Stamm, Montessori, Eliot, Medina, and the joint Siegel–Bryson card remain review-only: Stamm’s everyday-interaction wrapper is mapped to Harvard/WHO,
   while Montessori contributes only the form of a safe, accessible setup and room for the child’s
   response, Eliot only a wide-range-resilience rationale for ordinary experience, and Medina only
@@ -254,11 +254,14 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   are excluded. The full Suzuki sources raised his caution level from moderate to high: only an
   optional responsive shared song remains review-only, while training from birth, repetition
   doses, talent, memorization, treatment, character, family-environment causation, and caregiver
-  blame are excluded. Brain-wiring,
-  precise neurotimelines, animal-to-child enrichment transfer, permanence, IQ, attention-span,
+  blame are excluded. The full *Hold On to Your Kids* audit also raised Neufeld to high caution alongside Maté: only
+  warm presence without required reciprocity remains review-only. “Collecting”, elicited eye
+  contact/smiles, dependence, peer-orientation, attachment assessment, separation/childcare
+  judgment, hierarchy, control, and caregiver blame are excluded. Brain-wiring, precise
+  neurotimelines, animal-to-child enrichment transfer, permanence, IQ, attention-span,
   attachment, sensitive-period deadlines, method superiority, and acceleration claims are
-  explicitly excluded. Remaining authors are mostly
-  moderate/high-caution authors (Doman, Sears, Maté…) needing careful framing.
+  explicitly excluded. The four remaining authors—Sears, Shichida, Doman, and Ibuka—are all
+  high-caution and need careful framing.
 - `discuss_if` surfaced in **both UA and EN** — `DISCUSS_BY_ID` (54 entries, pulled from the
   canonical `mvp_0_12_months_map.csv`) now in `prototype_stage4/data.js`, with `#discussList`
   + `renderDiscuss()` in the EN Ask tab, mirroring the UA prototype.
@@ -280,7 +283,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | A | Integrate inventory + verify author names | **done** |
 | B | Surface "when to discuss" in the UI (reuse `discuss_if`) | **done (UA + EN)** |
 | B2 | Fix `allClear` maintenance bug (+ `partialClear`) | **done** |
-| C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (20/26; Suzuki + Sassé high-caution review-only; Neufeld moderate; all other remaining authors high caution) |
+| C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (22/26; Neufeld/Maté + Suzuki + Sassé high-caution review-only; four high-caution authors remain) |
 | D | Expert review + parent test (validation gates) | **packs ready; live reviews/sessions pending** |
 
 ### Product roadmap (from the 2026-06-08 direction)

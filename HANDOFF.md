@@ -155,12 +155,12 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 20/26 done; Michelle Macias and Jennifer Poon complete the no-caution
+3. **Author cards** — 22/26 done; Michelle Macias and Jennifer Poon complete the no-caution
    clinical boundary set; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
    joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards; A. R.
    Luria and N. A. Bernstein are historical internal-only guardrails with no activities;
-   Margaret Sassé and Shinichi Suzuki are high-caution review-only with no activity IDs. The
-   rest are moderate/high-caution authors needing careful,
+   Margaret Sassé, Shinichi Suzuki, Gordon Neufeld, and Gabor Maté are high-caution review-only
+   with no activity IDs. The four remaining authors are high-caution and need careful,
    gated framing.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
 5. **Deferred / low-value:** IndexedDB backend; EN parity for WHO windows + coverage fix;
@@ -185,6 +185,16 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-02 — Neufeld + Maté full-source boundary audit (22/26)
+- Reviewed the complete local *Hold On to Your Kids* OCR and checked pages 113–118 against source
+  images. Neufeld’s previous moderate/mechanism-support label was raised to high-caution
+  inspiration-only; Maté remains high caution. The book is mainly about older-child peer
+  orientation, discipline and dependence, not infant evidence.
+- Added one joint review-only card retaining only warm presence without required reciprocity.
+  Blocked “collecting”, elicited eye contact/smile/nod/grasp, attachment judgments, dependence and
+  peer-orientation claims, hierarchy/control, separation or childcare judgments, future-behavior
+  predictions, and caregiver blame. No activity ID or runtime content was added.
 
 ### 2026-07-02 — Suzuki full-source audit and caution escalation (20/26)
 - Reviewed both complete local OCR sets and selected source images for *Nurtured by Love* and
