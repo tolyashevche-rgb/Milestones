@@ -97,7 +97,7 @@ This inventory includes the broader list recovered from the earlier screenshot/s
 |---|---:|---|---|---|
 | Maria Montessori | high | pedagogy_method / expert_model | The Absorbent Mind, The Secret of Childhood, The Discovery of the Child | Prepared environment, independence, concentration, observation |
 | Shinichi Suzuki | medium | pedagogy_method | Nurtured by Love, Ability Development from Age Zero | Repetition, environment, parent involvement, music/learning |
-| Makoto Shichida | low-medium | pedagogy_method | Shichida Method books/materials | Method inspiration only; avoid strong neuroscience claims |
+| Makoto Shichida | low-medium | pedagogy_method | Shichida Method books/materials | High-caution boundary only: no right-brain, flash-card, ESP, critical-window, extraordinary-ability, treatment, or outcome claims |
 | Glenn Doman | low-medium | pedagogy_method / early-learning method | How to Teach Your Baby to Read, How to Teach Your Baby Math, How to Multiply Your Baby's Intelligence | Early-learning method inspiration only; high caution, avoid pressure and unsupported claims |
 | Masaru Ibuka | low-medium | pedagogy_method | Kindergarten Is Too Late | Early-start philosophy; use carefully without pressure or fear |
 | Margaret Sasse / Margaret Sassé | medium | pedagogy_method / movement-practical | Smart Start: How Exercise Can Transform Your Child's Life, Active Baby Healthy Brain | Movement-based activity ideas; both works verified Jun 2026; claims need caution |

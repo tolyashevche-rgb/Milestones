@@ -66,7 +66,7 @@ function testContentAndEngine() {
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
-  assert.equal(authorCardFiles.length, 21, "author-card roadmap count must match the twenty-one review records");
+  assert.equal(authorCardFiles.length, 22, "author-card roadmap count must match the twenty-two review records");
   const coveredAuthorIds = new Set();
   authorCardFiles.forEach((name) => {
     const card = read(`knowledge_base/author_source_cards/${name}`);
@@ -77,7 +77,7 @@ function testContentAndEngine() {
     assert.ok(authorId, `${name} needs an author_id`);
     authorId[1].split("|").map((id) => id.trim()).filter(Boolean).forEach((id) => coveredAuthorIds.add(id));
   });
-  assert.equal(coveredAuthorIds.size, 23, "author-card roadmap must cover twenty-three distinct authors");
+  assert.equal(coveredAuthorIds.size, 24, "author-card roadmap must cover twenty-four distinct authors");
   assert.ok(authorMap.includes("amap_007;early_brain_development_daily_interaction;Jill Stamm"), "Stamm review card needs a traceable recommendation-map row");
   assert.ok(stammCard.includes("evidence_level: secondary_synthesis")
     && stammCard.includes("Do not claim that this “wires the brain correctly”")
@@ -175,6 +175,17 @@ function testContentAndEngine() {
     && searsCard.includes("Do not reuse vaccination schedules, medication doses, diagnoses, treatments")
     && searsCard.includes("Caregiver exhaustion deserves practical support")
     && !stage5Authors.includes('author: "William Sears"'), "Sears must remain method-free, safe-sleep bounded, blame-free, and outside runtime");
+  const shichidaCard = read("knowledge_base/author_source_cards/auth_shichida_shared-picture-without-right-brain-training.md");
+  assert.ok(authorMap.includes("amap_020;shared_picture_without_right_brain_training;Makoto Shichida")
+    && authorRegistry.includes("shichida;Makoto Shichida;pedagogy_method;pedagogy_method;low-medium;high;inspiration_form_only;shared-picture form only")
+    && authorWorks.includes("work_shichida_001;shichida;Makoto Shichida;Children Can Change Through Right Brain Education;book;supporting;Optional shared-picture form only;inspiration_form_only;high")
+    && shichidaCard.includes("caution: high") && shichidaCard.includes("used_in_activities: []")
+    && shichidaCard.includes("Do not say the right brain dominates from birth to age three")
+    && shichidaCard.includes("Do not prescribe rapid flash cards, dots, numerals, equations")
+    && shichidaCard.includes("clairvoyance, telepathy")
+    && shichidaCard.includes("Do not claim the method changes facial muscles")
+    && shichidaCard.includes("Do not blame a caregiver's pace")
+    && !stage5Authors.includes('author: "Makoto Shichida"'), "Shichida must remain right-brain-free, flash-card-free, treatment-free, and outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),

@@ -233,9 +233,10 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   pack (neutral script, short consent, observation sheet, severity rubric, synthesis) is in
   [docs/parent_test_facilitator_pack_ua.md](docs/parent_test_facilitator_pack_ua.md); use only
   after the expert-review tracker approves parent testing.
-- Author cards: **23 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
+- Author cards: **24 done** (Glascoe, Lieberman, Pikler, Hirsh-Pasek & Golinkoff, Harvard
   serve-return, Harvard brain-building-play, Mooney, Marks, Stamm, Montessori, Eliot, Medina,
-  Siegel & Bryson, Luria, Bernstein, Macias, Poon, Sassé, Suzuki, Neufeld & Maté, Sears).
+  Siegel & Bryson, Luria, Bernstein, Macias, Poon, Sassé, Suzuki, Neufeld & Maté, Sears,
+  Shichida).
   Stamm, Montessori, Eliot, Medina, and the joint Siegel–Bryson card remain review-only: Stamm’s everyday-interaction wrapper is mapped to Harvard/WHO,
   while Montessori contributes only the form of a safe, accessible setup and room for the child’s
   response, Eliot only a wide-range-resilience rationale for ordinary experience, and Medina only
@@ -261,10 +262,14 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   Sears high-caution and review-only: only a warm cue-responsive tone survives. The seven-B
   checklist, bed-sharing and outdated adult-bed precautions, SIDS reduction, feeding or sleep
   prescriptions, attachment assessment, developmental/intelligence outcomes, medical advice, and
-  caregiver blame are excluded. Brain-wiring, precise
+  caregiver blame are excluded. The Shichida audit retains only one optional shared picture at
+  the baby's pace. Right-brain activation/dominance, alpha-state learning, rapid or massive
+  flash-card input, ESP/prenatal telepathy, photographic memory, genius/intelligence, critical
+  windows, disability treatment, testing, commercial curricula, and caregiver blame are excluded.
+  Brain-wiring, precise
   neurotimelines, animal-to-child enrichment transfer, permanence, IQ, attention-span,
   attachment, sensitive-period deadlines, method superiority, and acceleration claims are
-  explicitly excluded. The three remaining authors—Shichida, Doman, and Ibuka—are all
+  explicitly excluded. The two remaining authors—Doman and Ibuka—are both
   high-caution and need careful framing.
 - `discuss_if` surfaced in **both UA and EN** — `DISCUSS_BY_ID` (54 entries, pulled from the
   canonical `mvp_0_12_months_map.csv`) now in `prototype_stage4/data.js`, with `#discussList`
@@ -287,7 +292,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | A | Integrate inventory + verify author names | **done** |
 | B | Surface "when to discuss" in the UI (reuse `discuss_if`) | **done (UA + EN)** |
 | B2 | Fix `allClear` maintenance bug (+ `partialClear`) | **done** |
-| C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (23/26; Sears + Neufeld/Maté + Suzuki + Sassé high-caution review-only; three high-caution authors remain) |
+| C | Extract the remaining author cards (no-caution first, high-caution last) | in progress (24/26; Shichida + Sears + Neufeld/Maté + Suzuki + Sassé high-caution review-only; Doman and Ibuka remain) |
 | D | Expert review + parent test (validation gates) | **packs ready; live reviews/sessions pending** |
 
 ### Product roadmap (from the 2026-06-08 direction)

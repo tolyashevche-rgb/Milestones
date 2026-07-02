@@ -155,13 +155,13 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 23/26 done; Michelle Macias and Jennifer Poon complete the no-caution
+3. **Author cards** — 24/26 done; Michelle Macias and Jennifer Poon complete the no-caution
    clinical boundary set; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
    joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards; A. R.
    Luria and N. A. Bernstein are historical internal-only guardrails with no activities;
-   Margaret Sassé, Shinichi Suzuki, Gordon Neufeld, Gabor Maté, and William Sears are high-caution
-   review-only with no activity IDs. The three remaining authors are high-caution and need careful,
-   gated framing.
+   Margaret Sassé, Shinichi Suzuki, Gordon Neufeld, Gabor Maté, William Sears, and Makoto Shichida
+   are high-caution review-only with no activity IDs. Doman and Ibuka remain high-caution and need
+   careful, gated framing.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
 5. **Deferred / low-value:** IndexedDB backend; EN parity for WHO windows + coverage fix;
    designer-made illustrations (interim inline-SVG in place).
@@ -185,6 +185,18 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-02 — Makoto Shichida pseudoscience boundary audit (24/26)
+- Searched both complete local PDFs: a 9-page secondary article and a 31-page commercial manual
+  that mixes Shichida, Heguru, and Doman. Rendered and visually checked article pages 2–7 and
+  manual pages 3–9 and 17. The materials confirm global left/right-brain claims, zero-to-three
+  dominance, alpha-state learning, rapid mass input, ESP/prenatal telepathy, photographic memory,
+  infant calculation, speed reading, intensive flash cards, and unsupported disability treatment.
+- Added one high-caution review-only card retaining only an optional shared look at one ordinary
+  picture at the baby's pace under WHO/Harvard responsive-interaction boundaries. Blocked brain
+  activation, all flash-card doses and tests, extraordinary abilities, critical-window pressure,
+  commercial curricula, treatment, predictions, and caregiver blame. No activity ID or runtime
+  content was added.
 
 ### 2026-07-02 — William Sears full-source safety boundary (23/26)
 - Searched the complete local 1,611-page *The Baby Book* text, reviewed its attachment-parenting,
