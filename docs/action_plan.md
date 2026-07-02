@@ -8,6 +8,8 @@ Stage 4: Prototype and Validation Loop.
 
 Goal: перетворити review-ready content pack у перший клікабельний продукт, landing structure і сценарій тестування з батьками.
 
+Активний план наступного розширення продукту: [product_expansion_retention_plan_ua.md](product_expansion_retention_plan_ua.md).
+
 ## Completed
 
 - Адаптована матриця сенсів:

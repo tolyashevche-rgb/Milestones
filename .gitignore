@@ -9,6 +9,11 @@
 
 # Temp previews extracted from copyrighted books
 /_tmp_*/
+/tmp/
+
+# Local motion-card animation previews (the app ships optimized JPG cards)
+/prototype_stage5_ua/assets/motion_cards/*.mp4
+/prototype_stage5_ua/assets/motion_cards/*.webm
 
 # Stray binary blobs anywhere in the tree
 *.zip

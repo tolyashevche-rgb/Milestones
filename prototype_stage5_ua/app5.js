@@ -28,16 +28,72 @@ const PLAY_CONTEXTS = [
   { id: "any", label: "Будь-яка" },
   { id: "quick", label: "До 3 хв" },
   { id: "no_materials", label: "Без речей" },
+  { id: "one_hand", label: "Одна рука" },
+  { id: "quiet", label: "Тиха гра" },
+  { id: "calming", label: "Заспокоїтися" },
+  { id: "active", label: "Хоче рухатися" },
   { id: "low_energy", label: "Мало сил" }
 ];
 const PLAY_CONTEXT_IDS = PLAY_CONTEXTS.map((context) => context.id);
 
 const STORAGE_KEY = "milestonesMap.stage5.ua";
+const MOTION_REVIEW_KEY = "milestonesMap.motionReview.ua.v1";
+const MOTION_REVIEW_SESSIONS = [
+  { id: "parent_1", label: "Мама 1", type: "parent" },
+  { id: "parent_2", label: "Мама 2", type: "parent" },
+  { id: "parent_3", label: "Мама 3", type: "parent" },
+  { id: "parent_4", label: "Мама 4", type: "parent" },
+  { id: "parent_5", label: "Мама 5", type: "parent" },
+  { id: "expert", label: "Фахівець", type: "expert" }
+];
+const MOTION_REVIEW_CRITERIA = {
+  parent: [
+    { id: "action", label: "Дію зрозуміло за 5–8 секунд" },
+    { id: "hands", label: "Зрозуміло, де мають бути руки" },
+    { id: "stop", label: "Зрозуміло, коли зупинитися" }
+  ],
+  expert: [
+    { id: "age", label: "Рух і поза відповідають віку" },
+    { id: "posture", label: "Підтримка голови й тіла безпечна" },
+    { id: "objects", label: "Предмети та поверхня безпечні" },
+    { id: "supervision", label: "Нагляд дорослого показано коректно" }
+  ]
+};
 const BACKUP_SCHEMA = "milestones.stage5.ua.backup";
 const BACKUP_VERSION = 1;
 const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
 const CORRECTED_AGE_MIN_DAYS = 21;
 let storageProblem = "";
+
+function freshMotionReview() { return { active: "parent_1", sessions: {} }; }
+function loadMotionReview() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(MOTION_REVIEW_KEY) || "null");
+    if (!parsed || typeof parsed !== "object" || !MOTION_REVIEW_SESSIONS.some((session) => session.id === parsed.active)) return freshMotionReview();
+    parsed.sessions = parsed.sessions && typeof parsed.sessions === "object" ? parsed.sessions : {};
+    return parsed;
+  } catch { return freshMotionReview(); }
+}
+function saveMotionReview() {
+  try { localStorage.setItem(MOTION_REVIEW_KEY, JSON.stringify(motionReview)); return true; }
+  catch { return false; }
+}
+function activeMotionReviewSession() {
+  const meta = MOTION_REVIEW_SESSIONS.find((session) => session.id === motionReview.active) || MOTION_REVIEW_SESSIONS[0];
+  motionReview.sessions[meta.id] = motionReview.sessions[meta.id] || { cards: {} };
+  motionReview.sessions[meta.id].cards = motionReview.sessions[meta.id].cards || {};
+  return { meta, data: motionReview.sessions[meta.id] };
+}
+function motionReviewCardComplete(card, criteria) {
+  return criteria.every((criterion) => ["yes", "no"].includes(card?.[criterion.id]));
+}
+function motionReviewProgressText() {
+  const { meta, data } = activeMotionReviewSession();
+  const criteria = MOTION_REVIEW_CRITERIA[meta.type];
+  const total = typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES).length : 0;
+  const reviewed = Object.values(data.cards).filter((card) => motionReviewCardComplete(card, criteria)).length;
+  return `Перевірено ${reviewed} із ${total}`;
+}
 
 // ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
 function emptySpecialistPrep(noticed = "") {
@@ -167,7 +223,7 @@ function validateBackupPayload(payload) {
       return fail("У файлі є пошкоджені збережені ігри.");
     }
     if (child.activityReactions != null && (!isRecord(child.activityReactions)
-      || Object.values(child.activityReactions).some((reaction) => !["liked", "not_today"].includes(reaction)))) {
+      || Object.values(child.activityReactions).some((reaction) => !["liked", "repeat_later", "not_today", "hard"].includes(reaction)))) {
       return fail("У файлі є пошкоджені відгуки про ігри.");
     }
     if (child.playContext != null && !PLAY_CONTEXT_IDS.includes(child.playContext)) {
@@ -199,6 +255,7 @@ function validateBackupPayload(payload) {
 // Active child — per-child data lives here. Null only before the first child exists.
 function cc() { return store.children.find((c) => c.id === store.activeChildId) || store.children[0] || null; }
 let store = load();
+let motionReview = loadMotionReview();
 store.children.forEach((c) => {
   normalizeChild(c);
   specialistPrepFor(c);
@@ -350,7 +407,7 @@ function calendarDayNumber(value) {
   return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
 }
 function weeklyPlaySummary(child = cc(), now = new Date()) {
-  const summary = { count: 0, liked: 0, notToday: 0 };
+  const summary = { count: 0, liked: 0, repeatLater: 0, notToday: 0, hard: 0 };
   if (!child) return summary;
   const today = calendarDayNumber(now);
   for (const [key, completion] of Object.entries(child.activityCompletions || {})) {
@@ -361,7 +418,9 @@ function weeklyPlaySummary(child = cc(), now = new Date()) {
     if (ageInDays == null || ageInDays < 0 || ageInDays > 6 || !completion || !completion.activityId) continue;
     summary.count += 1;
     if (child.activityReactions?.[key] === "liked") summary.liked += 1;
+    if (child.activityReactions?.[key] === "repeat_later") summary.repeatLater += 1;
     if (child.activityReactions?.[key] === "not_today") summary.notToday += 1;
+    if (child.activityReactions?.[key] === "hard") summary.hard += 1;
   }
   return summary;
 }
@@ -372,11 +431,13 @@ function weeklyRecapHtml(summary) {
     ? "За останні 7 днів ви зберегли один короткий момент разом."
     : "За останні 7 днів ви кілька разів поверталися до короткої гри разом.";
   const liked = summary.liked ? `<p class="week-recap-note">Є гра, яку ви відзначили як приємну. Вона залишиться у вашому профілі.</p>` : "";
+  const repeatLater = summary.repeatLater ? `<p class="week-recap-note">Гру «повторити пізніше» не показуватимемо одразу знову — вона м’яко повернеться за кілька днів.</p>` : "";
   const notToday = summary.notToday ? `<p class="week-recap-note">«Не сьогодні» — теж нормальна відповідь. Тут немає обов'язкової серії.</p>` : "";
+  const hard = summary.hard ? `<p class="week-recap-note">Якщо було складно, наступні рекомендації віддадуть перевагу простішим ідеям.</p>` : "";
   return `<aside class="week-recap" aria-labelledby="weekRecapTitle">
     <div class="week-recap-mark" aria-hidden="true">${navIcon("play")}</div>
     <div><span class="mini-label">Ваш тиждень</span><h2 id="weekRecapTitle">${title}</h2>
-      <p>${memory} Немає мінімуму: навіть один спокійний момент уже достатній.</p>${liked}${notToday}</div>
+      <p>${memory} Немає мінімуму: навіть один спокійний момент уже достатній.</p>${liked}${repeatLater}${notToday}${hard}</div>
   </aside>`;
 }
 function currentProgramDayIndex(survey, programLength) {
@@ -415,7 +476,7 @@ function route() {
   // Onboarding gate: welcome first, then consent, then child profile.
   if (!store.consent || !store.consent.accepted) return show(r === "consent" ? "consent" : "welcome");
   if (!store.children.length) return show("profile");
-  const known = ["home", "survey", "results", "program", "progress", "ask", "profile", "consent", "welcome"];
+  const known = ["home", "survey", "results", "program", "progress", "ask", "visual-pilot", "profile", "consent", "welcome"];
   show(known.includes(r) ? r : "home");
 }
 
@@ -424,7 +485,8 @@ function show(screen) {
   const renderers = {
     welcome: renderWelcome, consent: renderConsent, profile: renderProfile,
     home: renderHome, survey: renderSurvey, results: renderResults,
-    program: renderProgram, progress: renderProgress, ask: renderAsk
+    program: renderProgram, progress: renderProgress, ask: renderAsk,
+    "visual-pilot": renderVisualPilot
   };
   root.innerHTML = (renderers[screen] || renderHome)();
   renderNav(screen);
@@ -812,7 +874,29 @@ function activityFitsContext(activity, context) {
   if (context === "quick") return activityMaxMinutes(activity.time) <= 3;
   if (context === "no_materials") return String(activity.materials || "").toLowerCase().includes("без матеріалів");
   if (context === "low_energy") return Boolean(typeof ACTIVITY_LOW_ENERGY_UA !== "undefined" && ACTIVITY_LOW_ENERGY_UA[activity.id]);
+  if (["one_hand", "quiet", "calming", "active"].includes(context)) {
+    return Boolean(typeof ACTIVITY_CONTEXT_TAGS_UA !== "undefined" && ACTIVITY_CONTEXT_TAGS_UA[context]?.includes(activity.id));
+  }
   return false;
+}
+function activityReactionRank(id, child = cc(), now = new Date()) {
+  if (!child) return 0;
+  const today = calendarDayNumber(now);
+  let rank = 0;
+  for (const [key, reaction] of Object.entries(child.activityReactions || {})) {
+    const completion = child.activityCompletions?.[key];
+    if (!completion || completion.activityId !== id) continue;
+    const match = /^(\d{4}-\d{2}-\d{2}):\d+$/.exec(key);
+    const date = match ? parseLocalDate(match[1]) : null;
+    const day = date ? calendarDayNumber(date) : null;
+    const ageInDays = today == null || day == null ? Infinity : today - day;
+    if (reaction === "liked" && ageInDays <= 30) rank = Math.max(rank, 2);
+    if (reaction === "repeat_later" && ageInDays <= 2) rank = Math.min(rank, -4);
+    else if (reaction === "repeat_later" && ageInDays <= 14) rank = Math.max(rank, 1);
+    if (reaction === "not_today" && ageInDays <= 2) rank = Math.min(rank, -2);
+    if (reaction === "hard" && ageInDays <= 14) rank = Math.min(rank, -3);
+  }
+  return rank;
 }
 function personalizedActivityIds(program, currentIndex = 0) {
   if (!Array.isArray(program) || !program.length) return [];
@@ -822,7 +906,9 @@ function personalizedActivityIds(program, currentIndex = 0) {
     for (const id of day.options || []) if (!ids.includes(id)) ids.push(id);
     for (const bonus of day.bonus || []) if (bonus && bonus.id && !ids.includes(bonus.id)) ids.push(bonus.id);
   }
-  return ids;
+  return ids.map((id, index) => ({ id, index, rank: activityReactionRank(id) }))
+    .sort((a, b) => b.rank - a.rank || a.index - b.index)
+    .map((entry) => entry.id);
 }
 function contextActivityId(age, context) {
   return personalizedActivityIds(programState.program, programState.currentIndex)
@@ -833,6 +919,10 @@ function contextStatusText(context, found = true, done = false) {
   if (!found) return "У персональному плані зараз немає такої гри. Залишили поточну ідею.";
   if (context === "quick") return "Показуємо коротку гру тривалістю до 3 хвилин.";
   if (context === "no_materials") return "Показуємо гру без підготовки речей.";
+  if (context === "one_hand") return "Показуємо гру, яку зручно запропонувати, коли вільна лише одна рука.";
+  if (context === "quiet") return "Показуємо спокійну гру без зайвого шуму.";
+  if (context === "calming") return "Показуємо м’яку ідею для спокійного контакту — без обіцянки миттєво припинити плач.";
+  if (context === "active") return "Показуємо безпечну рухову гру за віком.";
   if (context === "low_energy") return "Показуємо полегшений варіант. Одного маленького кроку достатньо.";
   return "Показуємо основну рекомендацію для сьогодні.";
 }
@@ -888,6 +978,56 @@ function renderProgram() {
         <div class="program-list" id="programList"></div>
       </details>
     </section>`;
+}
+
+function renderVisualPilot() {
+  const { meta: reviewMeta, data: reviewData } = activeMotionReviewSession();
+  const reviewCriteria = MOTION_REVIEW_CRITERIA[reviewMeta.type];
+  const visualCount = typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES).length : 0;
+  const gallery = (typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.entries(ACTIVITY_RASTER_GUIDES) : []).map(([id, guide]) => {
+    const age = Number(id.slice(4, 7));
+    const activity = activityById(age, id);
+    const review = reviewData.cards[id] || {};
+    const complete = motionReviewCardComplete(review, reviewCriteria);
+    const criteriaHtml = reviewCriteria.map((criterion) => `<div class="pilot-review-row">
+      <span>${esc(criterion.label)}</span>
+      <div class="pilot-review-options" role="group" aria-label="${esc(criterion.label)}">
+        <button type="button" data-motion-review="${id}" data-review-criterion="${criterion.id}" data-review-value="yes" aria-pressed="${review[criterion.id] === "yes"}" class="${review[criterion.id] === "yes" ? "active" : ""}">Так</button>
+        <button type="button" data-motion-review="${id}" data-review-criterion="${criterion.id}" data-review-value="no" aria-pressed="${review[criterion.id] === "no"}" class="${review[criterion.id] === "no" ? "active review-no" : ""}">Ні</button>
+      </div>
+    </div>`).join("");
+    return `<figure class="pilot-figure pilot-gallery-card${complete ? " review-complete" : ""}" data-review-card="${id}">
+      <img src="${esc(guide.image)}" alt="${esc(guide.imageAlt)}" loading="lazy" decoding="async">
+      <figcaption><strong>${esc(activity ? activity.title : id)}</strong><span>${age} міс · чернетка до експертної перевірки</span></figcaption>
+      <details class="pilot-review"><summary>${complete ? "✓ Перевірено" : "Перевірити картку"}</summary>
+        <div class="pilot-review-body">${criteriaHtml}
+          <label>Нотатка<textarea rows="2" data-motion-review-note="${id}" placeholder="Що було незрозуміло або небезпечно?">${esc(review.note || "")}</textarea></label>
+        </div>
+      </details>
+    </figure>`;
+  }).join("");
+  return `<section class="screen-pad visual-pilot-screen">
+    <button type="button" class="pilot-back" data-go="program">← До розділу «Гра»</button>
+    <div class="pilot-kicker">Пілот нового формату</div>
+    <h1 tabindex="-1">Ілюстрована підказка до гри</h1>
+    <p class="muted">Приклад власного стилю Milestones: одна послідовність, яку можна зрозуміти без довгого тексту.</p>
+    <figure class="pilot-figure">
+      <img src="activity-tummy-time-guide-v1.png" alt="Чотири послідовні сцени гри на животику: підготовка килимка, положення дитини під наглядом, спокійна взаємодія на рівні очей та завершення гри при втомі.">
+      <figcaption>Міні-хвилинка на животику · візуальний прототип</figcaption>
+    </figure>
+    <div class="pilot-legend" aria-label="Послідовність ілюстрації">
+      <span><b>1</b> Підготуйте</span><span><b>2</b> Розташуйтеся поруч</span>
+      <span><b>3</b> Спостерігайте</span><span><b>4</b> Спокійно завершіть</span>
+    </div>
+    <div class="pilot-safety"><strong>Важливо:</strong> лише коли дитина не спить, на твердій рівній поверхні та під постійним наглядом дорослого.</div>
+    <div class="pilot-gallery-head"><h2>Бібліотека з ${visualCount} карток</h2><p class="muted">Єдина візуальна мова, три повторювані сім’ї та фони, що пояснюють дію. Це робочі чернетки до перевірки фахівцем.</p></div>
+    <section class="motion-review-toolbar" aria-labelledby="motionReviewTitle">
+      <div><strong id="motionReviewTitle">Режим перевірки</strong><span id="motionReviewProgress" role="status">${motionReviewProgressText()}</span></div>
+      <div class="motion-review-sessions" role="group" aria-label="Учасник перевірки">${MOTION_REVIEW_SESSIONS.map((session) => `<button type="button" data-review-session="${session.id}" aria-pressed="${session.id === reviewMeta.id}" class="${session.id === reviewMeta.id ? "active" : ""}">${esc(session.label)}</button>`).join("")}</div>
+      <p>Відповіді зберігаються лише в цьому браузері. Для кожної мами є окремий набір, а фахівець бачить критерії безпеки.</p>
+    </section>
+    <div class="pilot-gallery">${gallery}</div>
+  </section>`;
 }
 
 function afterProgramRender() { renderProgramList(); }
@@ -963,13 +1103,19 @@ function activityReactionHtml(age, activityId) {
   const completion = completedActivityToday(age);
   if (!completion || completion.activityId !== activityId) return "";
   const reaction = cc().activityReactions[completionKey(age)] || "";
+  const response = reaction === "repeat_later" ? "Добре — повернемо цю гру не одразу, а за кілька днів."
+    : reaction === "hard" ? "Зрозуміло. Це не оцінка дитини — наступні ідеї будуть простішими."
+    : "";
   return `<div class="activity-feedback" aria-labelledby="activityFeedbackTitle">
     <strong id="activityFeedbackTitle">Як вам ця гра сьогодні?</strong>
     <p>Необов'язково — відповідь збережеться лише у цьому профілі.</p>
     <div class="feedback-options">
       <button type="button" data-activity-reaction="liked" aria-pressed="${reaction === "liked"}" class="${reaction === "liked" ? "active" : ""}">Сподобалося</button>
+      <button type="button" data-activity-reaction="repeat_later" aria-pressed="${reaction === "repeat_later"}" class="${reaction === "repeat_later" ? "active" : ""}">Повторити пізніше</button>
       <button type="button" data-activity-reaction="not_today" aria-pressed="${reaction === "not_today"}" class="${reaction === "not_today" ? "active" : ""}">Не сьогодні</button>
+      <button type="button" data-activity-reaction="hard" aria-pressed="${reaction === "hard"}" class="${reaction === "hard" ? "active" : ""}">Було складно</button>
     </div>
+    ${response ? `<p class="activity-feedback-response" role="status">${esc(response)}</p>` : ""}
   </div>`;
 }
 
@@ -1001,6 +1147,40 @@ function sourceFriendly(source) {
   return String(source || "").replace(/WHO motor/gi, "WHO — руховий розвиток");
 }
 
+function activityVisualGuideHtml(id) {
+  if (typeof activityVisualGuide !== "function" || typeof motionCardArt !== "function") return "";
+  const guide = activityVisualGuide(id);
+  if (!guide) return "";
+  let cards = Array.isArray(guide.cards) ? guide.cards : null;
+  if (!cards && guide.image) {
+    const age = Number(String(id).slice(4, 7));
+    const activity = activityById(age, id);
+    const steps = activity && Array.isArray(activity.steps) ? activity.steps : [];
+    if (activity) cards = [
+      { phase: "Підготуйте", text: steps[0] || activity.materials || "Оберіть спокійний момент." },
+      { phase: "Зробіть", text: steps[1] || "Спокійно запропонуйте гру." },
+      { phase: "Спостерігайте", text: steps.slice(2).join(" ") || "Дайте дитині час відповісти у власний спосіб." },
+      { phase: "Зупиніться", text: activity.stop, stop: true }
+    ];
+  }
+  if (!Array.isArray(cards)) return "";
+  const visualCards = guide.image
+    ? `<figure class="motion-guide-figure"><img src="${esc(guide.image)}" alt="${esc(guide.imageAlt || "Покрокова ілюстрація гри")}" loading="lazy" decoding="async"></figure>
+      <div class="motion-image-steps">${cards.map((card, index) => `<div class="motion-image-step${card.stop ? " motion-image-step-stop" : ""}"><b>${index + 1}</b><span><strong>${esc(card.phase)}</strong>${esc(card.text)}</span></div>`).join("")}</div>`
+    : `<div class="motion-card-grid">${cards.map((card, index) => `<article class="motion-card${card.stop ? " motion-card-stop" : ""}">
+      <div class="motion-card-art" aria-hidden="true">${motionCardArt(card.art)}</div>
+      <div class="motion-card-copy"><span>${index + 1}. ${esc(card.phase)}</span><p>${esc(card.text)}</p></div>
+    </article>`).join("")}</div>`;
+  return `<section class="motion-guide" aria-labelledby="motion-guide-${esc(id)}">
+    <div class="motion-guide-head">
+      <strong id="motion-guide-${esc(id)}">${esc(guide.title || "Як грати")}</strong>
+      <span>4 короткі підказки</span>
+    </div>
+    ${visualCards}
+    <p class="motion-guide-note">Не треба домагатися певної реакції — достатньо спокійно запропонувати й помітити відповідь дитини.</p>
+  </section>`;
+}
+
 function activityDetailHtml(age, id, showLowEnergy = false) {
   const a = activityById(age, id);
   if (!a) return "";
@@ -1008,6 +1188,7 @@ function activityDetailHtml(age, id, showLowEnergy = false) {
   const note = (typeof authorNoteFor === "function") ? authorNoteFor(a.id) : null;
   const favorite = cc().favoriteActivities.includes(id);
   const lowEnergy = showLowEnergy && typeof ACTIVITY_LOW_ENERGY_UA !== "undefined" ? ACTIVITY_LOW_ENERGY_UA[id] : "";
+  const visualGuide = activityVisualGuideHtml(id);
   // Plain-language note: keep author + the actionable idea; the internal mechanism mapping
   // stays in data for traceability but is not shown as jargon to parents.
   const basis = a.why || a.evidence || note ? `<details class="evidence-details"><summary>Чому ця гра тут</summary>
@@ -1021,7 +1202,8 @@ function activityDetailHtml(age, id, showLowEnergy = false) {
     </div>
     <div class="tag-row activity-quick-meta"><span class="chip">${esc(a.time)}</span><span class="chip">${esc(a.materials)}</span></div>
     ${lowEnergy ? `<div class="low-energy-option"><strong>Коли сил мало</strong><span>${esc(lowEnergy)}</span><small>Повні кроки й умова зупинки залишаються нижче.</small></div>` : ""}
-    <div class="steps"><strong>Кроки</strong><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>
+    ${visualGuide}
+    ${visualGuide ? `<details class="full-steps"><summary>Детальні кроки</summary><div class="steps"><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div></details>` : `<div class="steps"><strong>Кроки</strong><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>`}
     <div class="stop"><strong>Коли зупинитися:</strong> ${esc(a.stop)}</div>
     ${basis}`;
 }
@@ -1255,6 +1437,45 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
+  const reviewSessionButton = e.target.closest("[data-review-session]");
+  if (reviewSessionButton) {
+    const requested = reviewSessionButton.dataset.reviewSession;
+    if (!MOTION_REVIEW_SESSIONS.some((session) => session.id === requested)) return;
+    motionReview.active = requested;
+    saveMotionReview();
+    route();
+    document.querySelector(`[data-review-session="${requested}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  const motionReviewButton = e.target.closest("[data-motion-review]");
+  if (motionReviewButton) {
+    const id = motionReviewButton.dataset.motionReview;
+    const criterion = motionReviewButton.dataset.reviewCriterion;
+    const value = motionReviewButton.dataset.reviewValue;
+    const { meta, data } = activeMotionReviewSession();
+    const criteria = MOTION_REVIEW_CRITERIA[meta.type];
+    if (!ACTIVITY_RASTER_GUIDES[id] || !criteria.some((item) => item.id === criterion) || !["yes", "no"].includes(value)) return;
+    data.cards[id] = data.cards[id] || {};
+    if (data.cards[id][criterion] === value) delete data.cards[id][criterion];
+    else data.cards[id][criterion] = value;
+    saveMotionReview();
+    const group = motionReviewButton.closest(".pilot-review-options");
+    group?.querySelectorAll("button").forEach((button) => {
+      const active = data.cards[id][criterion] === button.dataset.reviewValue;
+      button.classList.toggle("active", active);
+      button.classList.toggle("review-no", active && button.dataset.reviewValue === "no");
+      button.setAttribute("aria-pressed", String(active));
+    });
+    const complete = motionReviewCardComplete(data.cards[id], criteria);
+    const card = motionReviewButton.closest("[data-review-card]");
+    card?.classList.toggle("review-complete", complete);
+    const summary = card?.querySelector(".pilot-review summary");
+    if (summary) summary.textContent = complete ? "✓ Перевірено" : "Перевірити картку";
+    const progress = document.getElementById("motionReviewProgress");
+    if (progress) progress.textContent = motionReviewProgressText();
+    return;
+  }
+
   if (e.target.id === "consentContinue") {
     store.consent = { accepted: true, date: new Date().toISOString() }; save(); setHash("profile"); return;
   }
@@ -1369,7 +1590,7 @@ document.addEventListener("click", async (e) => {
   if (reactionButton) {
     const key = completionKey(programState.age);
     const reaction = reactionButton.dataset.activityReaction;
-    if (!["liked", "not_today"].includes(reaction) || !completedActivityToday(programState.age)) return;
+    if (!["liked", "repeat_later", "not_today", "hard"].includes(reaction) || !completedActivityToday(programState.age)) return;
     if (cc().activityReactions[key] === reaction) delete cc().activityReactions[key];
     else cc().activityReactions[key] = reaction;
     save();
@@ -1490,6 +1711,14 @@ document.addEventListener("click", async (e) => {
 });
 
 document.addEventListener("input", (e) => {
+  const motionNoteId = e.target.dataset.motionReviewNote;
+  if (motionNoteId && typeof ACTIVITY_RASTER_GUIDES === "object" && ACTIVITY_RASTER_GUIDES[motionNoteId]) {
+    const { data } = activeMotionReviewSession();
+    data.cards[motionNoteId] = data.cards[motionNoteId] || {};
+    data.cards[motionNoteId].note = e.target.value.slice(0, 1000);
+    saveMotionReview();
+    return;
+  }
   if (e.target.id === "childSwitch") {
     const v = e.target.value;
     if (v === "__add") { profileEditing = false; setHash("profile"); return; }

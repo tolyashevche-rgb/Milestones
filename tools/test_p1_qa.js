@@ -34,7 +34,7 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260630-p2-16-r1"), "Stage5 assets must use the P2.16 cache key");
+  assert.ok(stage5Index.includes("20260702-p2-22-r1"), "Stage5 assets must use the P2.22 cache key");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -51,7 +51,10 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-16-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-22-r1"'), "service worker cache must be versioned");
+  const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
+  assert.equal(motionCardFiles.length, 30, "two Motion Cards batches must contain exactly 30 optimized illustrations");
+  motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
   assert.ok(serviceWorker.includes('caches.match("./index.html")'), "offline navigation needs an app-shell fallback");
   assert.ok(pwaScript.includes('navigator.serviceWorker.register("./sw.js")'), "the app must register its service worker");
   assert.ok(pwaScript.includes('window.addEventListener("beforeinstallprompt"'), "supported browsers need a deferred native install action");
@@ -336,6 +339,7 @@ function appContext(options = {}) {
   run(context, "prototype_stage4_ua/data_ua.js");
   run(context, "prototype_stage4_ua/engine.js");
   run(context, "prototype_stage5_ua/questions_ua.js");
+  run(context, "prototype_stage5_ua/illustrations.js");
   run(context, "prototype_stage5_ua/activity_context_ua.js");
   run(context, "prototype_stage5_ua/app5.js");
   return context;
@@ -403,8 +407,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260630-p2-16-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260630-p2-16-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260702-p2-22-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260702-p2-22-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
   assert.equal(skipWaitingCalled, true, "approved update must tell the waiting worker to activate");
@@ -412,7 +417,7 @@ async function testServiceWorker() {
   let activateWork;
   listeners.activate({ waitUntil: (promise) => { activateWork = promise; } });
   await activateWork;
-  assert.deepEqual(deletedCaches, ["milestones-stage5-p2-12", "milestones-stage5-p2-13", "milestones-stage5-p2-14", "milestones-stage5-p2-15", "milestones-stage5-p2-15-r1", "milestones-stage5-p2-16"], "activation must delete only older Stage5 caches");
+  assert.deepEqual(deletedCaches, ["milestones-stage5-p2-12", "milestones-stage5-p2-13", "milestones-stage5-p2-14", "milestones-stage5-p2-15", "milestones-stage5-p2-15-r1", "milestones-stage5-p2-16", "milestones-stage5-p2-16-r1"], "activation must delete only older Stage5 caches");
   assert.equal(clientsClaimed, true, "new service worker must claim the app after activation");
 
   let navigationResponse;
@@ -616,17 +621,43 @@ function testAppState() {
     const lowEnergyContextId = contextActivityId(4, "low_energy");
     const contextPickerMarkup = playContextHtml(4);
     const lowEnergyMarkup = activityDetailHtml(4, lowEnergyContextId, true);
-    const contextFilterOkay = PLAY_CONTEXT_IDS.join(",") === "any,quick,no_materials,low_energy"
-      && AGES.every((age) => ["quick", "no_materials", "low_energy"].every((context) =>
+    const contextFilterOkay = PLAY_CONTEXT_IDS.join(",") === "any,quick,no_materials,one_hand,quiet,calming,active,low_energy"
+      && AGES.every((age) => ["quick", "no_materials", "one_hand", "quiet", "calming", "active", "low_energy"].every((context) =>
         (ACTIVITIES_BY_AGE[age] || []).some((activity) => activityFitsContext(activity, context))))
       && activityFitsContext(activityById(4, quickContextId), "quick")
       && activityFitsContext(activityById(4, noMaterialsContextId), "no_materials")
       && activityFitsContext(activityById(4, lowEnergyContextId), "low_energy")
-      && (contextPickerMarkup.match(/data-play-context=/g) || []).length === 4
+      && (contextPickerMarkup.match(/data-play-context=/g) || []).length === 8
       && contextPickerMarkup.includes("не відповіді спостереження")
       && lowEnergyMarkup.includes("Коли сил мало")
       && lowEnergyMarkup.includes("Повні кроки й умова зупинки")
       && lowEnergyMarkup.includes(ACTIVITY_LOW_ENERGY_UA[lowEnergyContextId]);
+    const rasterVisualIds = Object.keys(ACTIVITY_RASTER_GUIDES);
+    const visualPilotIds = ["act_002_movement_001", ...rasterVisualIds];
+    const visualGuideOkay = visualPilotIds.every((id) => {
+      const age = Number(id.slice(4, 7));
+      const markup = activityDetailHtml(age, id);
+      const expectedImage = id === "act_002_movement_001"
+        ? "activity-tummy-time-guide-v1.png"
+        : ACTIVITY_RASTER_GUIDES[id].image;
+      const hasFourVisuals = markup.includes('src="' + expectedImage + '"')
+        && (markup.match(/<div class="motion-image-step(?: |")/g) || []).length === 4;
+      return hasFourVisuals
+        && markup.includes("Підготуйте")
+        && markup.includes("Спостерігайте")
+        && markup.includes("Детальні кроки")
+        && markup.includes("Не треба домагатися певної реакції");
+    }) && rasterVisualIds.length === 30 && activityVisualGuideHtml("act_004_language_003") === "";
+    motionReview.active = "parent_1";
+    motionReview.sessions.parent_1 = { cards: { [rasterVisualIds[0]]: { action: "yes", hands: "yes", stop: "yes", note: "зрозуміло" } } };
+    const motionReviewMarkup = renderVisualPilot();
+    const motionReviewOkay = motionReviewProgressText() === "Перевірено 1 із 30"
+      && (motionReviewMarkup.match(/data-review-session=/g) || []).length === 6
+      && (motionReviewMarkup.match(/class="pilot-review"/g) || []).length === 30
+      && motionReviewMarkup.includes('data-motion-review="' + rasterVisualIds[0] + '"')
+      && motionReviewMarkup.includes("Відповіді зберігаються лише в цьому браузері")
+      && MOTION_REVIEW_CRITERIA.parent.length === 3
+      && MOTION_REVIEW_CRITERIA.expert.length === 4;
     first.activityCompletions[completionKey(4)] = { activityId: playStep.task.act.id };
     first.favoriteActivities.push(playStep.task.act.id);
     first.activityReactions[completionKey(4)] = "liked";
@@ -655,7 +686,9 @@ function testAppState() {
     const gentleEngagementOkay = todayMarkup.includes('data-favorite-id="' + playStep.task.act.id + '"')
       && todayMarkup.includes("Збережено")
       && todayMarkup.includes('data-activity-reaction="liked" aria-pressed="true"')
+      && todayMarkup.includes('data-activity-reaction="repeat_later"')
       && todayMarkup.includes("Не сьогодні")
+      && todayMarkup.includes("Було складно")
       && savedMarkup.includes('data-saved-game="' + playStep.task.act.id + '"');
     const programUiOkay = programMarkup.includes('<div id="programToday"></div>')
       && programMarkup.includes('<div id="playContext"></div>')
@@ -745,7 +778,7 @@ function testAppState() {
       && changes.newlyObserved.length === 2
       && changes.changed.length === 1;
 
-    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, gentleEngagementOkay, weeklyRecapOkay, contextFilterOkay };
+    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, gentleEngagementOkay, weeklyRecapOkay, contextFilterOkay, visualGuideOkay, motionReviewOkay };
   })()`, context);
 
   assert.equal(result.restartOkay, true, "re-test must clear only the active plan and today's completion");
@@ -765,6 +798,8 @@ function testAppState() {
   assert.equal(result.gentleEngagementOkay, true, "favorites and optional post-play feedback must stay calm and local per child");
   assert.equal(result.weeklyRecapOkay, true, "weekly recap must describe recent play without a streak, progress bar, or competing action");
   assert.equal(result.contextFilterOkay, true, "context picker must use honest activity attributes and authored low-energy variants across all ages");
+  assert.equal(result.visualGuideOkay, true, "the visual pilot and 15 Motion Cards need four-frame guides and unchanged detailed safety steps");
+  assert.equal(result.motionReviewOkay, true, "Motion Cards need five isolated parent sessions and one expert safety review session");
 }
 
 (async () => {
