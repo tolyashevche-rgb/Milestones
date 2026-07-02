@@ -113,7 +113,7 @@ function freshChild(name, dob, expectedDueDate = "") {
   return { id: "child_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
            name: name || "", dob: dob || "", expectedDueDate: expectedDueDate || "",
            surveys: {}, snapshots: [], programSelections: {}, activityCompletions: {}, triedActivities: [], notes: "",
-           favoriteActivities: [], activityReactions: {}, playContext: "any",
+           favoriteActivities: [], activityReactions: {}, activityNotes: {}, playContext: "any",
            specialistPrep: emptySpecialistPrep() };
 }
 function freshStore() { return { consent: null, children: [], activeChildId: null }; }
@@ -131,6 +131,7 @@ function migrate(s) {
     c.triedActivities = s.triedActivities || []; c.notes = s.notes || "";
     c.favoriteActivities = s.favoriteActivities || [];
     c.activityReactions = s.activityReactions || {};
+    c.activityNotes = s.activityNotes || {};
     c.playContext = PLAY_CONTEXT_IDS.includes(s.playContext) ? s.playContext : "any";
     c.specialistPrep = s.specialistPrep || emptySpecialistPrep(c.notes);
     st.children.push(c); st.activeChildId = c.id;
@@ -183,6 +184,7 @@ function normalizeChild(child) {
   child.triedActivities = Array.isArray(child.triedActivities) ? child.triedActivities : [];
   child.favoriteActivities = Array.isArray(child.favoriteActivities) ? child.favoriteActivities : [];
   child.activityReactions = isRecord(child.activityReactions) ? child.activityReactions : {};
+  child.activityNotes = isRecord(child.activityNotes) ? child.activityNotes : {};
   child.playContext = PLAY_CONTEXT_IDS.includes(child.playContext) ? child.playContext : "any";
   return child;
 }
@@ -225,6 +227,10 @@ function validateBackupPayload(payload) {
     if (child.activityReactions != null && (!isRecord(child.activityReactions)
       || Object.values(child.activityReactions).some((reaction) => !["liked", "repeat_later", "not_today", "hard"].includes(reaction)))) {
       return fail("У файлі є пошкоджені відгуки про ігри.");
+    }
+    if (child.activityNotes != null && (!isRecord(child.activityNotes)
+      || Object.values(child.activityNotes).some((note) => typeof note !== "string" || note.length > 1000))) {
+      return fail("У файлі є пошкоджені нотатки після ігор.");
     }
     if (child.playContext != null && !PLAY_CONTEXT_IDS.includes(child.playContext)) {
       return fail("У файлі є пошкоджені налаштування гри.");
@@ -380,6 +386,7 @@ function restartSurvey(age) {
   delete cc().programSelections[String(age)];
   delete cc().activityCompletions[completionKey(age)];
   delete cc().activityReactions[completionKey(age)];
+  delete cc().activityNotes[completionKey(age)];
   surveyUi = { age, index: 0 };
   surveyAdvancePending = false;
   surveyAdvanceToken += 1;
@@ -401,13 +408,57 @@ function profileForSurvey(survey, age) {
   const s = survey || { states: {}, questionIds: [] };
   return buildProfile(s.states || {}, age, ENGINE_CONFIG, s.questionIds || null);
 }
+function addCalendarDays(value, days) {
+  const date = value instanceof Date ? new Date(value) : new Date(value);
+  if (isNaN(date)) return null;
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + days);
+  return date;
+}
+function shortDate(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  return isNaN(date) ? "—" : date.toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
+}
+function observationRouteFor(survey, now = new Date()) {
+  if (!survey || !survey.date) return { kind: "not-complete" };
+  const states = Object.values(survey.states || {});
+  const notYet = states.filter((state) => state === "not_yet").length;
+  const notSure = states.filter((state) => state === "not_sure").length;
+  if (notYet) return { kind: "discuss-now", count: notYet };
+  if (notSure) {
+    const earliest = addCalendarDays(survey.date, 7);
+    const latest = addCalendarDays(survey.date, 14);
+    const ready = earliest && calendarDayNumber(now) >= calendarDayNumber(earliest);
+    return { kind: ready ? "recheck-ready" : "watch-window", count: notSure, earliest, latest };
+  }
+  return { kind: "age-window" };
+}
+function observationRouteHtml(survey, compact = false) {
+  const followUp = observationRouteFor(survey);
+  if (followUp.kind === "discuss-now") {
+    return `<aside class="observation-route discuss-now" aria-labelledby="observationRouteTitle">
+      <span class="mini-label">Не чекайте кінця плану</span><strong id="observationRouteTitle">Підготуйте розмову з фахівцем</strong>
+      <p>Ви позначили «Ще не помічаю». Ігри можуть залишатися частиною дня, але не замінюють обговорення спостереження.</p>
+      ${compact ? "" : '<button type="button" class="btn ghost" data-go="ask">Відкрити підсумок</button>'}
+    </aside>`;
+  }
+  if (followUp.kind === "watch-window" || followUp.kind === "recheck-ready") {
+    const ready = followUp.kind === "recheck-ready";
+    return `<aside class="observation-route ${ready ? "recheck-ready" : "watch-window"}" aria-labelledby="observationRouteTitle">
+      <span class="mini-label">Коротке повторне спостереження</span><strong id="observationRouteTitle">${ready ? "Можна спокійно перевірити ще раз" : `${shortDate(followUp.earliest)} — ${shortDate(followUp.latest)}`}</strong>
+      <p>${ready ? "Минув щонайменше тиждень. Оновіть відповіді за звичайними моментами, а не одразу після вправи." : "До цього часу просто давайте безпечні можливості для гри й записуйте звичайні спостереження."}</p>
+      ${ready && !compact ? '<button type="button" class="btn ghost" data-go="survey" data-restart="1">Оновити спостереження</button>' : ""}
+    </aside>`;
+  }
+  return `<aside class="observation-route age-window"><span class="mini-label">Спостереження триває щодня</span><strong>Віковий чекліст — лише контрольна точка</strong><p>Якщо щось непокоїть або дитина втратила навичку, не чекайте наступного вікового інтервалу.</p></aside>`;
+}
 function calendarDayNumber(value) {
   const date = value instanceof Date ? value : new Date(value);
   if (isNaN(date)) return null;
   return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
 }
 function weeklyPlaySummary(child = cc(), now = new Date()) {
-  const summary = { count: 0, liked: 0, repeatLater: 0, notToday: 0, hard: 0 };
+  const summary = { count: 0, liked: 0, repeatLater: 0, notToday: 0, hard: 0, notes: 0 };
   if (!child) return summary;
   const today = calendarDayNumber(now);
   for (const [key, completion] of Object.entries(child.activityCompletions || {})) {
@@ -421,6 +472,7 @@ function weeklyPlaySummary(child = cc(), now = new Date()) {
     if (child.activityReactions?.[key] === "repeat_later") summary.repeatLater += 1;
     if (child.activityReactions?.[key] === "not_today") summary.notToday += 1;
     if (child.activityReactions?.[key] === "hard") summary.hard += 1;
+    if (String(child.activityNotes?.[key] || "").trim()) summary.notes += 1;
   }
   return summary;
 }
@@ -434,10 +486,11 @@ function weeklyRecapHtml(summary) {
   const repeatLater = summary.repeatLater ? `<p class="week-recap-note">Гру «повторити пізніше» не показуватимемо одразу знову — вона м’яко повернеться за кілька днів.</p>` : "";
   const notToday = summary.notToday ? `<p class="week-recap-note">«Не сьогодні» — теж нормальна відповідь. Тут немає обов'язкової серії.</p>` : "";
   const hard = summary.hard ? `<p class="week-recap-note">Якщо було складно, наступні рекомендації віддадуть перевагу простішим ідеям.</p>` : "";
+  const notes = summary.notes ? `<p class="week-recap-note">Збережено ${summary.notes} ${summary.notes === 1 ? "коротке спостереження" : "короткі спостереження"} після гри — без оцінювання навички.</p>` : "";
   return `<aside class="week-recap" aria-labelledby="weekRecapTitle">
     <div class="week-recap-mark" aria-hidden="true">${navIcon("play")}</div>
     <div><span class="mini-label">Ваш тиждень</span><h2 id="weekRecapTitle">${title}</h2>
-      <p>${memory} Немає мінімуму: навіть один спокійний момент уже достатній.</p>${liked}${repeatLater}${notToday}${hard}</div>
+      <p>${memory} Немає мінімуму: навіть один спокійний момент уже достатній.</p>${liked}${repeatLater}${notToday}${hard}${notes}</div>
   </aside>`;
 }
 function currentProgramDayIndex(survey, programLength) {
@@ -449,6 +502,18 @@ function currentProgramDayIndex(survey, programLength) {
 }
 function completionKey(age) { return `${localDateString()}:${age}`; }
 function completedActivityToday(age) { return cc().activityCompletions[completionKey(age)] || null; }
+function recentActivityNoteLines(age, child = cc(), now = new Date(), days = 14) {
+  const today = calendarDayNumber(now);
+  return Object.entries(child?.activityNotes || {}).flatMap(([key, note]) => {
+    const match = /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(key);
+    const date = match ? parseLocalDate(match[1]) : null;
+    const ageInDays = date ? today - calendarDayNumber(date) : Infinity;
+    if (!match || Number(match[2]) !== age || ageInDays < 0 || ageInDays >= days || !String(note).trim()) return [];
+    const activityId = child.activityCompletions?.[key]?.activityId;
+    const activity = activityById(age, activityId);
+    return [`- ${match[1]} · ${activity ? activity.title : "Гра"}: ${String(note).trim()}`];
+  });
+}
 
 // ---- routing ----
 const NAV = [
@@ -621,6 +686,29 @@ function homeNextStep(age) {
     };
   }
 
+  const followUp = observationRouteFor(survey);
+  if (followUp.kind === "discuss-now") {
+    return {
+      kind: "discuss-now",
+      label: "Не чекайте кінця плану",
+      title: "Підготуйте розмову з фахівцем",
+      body: "Ігри можуть підтримувати розвиток, але відповідь «Ще не помічаю» не варто перевіряти лише вправами.",
+      cta: "Відкрити підсумок",
+      route: "ask"
+    };
+  }
+  if (followUp.kind === "recheck-ready") {
+    return {
+      kind: "recheck-ready",
+      label: "Минув щонайменше тиждень",
+      title: "Оновіть коротке спостереження",
+      body: "Відповідайте за тим, що помічали у звичайних ситуаціях, а не лише одразу після гри.",
+      cta: "Спостерігати ще раз",
+      route: "survey",
+      restart: true
+    };
+  }
+
   const task = todaysTask(age);
   if (task && task.done) {
     return {
@@ -657,7 +745,7 @@ function homeNextStepHtml(step) {
     <div class="next-step-progress" role="progressbar" aria-label="Збережені відповіді" aria-valuemin="0" aria-valuemax="${step.progress.total}" aria-valuenow="${step.progress.value}">
       <span style="width:${step.progress.total ? (step.progress.value / step.progress.total) * 100 : 0}%"></span>
     </div>` : "";
-  const action = step.route ? `<button type="button" class="btn primary" data-primary-action="${step.kind}" data-go="${step.route}">${step.cta}</button>` : "";
+  const action = step.route ? `<button type="button" class="btn primary" data-primary-action="${step.kind}" data-go="${step.route}" ${step.restart ? 'data-restart="1"' : ""}>${step.cta}</button>` : "";
   return `
     <article class="card next-step ${step.kind}" aria-labelledby="nextStepTitle">
       <span class="mini-label">${step.label}</span>
@@ -682,6 +770,8 @@ function renderHome() {
 
       ${homeNextStepHtml(nextStep)}
 
+      ${tested ? observationRouteHtml(survey, true) : ""}
+
       ${weeklyRecapHtml(weekly)}
 
       <details class="home-more">
@@ -698,7 +788,7 @@ function renderHome() {
         </div>
       </details>
 
-      ${next ? `<p class="note">Наступне вікове спостереження — приблизно у ${next} місяців.</p>` : ""}
+      ${next ? `<p class="note">Наступний віковий чекліст — приблизно у ${next} місяців. Спостереження й звернення при занепокоєнні не потрібно відкладати до цієї дати.</p>` : ""}
       <details class="data-controls">
         <summary>Керування профілем і даними</summary>
         <div class="install-controls">
@@ -945,11 +1035,15 @@ function renderResults() {
       ${calmDiscussionIntroHtml()}
       ${flagged.map((m) => discussCardHtml(m, survey.states[m.id])).join("")}
     </details>` : "";
+  const followUp = observationRouteFor(survey);
+  const primaryRoute = followUp.kind === "discuss-now" ? "ask" : "program";
+  const primaryLabel = followUp.kind === "discuss-now" ? "Підготувати розмову" : "Почати гру на сьогодні";
 
   return `
     <section class="screen-pad has-thumb-action">
       <h1 tabindex="-1">Ваші спостереження</h1>
       <p class="muted">Короткий підсумок для віку ${AGE_LABELS[age]}. Це не оцінка і не діагноз.</p>
+      ${observationRouteHtml(survey)}
       <article class="card">
         <span class="mini-label">Що ви помітили</span>
         ${domainSummary(age)}
@@ -962,7 +1056,7 @@ function renderResults() {
 
       ${discuss}
 
-      <div class="thumb-action"><button type="button" class="btn primary" data-go="program">Почати гру на сьогодні</button></div>
+      <div class="thumb-action"><button type="button" class="btn primary" data-go="${primaryRoute}">${primaryLabel}</button></div>
     </section>`;
 }
 
@@ -1046,6 +1140,25 @@ function playContextHtml(age) {
   </section>`;
 }
 
+function playWeekCalendarHtml(program, currentIndex, now = new Date()) {
+  if (!program.length) return "";
+  const start = addCalendarDays(now, -currentIndex);
+  const days = program.map((day, index) => {
+    const date = addCalendarDays(start, index);
+    const active = index === currentIndex;
+    return `<li class="${active ? "active" : ""}" ${active ? 'aria-current="date"' : ""}>
+      <span>${date ? date.toLocaleDateString("uk-UA", { weekday: "short" }) : `Д${index + 1}`}</span>
+      <strong>${date ? date.getDate() : index + 1}</strong>
+      <small>${esc(DOMAIN_LABELS_SHORT[day.domain] || day.domain)}</small>
+    </li>`;
+  }).join("");
+  return `<section class="play-cycle" aria-labelledby="playCycleTitle">
+    <div class="play-cycle-head"><div><span class="mini-label">Цикл 7 днів</span><strong id="playCycleTitle">${shortDate(start)} — ${shortDate(addCalendarDays(start, 6))}</strong></div><span>День ${currentIndex + 1} із 7</span></div>
+    <ol>${days}</ol>
+    <p>Одна гра — це можливість, а не лікувальна доза. Пропустити день нормально.</p>
+  </section>`;
+}
+
 function renderProgram() {
   const age = currentAge();
   const survey = cc().surveys[age];
@@ -1076,6 +1189,8 @@ function renderProgram() {
     <section class="screen-pad has-thumb-action">
       <h1 tabindex="-1">Гра на сьогодні</h1>
       <p class="muted">Одна коротка ідея — цього достатньо. Зупиніться раніше, якщо дитина втомилася або втратила інтерес.</p>
+      ${observationRouteHtml(survey, true)}
+      ${playWeekCalendarHtml(program, currentIndex)}
       <div id="playContext"></div>
       <div id="programToday"></div>
       <div id="savedGames"></div>
@@ -1185,7 +1300,7 @@ function todayActivityHtml(age, d) {
         <span class="day-num">Сьогодні</span>
         <span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span>
       </div>
-      <div class="day-acc-body">${dayBodyHtml(age, d)}${done ? activityReactionHtml(age, sel) : ""}</div>
+      <div class="day-acc-body">${dayBodyHtml(age, d)}${done ? `${activityReactionHtml(age, sel)}${activityObservationHtml(age, sel)}` : ""}</div>
     </article>
     <div class="thumb-action"><button type="button" id="toggleTodayDone" class="btn ${done ? "ghost" : "primary"}" data-activity-id="${sel}" aria-pressed="${done}">${done ? "✓ Виконано сьогодні" : "Позначити виконаним"}</button></div>`;
 }
@@ -1222,6 +1337,18 @@ function activityReactionHtml(age, activityId) {
       <button type="button" data-activity-reaction="hard" aria-pressed="${reaction === "hard"}" class="${reaction === "hard" ? "active" : ""}">Було складно</button>
     </div>
     ${response ? `<p class="activity-feedback-response" role="status">${esc(response)}</p>` : ""}
+  </div>`;
+}
+
+function activityObservationHtml(age, activityId) {
+  const completion = completedActivityToday(age);
+  if (!completion || completion.activityId !== activityId) return "";
+  const key = completionKey(age);
+  const note = cc().activityNotes[key] || "";
+  return `<div class="activity-observation">
+    <label for="activityObservation"><strong>Що саме ви помітили?</strong><span>Не оцінюйте результат вправи — запишіть конкретний звук, рух, погляд, інтерес або втому.</span></label>
+    <textarea id="activityObservation" data-activity-note="${esc(key)}" rows="3" maxlength="1000" placeholder="Наприклад: двічі повернула голову на мій голос, потім відвернулася…">${esc(note)}</textarea>
+    <p id="activityObservationStatus" role="status" aria-live="polite">${note ? "Збережено лише в цьому профілі." : "Необов’язково."}</p>
   </div>`;
 }
 
@@ -1481,9 +1608,10 @@ function summaryText() {
   const survey = cc().surveys[age] || { states: {}, questionIds: [] };
   const ids = survey.questionIds || [];
   const prep = specialistPrepFor();
+  const playNotes = recentActivityNoteLines(age);
   const pick = (st) => ids.map((id) => milestoneById(age, id)).filter((m) => m && survey.states[m.id] === st).map((m) => "- " + m.title).join("\n") || "- нічого не позначено";
   const note = (value) => value.trim() || "- немає";
-  return `ПІДГОТОВКА ДО РОЗМОВИ З ФАХІВЦЕМ\n\nДитина: ${cc().name || "не вказано"}\nВік: ${AGE_LABELS[age]}\nДата спостереження: ${visitDateLabel(survey.date)}\nМета: нотатки для розмови про розвиток, не діагностика і не скринінг\n\nБачу:\n${pick("yes")}\n\nЩе спостерігаю:\n${pick("not_sure")}\n\nЩе не помічаю:\n${pick("not_yet")}\n\nЩО ПОМІТИЛИ\n${note(prep.noticed)}\n\nЩО ВЖЕ ПРОБУВАЛИ\n${note(prep.tried)}\n\nПИТАННЯ ДО ФАХІВЦЯ\n${note(prep.questions)}`;
+  return `ПІДГОТОВКА ДО РОЗМОВИ З ФАХІВЦЕМ\n\nДитина: ${cc().name || "не вказано"}\nВік: ${AGE_LABELS[age]}\nДата спостереження: ${visitDateLabel(survey.date)}\nМета: нотатки для розмови про розвиток, не діагностика і не скринінг\n\nБачу:\n${pick("yes")}\n\nЩе спостерігаю:\n${pick("not_sure")}\n\nЩе не помічаю:\n${pick("not_yet")}\n\nСПОСТЕРЕЖЕННЯ ПІСЛЯ ІГОР ЗА ОСТАННІ 14 ДНІВ\n${playNotes.join("\n") || "- немає"}\n\nЩО ПОМІТИЛИ\n${note(prep.noticed)}\n\nЩО ВЖЕ ПРОБУВАЛИ\n${note(prep.tried)}\n\nПИТАННЯ ДО ФАХІВЦЯ\n${note(prep.questions)}`;
 }
 
 // ---- snapshot on finishing a survey ----
@@ -1728,6 +1856,7 @@ document.addEventListener("click", async (e) => {
     if (current && current.activityId === activityId) {
       delete cc().activityCompletions[key];
       delete cc().activityReactions[key];
+      delete cc().activityNotes[key];
     } else {
       cc().activityCompletions[key] = { activityId, completedAt: new Date().toISOString() };
       delete cc().activityReactions[key];
@@ -1833,6 +1962,16 @@ document.addEventListener("click", async (e) => {
 });
 
 document.addEventListener("input", (e) => {
+  const activityNoteKey = e.target.dataset.activityNote;
+  if (activityNoteKey && /^\d{4}-\d{2}-\d{2}:\d+$/.test(activityNoteKey)) {
+    const value = e.target.value.slice(0, 1000);
+    if (value.trim()) cc().activityNotes[activityNoteKey] = value;
+    else delete cc().activityNotes[activityNoteKey];
+    save();
+    const status = document.getElementById("activityObservationStatus");
+    if (status) status.textContent = value.trim() ? "Збережено лише в цьому профілі." : "Необов’язково.";
+    return;
+  }
   if (e.target.id === "librarySearch") {
     libraryUi.query = e.target.value.slice(0, 120);
     const results = document.getElementById("libraryResults");

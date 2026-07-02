@@ -63,8 +63,11 @@ The personalization engine must hold these three lines at all times:
 2. **The program is *opportunities*, not a dose.** Never imply "do N repetitions for
    M days and the gap closes." Frame plans as chances to play, woven into the day.
    One short interaction already counts.
-3. **Two separate clocks.** Milestone re-assessment follows real CDC age windows
-   (months). The weekly play cycle is engagement only — never framed as re-screening.
+3. **Three separate clocks.** CDC age windows are checklist checkpoints; the seven-day play
+   cycle is engagement only; `not_sure` may create a 7–14 day observation window. None is a
+   treatment dose. A `not_yet` answer, lost skill, or parent concern must not wait for a cycle.
+4. **Completion is not an outcome.** Marking a game done or writing a post-play note never
+   changes a milestone answer automatically. Notes describe concrete behavior, not success/failure.
 
 "Complexity of the situation" = how many focus areas / how much support a parent
 wants. It NEVER means severity of delay or a risk level.
@@ -106,8 +109,10 @@ inside these limits:
 A `concern` in this product means **a parent's worry or a focus area** — not a
 detected deficit. Therefore:
 
-- A concern routes to **support + observation**, and to the "Ask" tab to prepare a
-  conversation. It never produces a verdict about the child.
+- `not_sure` routes to support plus a calm 7–14 day re-observation window.
+- `not_yet` or a concern routes to the "Ask" tab immediately while safe play remains optional.
+  It never produces a verdict about the child and never asks the parent to train until the
+  checklist changes.
 - "When to discuss with a professional" guidance is encouraged (this is CDC
   *act-early*), but it is framed as preparation, not alarm:
   > "If this worries you, it is not a reason to panic — it is a reason to note it

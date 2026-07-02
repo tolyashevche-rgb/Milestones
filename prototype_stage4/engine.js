@@ -15,7 +15,7 @@ const DOMAIN_KEYS = ["social", "language", "cognitive", "movement"];
 // Tunable parameters. These are starting hypotheses to validate with the parent test
 // and expert review — deliberately NOT hard-coded into the logic below.
 const ENGINE_CONFIG = {
-  cycleDays: 14,       // 1-2 week play cycle (engagement clock, not a re-screening clock)
+  cycleDays: 7,        // weekly play cycle (engagement clock, never a treatment dose)
   maxFocus: 2,         // primary focus domains shown prominently (1-2 to avoid overload)
   optionsPerDay: 2,    // primary same-domain ideas per day; doing one already "counts"
   bonusPerDay: 2,      // optional cross-domain "if in the mood" ideas added to each day

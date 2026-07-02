@@ -57,7 +57,7 @@ Produces a day-by-day list: `[{ day, domain, options: [activityId, ...] }]`.
 
 1. **Maintenance mode** (`allClear`): light rotation through all activities of the age,
    flagged `maintenance: true`, no pressure framing.
-2. Otherwise, `allocateDays(focus, cycleDays)` spreads `cycleDays` (14) across the focus
+2. Otherwise, `allocateDays(focus, cycleDays)` spreads `cycleDays` (7) across the focus
    domains **proportional to weight**, with a minimum of 1 day each (largest-remainder
    method). A domain with more "not yet / not sure" therefore appears on more days —
    this is the adaptivity, expressed as *more chances to play*, not a higher dose.
@@ -77,7 +77,7 @@ Produces a day-by-day list: `[{ day, domain, options: [activityId, ...] }]`.
 
 | Param | Default | Meaning |
 |---|---|---|
-| `cycleDays` | 14 | Length of the play cycle, ~1–2 weeks (engagement clock) |
+| `cycleDays` | 7 | Length of the visible weekly play cycle (engagement clock, not dosage) |
 | `maxFocus` | 2 | Max primary focus domains shown |
 | `optionsPerDay` | 2 | Primary same-domain activity options offered per day |
 | `bonusPerDay` | 2 | Optional cross-domain "bonus" ideas added per day (breadth, not a dose) |
@@ -96,13 +96,15 @@ without rewriting the engine. None of them is an evidence-based dosage.
   sourced set in `ACTIVITIES_BY_AGE`. No live LLM generation, so every recommendation
   is traceable to a source and reviewable.
 - It never computes or exposes a score, level, percentile, or risk.
-- It does not set the milestone re-assessment schedule — that follows CDC age windows
-  (the UI shows "next milestone check: around N months").
+- It does not turn game completion into milestone completion.
+- It does not delay a concern until the next CDC age window.
 
 ---
 
 ## Re-assessment cycle (UI)
 
-`nextCheckAge(age)` returns the next CDC age window (`2 → 4 → 6 → 9 → 12`). The Play
-tab shows it as a gentle prompt. The weekly play cycle and the milestone re-check are
-two separate clocks (see `safety_rules.md` §4).
+`nextCheckAge(age)` returns the next CDC age window (`2 → 4 → 6 → 9 → 12`), but this is only
+a checklist checkpoint. Everyday observation continues between windows. `not_sure` creates a
+calm 7–14 day re-observation window; `not_yet` routes immediately to conversation preparation
+while keeping play optional. Loss of a skill or any concern should not wait for either clock.
+The seven-day play cycle remains a planning surface, not a treatment dose or screening tool.

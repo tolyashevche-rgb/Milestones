@@ -114,7 +114,7 @@ function renderPlan() {
   const profile = buildProfile(state, currentAge);
 
   if (profile.notStarted) {
-    profileBox.innerHTML = `<p class="panel-note">Позначте пункти у вкладці «Спостерігати», щоб отримати персональний фокус і план гри на 1–2 тижні.</p>`;
+    profileBox.innerHTML = `<p class="panel-note">Позначте пункти у вкладці «Спостерігати», щоб отримати персональний тижневий план гри.</p>`;
     programList.innerHTML = "";
     if (feature) feature.innerHTML = "";
     return;
@@ -128,7 +128,7 @@ function renderPlan() {
     focusHtml = `<p>Поки що нічого не виділено для окремого фокусу — це гарний знак. Ви позначили ${profile.answered} з ${profile.total} пунктів; решту можна позначити у «Спостерігати», щоб картина була повнішою. А поки — ось легкі ідеї для гри.</p>`;
   } else {
     const focusList = profile.focus.map((f) => `<li><strong>${DOMAIN_LABELS[f.domain]}</strong></li>`).join("");
-    focusHtml = `<p>Найближчі 1–2 тижні м'яко зосередьте гру на:</p><ul class="focus-list">${focusList}</ul>`;
+    focusHtml = `<p>Найближчий тиждень м'яко зосередьте гру на:</p><ul class="focus-list">${focusList}</ul>`;
   }
   const next = nextCheckAge(currentAge);
 

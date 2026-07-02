@@ -164,12 +164,17 @@ child_profile:
     - act_004_social_001
   activity_reactions:
     "2026-06-29:4": liked # liked | not_today; optional reflection on the game
+  activity_notes:
+    "2026-06-29:4": "Turned toward my voice twice, then looked away."
   play_context: any # any | quick | no_materials | low_energy
 ```
 
 These fields remain per child, local-first, included in the private backup, and isolated
 from other child profiles. Post-play reactions do not alter developmental observations.
-The Stage 5 weekly recap is a derived seven-day view over local completion/reaction entries;
+`activity_notes` store optional concrete observations after play. They never automatically
+change a milestone answer or prove that an activity produced a developmental result. Recent
+notes can be included in the specialist-preparation summary.
+The Stage 5 weekly recap is a derived seven-day view over local completion/reaction/note entries;
 it is not a stored score, streak, target, or additional child-development field.
 `play_context` is a reversible per-child UI preference. It searches only activities already in
 the personalized plan. Quick/no-material matching uses literal duration/material fields;

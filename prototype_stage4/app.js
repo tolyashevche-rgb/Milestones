@@ -116,7 +116,7 @@ function renderPlan() {
   const profile = buildProfile(state, currentAge);
 
   if (profile.notStarted) {
-    profileBox.innerHTML = `<p class="panel-note">Mark the milestones in the "Watch" tab to get your personalised focus and a 1–2 week play plan.</p>`;
+    profileBox.innerHTML = `<p class="panel-note">Mark the milestones in the "Watch" tab to get a personalised weekly play plan.</p>`;
     programList.innerHTML = "";
     if (feature) feature.innerHTML = "";
     return;
@@ -130,7 +130,7 @@ function renderPlan() {
     focusHtml = `<p>Nothing is flagged for special focus yet — a good sign. You've marked ${profile.answered} of ${profile.total} items; you can mark the rest in "Watch" for a fuller picture. In the meantime, here are some light play ideas.</p>`;
   } else {
     const focusList = profile.focus.map((f) => `<li><strong>${DOMAIN_LABELS[f.domain]}</strong></li>`).join("");
-    focusHtml = `<p>Over the next 1–2 weeks, gently focus play on:</p><ul class="focus-list">${focusList}</ul>`;
+    focusHtml = `<p>Over the next week, gently focus play on:</p><ul class="focus-list">${focusList}</ul>`;
   }
   const next = nextCheckAge(currentAge);
 

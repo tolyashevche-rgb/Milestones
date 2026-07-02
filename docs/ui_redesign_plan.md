@@ -54,7 +54,7 @@ the comparison vs last snapshot. Never a single "developmental score".
 play*, then contextual "when to discuss" notes for flagged items (the `DISCUSS_BY_ID`
 layer). Clear-result path still invites joining the program.
 
-**S6 — Program.** 1–2 week day-by-day plan, game-like cards (illustration + title + time +
+**S6 — Program.** Seven-day plan of optional play opportunities, game-like cards (illustration + title + time +
 "why it works" + stop rule). "Doing one already counts." Optional "add to calendar" (.ics).
 
 **S7 — Home/cabinet (returning).** Today's task front and center; "next milestone check:
@@ -87,7 +87,7 @@ around N months"; shortcuts to re-test, program, progress, notes-for-doctor (PDF
 2. **S2 child profile + IndexedDB** store (replaces flat `localStorage`); migrate snapshots.
 3. **S3 survey** wired to the curated question pool (depends on the pool existing).
 4. **S4/S5 results + vision** reusing `buildProfile` + `domainBars` + `DISCUSS_BY_ID`.
-5. **S6 program** reusing `buildProgram` (extended to 14 days), illustration slots.
+5. **S6 program** reusing `buildProgram` (seven-day reflection cycle), illustration slots.
 6. **S7 cabinet/home** + `.ics` "today's task".
 7. **S0/S1 welcome + consent**; polish, a11y pass, copy review against safety_rules.
 
