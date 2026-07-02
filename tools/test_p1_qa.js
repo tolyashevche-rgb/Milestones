@@ -28,6 +28,9 @@ function testContentAndEngine() {
   const serviceWorker = read("prototype_stage5_ua/sw.js");
   const pagesWorkflow = read(".github/workflows/pages.yml");
   const pagesIndex = read(".github/pages-index.html");
+  const libraryReviewPacket = read("docs/library_expert_review_packet_ua.md");
+  const libraryReviewTracker = read("docs/library_expert_review_tracker_ua.csv");
+  const libraryReviewBuilder = read("tools/build_library_review_packet.js");
   const authorCardFiles = fs.readdirSync(path.join(root, "knowledge_base/author_source_cards"))
     .filter((name) => name.startsWith("auth_") && name.endsWith(".md"));
   const authorMap = read("knowledge_base/recommendation_author_map.csv");
@@ -232,6 +235,12 @@ function testContentAndEngine() {
   assert.equal(api.LIBRARY_MATERIALS.length, 13, "E4 pilot needs thirteen concise materials including outdoor safety");
   assert.ok(api.LIBRARY_MATERIALS.every((item) => item.reviewStatus === "draft" && item.lastChecked === "2026-07-02" && item.source.url.startsWith("https://")), "library materials need honest review status, check date, and source");
   assert.ok(api.LIBRARY_TOPICS.some((topic) => topic.id === "safety") && api.LIBRARY_TOPICS.some((topic) => topic.id === "parent"), "library filters must cover safety and caregiver wellbeing");
+  const trackerLines = libraryReviewTracker.trim().split(/\r?\n/);
+  const trackerIds = trackerLines.slice(1).map((line) => line.split(";")[0].replaceAll('"', ""));
+  assert.deepEqual(trackerIds.sort(), Array.from(api.LIBRARY_MATERIALS, (item) => item.id).sort(), "E4 expert tracker must cover every live library material exactly once");
+  assert.ok(trackerLines[0].includes('"decision"') && trackerLines[0].includes('"reviewer_name_and_role"') && trackerLines[0].includes('"reviewed_at"'), "E4 tracker needs an attributable decision gate");
+  assert.ok(api.LIBRARY_MATERIALS.every((item) => libraryReviewPacket.includes(`\`${item.id}\``) && libraryReviewPacket.includes(item.source.url)), "E4 review packet must expose every live card and official source");
+  assert.ok(libraryReviewBuilder.includes("if (!fs.existsSync(TRACKER))"), "packet regeneration must preserve an existing expert tracker");
 
   const milestoneIds = new Set();
   const activityIds = new Set();
