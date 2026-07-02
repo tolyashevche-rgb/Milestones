@@ -155,13 +155,14 @@ successful recovery clears it, and erase/restore cannot report false persistence
 2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 25/26 done; Michelle Macias and Jennifer Poon complete the no-caution
-   clinical boundary set; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
+3. **Author cards** — 26/26 done; the planned set is complete. Michelle Macias and Jennifer Poon
+   complete the no-caution clinical boundary set; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
    joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards; A. R.
    Luria and N. A. Bernstein are historical internal-only guardrails with no activities;
    Margaret Sassé, Shinichi Suzuki, Gordon Neufeld, Gabor Maté, William Sears, Makoto Shichida,
-   and Glenn Doman are high-caution review-only with no activity IDs. Ibuka is the final remaining
-   high-caution author and needs careful, gated framing.
+   Glenn Doman, and Masaru Ibuka are high-caution review-only with no activity IDs. All records
+   have explicit claim limits; moderate/high-caution content still requires expert review before
+   any parent-facing use.
 4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
 5. **Deferred / low-value:** IndexedDB backend; EN parity for WHO windows + coverage fix;
    designer-made illustrations (interim inline-SVG in place).
@@ -185,6 +186,17 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-02 — Masaru Ibuka deadline and caregiver-blame boundary audit (26/26)
+- Searched the complete 230-page local Russian edition of *Kindergarten Is Too Late!* by topic and
+  visually checked PDF pages 23, 30–31, 45, 53, 86, and 200. They confirm age-three deadlines,
+  fixed brain percentages, deterministic stimulation/environment claims, effortless native-like
+  language, infant swimming, maternal-singing causation, and maternal-duty framing.
+- Added the final high-caution review-only card, retaining only optional ordinary books, songs,
+  family languages, safe objects, and movement without a deadline under WHO/Harvard/AAP
+  boundaries. Blocked early-skill promises, passive/sleep learning, infant swimming, discipline
+  optimization, character and social predictions, gendered care roles, and caregiver blame. No
+  activity ID or runtime content was added. The planned author-card roadmap is now complete 26/26.
 
 ### 2026-07-02 — Glenn Doman early-academics and treatment boundary audit (25/26)
 - Searched all three complete local PDFs: 199-page *How to Multiply Your Baby's Intelligence*,

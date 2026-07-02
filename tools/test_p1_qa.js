@@ -66,7 +66,7 @@ function testContentAndEngine() {
     && pagesWorkflow.includes("prototype_stage4_ua/data_ua.js prototype_stage4_ua/engine.js")
     && !pagesWorkflow.includes("path: '.'"), "Pages artifact must publish only the app and its canonical engine data");
   assert.ok(pagesIndex.includes('url=prototype_stage5_ua/') && pagesIndex.includes('href="prototype_stage5_ua/"'), "Pages root must lead to the Stage 5 UA preview");
-  assert.equal(authorCardFiles.length, 23, "author-card roadmap count must match the twenty-three review records");
+  assert.equal(authorCardFiles.length, 24, "author-card roadmap count must match the twenty-four review records");
   const coveredAuthorIds = new Set();
   authorCardFiles.forEach((name) => {
     const card = read(`knowledge_base/author_source_cards/${name}`);
@@ -77,7 +77,7 @@ function testContentAndEngine() {
     assert.ok(authorId, `${name} needs an author_id`);
     authorId[1].split("|").map((id) => id.trim()).filter(Boolean).forEach((id) => coveredAuthorIds.add(id));
   });
-  assert.equal(coveredAuthorIds.size, 25, "author-card roadmap must cover twenty-five distinct authors");
+  assert.equal(coveredAuthorIds.size, 26, "author-card roadmap must cover all twenty-six distinct authors");
   assert.ok(authorMap.includes("amap_007;early_brain_development_daily_interaction;Jill Stamm"), "Stamm review card needs a traceable recommendation-map row");
   assert.ok(stammCard.includes("evidence_level: secondary_synthesis")
     && stammCard.includes("Do not claim that this “wires the brain correctly”")
@@ -197,6 +197,17 @@ function testContentAndEngine() {
     && domanCard.includes("patterning, passive limb sequences, forced crawling or creeping")
     && domanCard.includes("Do not privilege mothers as natural or full-time teachers")
     && !stage5Authors.includes('author: "Glenn Doman"'), "Doman must remain card-free, early-academics-free, treatment-free, and outside runtime");
+  const ibukaCard = read("knowledge_base/author_source_cards/auth_ibuka_ordinary-experience-without-deadline.md");
+  assert.ok(authorMap.includes("amap_022;ordinary_experience_without_deadline;Masaru Ibuka")
+    && authorRegistry.includes("ibuka;Masaru Ibuka;pedagogy_method;pedagogy_method;low-medium;high;inspiration_form_only;ordinary responsive experience without deadline")
+    && authorWorks.includes("work_ibuka_001;ibuka;Masaru Ibuka;Kindergarten Is Too Late!;book;supporting;Optional ordinary responsive experience without deadline;inspiration_form_only;high")
+    && ibukaCard.includes("caution: high") && ibukaCard.includes("used_in_activities: []")
+    && ibukaCard.includes('Do not use "after three is too late"')
+    && ibukaCard.includes("Do not promise native-like multilingualism")
+    && ibukaCard.includes("Do not recommend infant swimming, submersion")
+    && ibukaCard.includes("Do not privilege maternal love")
+    && ibukaCard.includes("Current AAP policy requires")
+    && !stage5Authors.includes('author: "Masaru Ibuka"'), "Ibuka must remain deadline-free, infant-swimming-free, blame-free, and outside runtime");
 
   assert.equal(
     read("prototype_stage4/engine.js"),

@@ -99,7 +99,7 @@ This inventory includes the broader list recovered from the earlier screenshot/s
 | Shinichi Suzuki | medium | pedagogy_method | Nurtured by Love, Ability Development from Age Zero | Repetition, environment, parent involvement, music/learning |
 | Makoto Shichida | low-medium | pedagogy_method | Shichida Method books/materials | High-caution boundary only: no right-brain, flash-card, ESP, critical-window, extraordinary-ability, treatment, or outcome claims |
 | Glenn Doman | low-medium | pedagogy_method / early-learning method | How to Teach Your Baby to Read, How to Teach Your Baby Math, How to Multiply Your Baby's Intelligence | High-caution boundary only: no cards, early academics, brain-growth, intelligence, neurological treatment, dose, pressure, or outcome claims |
-| Masaru Ibuka | low-medium | pedagogy_method | Kindergarten Is Too Late | Early-start philosophy; use carefully without pressure or fear |
+| Masaru Ibuka | low-medium | pedagogy_method | Kindergarten Is Too Late | High-caution boundary only: no age-three/brain deadline, early-skill, infant-swimming, character, outcome, maternal-duty, or blame claims |
 | Margaret Sasse / Margaret Sassé | medium | pedagogy_method / movement-practical | Smart Start: How Exercise Can Transform Your Child's Life, Active Baby Healthy Brain | Movement-based activity ideas; both works verified Jun 2026; claims need caution |
 | Emmi Pikler | medium | pedagogy_method / movement-practical | Pikler / Lóczy approach to free movement | Self-initiated free movement, safe space, no forced positions |
 ## Problem-To-Author Map
