@@ -736,15 +736,52 @@ function libraryItems() {
   return typeof LIBRARY_MATERIALS !== "undefined" && Array.isArray(LIBRARY_MATERIALS) ? LIBRARY_MATERIALS : [];
 }
 
+function normalizeLibrarySearch(value) {
+  return String(value || "").toLocaleLowerCase("uk-UA")
+    .replace(/[’'`]/g, "")
+    .replace(/[^a-zа-яіїєґ0-9]+/giu, " ")
+    .trim().replace(/\s+/g, " ");
+}
+
+function libraryIntentIdsForToken(token) {
+  if (typeof LIBRARY_SEARCH_INTENTS === "undefined") return [];
+  return LIBRARY_SEARCH_INTENTS
+    .filter((intent) => intent.stems.some((stem) => token.startsWith(stem) || stem.startsWith(token)))
+    .map((intent) => intent.id);
+}
+
+function libraryItemMatchesQuery(item, query) {
+  const tokens = normalizeLibrarySearch(query).split(" ").filter(Boolean);
+  if (!tokens.length) return true;
+  const haystack = normalizeLibrarySearch([
+    item.title, item.answer, item.doNow, item.topicLabel, item.searchTerms,
+    item.source?.publisher, item.source?.title
+  ].filter(Boolean).join(" "));
+  const words = haystack.split(" ");
+  return tokens.every((token) => {
+    const textMatch = words.some((word) => word === token
+      || (Math.min(word.length, token.length) >= 4 && (word.startsWith(token) || token.startsWith(word))));
+    if (textMatch) return true;
+    const tokenIntents = libraryIntentIdsForToken(token);
+    return tokenIntents.some((intent) => (item.intents || [item.topic]).includes(intent));
+  });
+}
+
 function filteredLibraryItems() {
-  const query = libraryUi.query.trim().toLocaleLowerCase("uk-UA");
+  const query = normalizeLibrarySearch(libraryUi.query);
   const age = currentAge();
   return libraryItems().filter((item) => {
     if (libraryUi.topic !== "all" && item.topic !== libraryUi.topic) return false;
-    if (!query) return true;
-    return [item.title, item.answer, item.doNow, item.topicLabel, item.source?.publisher]
-      .filter(Boolean).join(" ").toLocaleLowerCase("uk-UA").includes(query);
+    return libraryItemMatchesQuery(item, query);
   }).sort((a, b) => Number(b.ages.includes(age)) - Number(a.ages.includes(age)));
+}
+
+function suggestedLibraryItems() {
+  const age = currentAge();
+  return libraryItems()
+    .filter((item) => libraryUi.topic === "all" || item.topic === libraryUi.topic)
+    .sort((a, b) => Number(b.ages.includes(age)) - Number(a.ages.includes(age)))
+    .slice(0, 3);
 }
 
 function libraryCardHtml(item) {
@@ -768,18 +805,25 @@ function libraryCardHtml(item) {
 
 function libraryResultsHtml() {
   const items = filteredLibraryItems();
-  return `<p id="libraryCount" class="library-count" role="status" aria-live="polite">Знайдено: ${items.length}</p>
-    <div class="library-list">${items.length ? items.map(libraryCardHtml).join("") : `<div class="empty-state"><h2>Нічого не знайшлося</h2><p class="muted">Спробуйте коротше слово або оберіть «Усі».</p></div>`}</div>`;
+  const hasQuery = Boolean(normalizeLibrarySearch(libraryUi.query));
+  const suggestions = hasQuery && !items.length ? suggestedLibraryItems() : [];
+  const visibleItems = items.length ? items : suggestions;
+  const status = items.length || !hasQuery
+    ? `Знайдено: ${items.length}`
+    : `Точного збігу поки немає · показуємо ${suggestions.length} корисні матеріали`;
+  const fallback = suggestions.length ? `<div class="library-fallback"><strong>Спробуйте інакше</strong><span>Напишіть коротко: «сон», «плач», «прогулянка» або «годування».</span><button type="button" data-clear-library-search>Показати всі матеріали</button></div>` : "";
+  return `<p id="libraryCount" class="library-count" role="status" aria-live="polite">${status}</p>
+    ${fallback}<div class="library-list">${visibleItems.map(libraryCardHtml).join("")}</div>`;
 }
 
 function renderLibrary() {
   const topics = typeof LIBRARY_TOPICS !== "undefined" && Array.isArray(LIBRARY_TOPICS) ? LIBRARY_TOPICS : [];
   return `<section class="screen-pad library-screen">
     <button type="button" class="pilot-back" data-go="home">← На головну</button>
-    <span class="pilot-kicker">Пілот · 12 матеріалів</span>
+    <span class="pilot-kicker">Пілот · ${libraryItems().length} матеріалів</span>
     <h1 tabindex="-1">Короткі відповіді</h1>
     <p class="muted">Одне питання — одна практична відповідь на 2–3 хвилини. Матеріали освітні й поки мають статус чернетки.</p>
-    <label class="library-search"><span>Пошук</span><input id="librarySearch" type="search" value="${esc(libraryUi.query)}" placeholder="Наприклад: сон або плач" autocomplete="off"></label>
+    <label class="library-search"><span>Пошук</span><input id="librarySearch" type="search" value="${esc(libraryUi.query)}" placeholder="Наприклад: прогулянка, сон або плач" autocomplete="off"></label>
     <div class="library-topics" role="group" aria-label="Фільтр за темою">${topics.map((topic) => `<button type="button" data-library-topic="${topic.id}" class="${libraryUi.topic === topic.id ? "active" : ""}" aria-pressed="${libraryUi.topic === topic.id}">${esc(topic.label)}</button>`).join("")}</div>
     <div id="libraryResults">${libraryResultsHtml()}</div>
   </section>`;
@@ -1503,6 +1547,12 @@ document.addEventListener("click", async (e) => {
     libraryUi.topic = requested;
     route();
     document.querySelector(`[data-library-topic="${requested}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  if (e.target.closest("[data-clear-library-search]")) {
+    libraryUi.query = "";
+    route();
+    document.getElementById("librarySearch")?.focus({ preventScroll: true });
     return;
   }
 

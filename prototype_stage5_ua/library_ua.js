@@ -45,6 +45,7 @@ const LIBRARY_MATERIALS = [
   },
   {
     id: "safe-sleep", topic: "safety", topicLabel: "Безпека", ages: [2, 4, 6, 9, 12],
+    intents: ["safety", "sleep"],
     title: "Базові умови безпечного сну",
     answer: "Для кожного сну кладіть немовля на спину на тверду рівну поверхню. М’які речі й вільна постіль не мають бути в зоні сну.",
     doNow: "Перед сном приберіть із ліжечка подушки, ковдри, бортики та м’які іграшки.",
@@ -59,6 +60,7 @@ const LIBRARY_MATERIALS = [
   },
   {
     id: "crying-caregiver-pause", topic: "parent", topicLabel: "Стан дорослого", ages: [2, 4, 6, 9, 12],
+    intents: ["parent", "calming"],
     title: "Що робити, якщо ви вже на межі?",
     answer: "Попросіть іншу дорослу людину підмінити вас. Якщо допомоги немає, покладіть дитину в безпечне ліжечко, відійдіть на кілька хвилин і поверніться, коли трохи заспокоїтесь. Ніколи не трусіть дитину.",
     doNow: "Напишіть одній людині коротке: «Мені потрібні 10 хвилин допомоги».",
@@ -66,6 +68,7 @@ const LIBRARY_MATERIALS = [
   },
   {
     id: "crying-urgent", topic: "specialist", topicLabel: "Фахівець", ages: [2, 4, 6, 9, 12],
+    intents: ["specialist", "calming"],
     title: "Коли плач потребує термінової допомоги?",
     answer: "Терміново звертайтеся по місцеву медичну допомогу, якщо дитина млява або не прокидається як завжди, має утруднене дихання, судоми, незвичний колір шкіри чи інші ознаки тяжкого стану.",
     doNow: "Довіряйте відчуттю, що поведінка незвична; не чекайте відповіді застосунку.",
@@ -73,6 +76,7 @@ const LIBRARY_MATERIALS = [
   },
   {
     id: "choking-shape", topic: "safety", topicLabel: "Безпека", ages: [6, 9, 12],
+    intents: ["safety", "feeding"],
     title: "Як зменшити ризик вдавлення їжею?",
     answer: "Форма, розмір і текстура їжі мають відповідати навичкам дитини. Під час їжі дитина сидить вертикально, дорослий постійно поруч, а прийом їжі проходить без поспіху.",
     doNow: "Перевірте, чи немає цілих твердих, круглих, липких або дрібних шматків.",
@@ -84,9 +88,20 @@ const LIBRARY_MATERIALS = [
     answer: "Коли починається прикорм приблизно у шість місяців, можна запропонувати тренувальну чашку, чашку із соломинкою або відкриту чашку з допомогою дорослого.",
     doNow: "Запропонуйте кілька ковтків у спокійний момент і будьте готові до розлитої води.",
     source: { publisher: "CDC", title: "Fingers, Spoons, Forks, and Cups", url: "https://www.cdc.gov/infant-toddler-nutrition/mealtime/fingers-spoons-forks-and-cups.html" }
+  },
+  {
+    id: "walk-hot-weather", topic: "safety", topicLabel: "Прогулянка", ages: [2, 4, 6, 9, 12],
+    intents: ["outdoors", "safety"],
+    searchTerms: "прогулянка гуляти вулиця надворі свіже повітря коляска візочок погода сонце спека літо парк",
+    title: "Як підготуватися до прогулянки у теплу погоду?",
+    answer: "Оберіть тінь і прохолодніший час, одягніть дитину легко та регулярно перевіряйте, чи їй не спекотно. Немовля до шести місяців тримайте подалі від прямого сонця.",
+    doNow: "Візьміть сонцезахисний козирок; не накривайте коляску ковдрою, бо всередині може перегрітися.",
+    source: { publisher: "NHS", title: "Keeping your baby safe in the sun", url: "https://www.nhs.uk/baby/first-aid-and-safety/safety/safety-in-the-sun/" }
   }
 ].map((item) => Object.freeze({
   ...item,
+  intents: Object.freeze(item.intents || [item.topic]),
+  searchTerms: item.searchTerms || "",
   lastChecked: "2026-07-02",
   reviewStatus: "draft",
   expert: null,
@@ -104,4 +119,19 @@ const LIBRARY_TOPICS = [
   { id: "feeding", label: "Годування" },
   { id: "parent", label: "Стан дорослого" },
   { id: "specialist", label: "Фахівець" }
+];
+
+// Small, inspectable intent dictionary. It expands common Ukrainian word forms
+// without pretending to be a medical chatbot or sending queries off-device.
+const LIBRARY_SEARCH_INTENTS = [
+  { id: "outdoors", stems: ["прогулян", "гуля", "вулиц", "надвор", "коляс", "візоч", "погод", "сонц", "спек", "парк"] },
+  { id: "calming", stems: ["плач", "крич", "заспок", "колік", "неспок"] },
+  { id: "sleep", stems: ["сон", "сну", "спат", "засин", "ноч"] },
+  { id: "feeding", stems: ["годув", "їж", "їст", "прикорм", "чаш", "вдав", "подав"] },
+  { id: "language", stems: ["мов", "говор", "звук", "сло", "лепет"] },
+  { id: "movement", stems: ["рух", "живот", "повз", "сид", "ход"] },
+  { id: "specialist", stems: ["лікар", "педіатр", "фахів", "тривог", "турбу"] },
+  { id: "safety", stems: ["безп", "ризик", "небезп"] },
+  { id: "parent", stems: ["мам", "тат", "доросл", "втом", "межі"] },
+  { id: "development", stems: ["розвит", "навич", "вік", "орієнтир"] }
 ];

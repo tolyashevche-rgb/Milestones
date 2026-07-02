@@ -349,6 +349,10 @@ main {
 .library-topics button { min-height: 42px; flex: 0 0 auto; padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink); cursor: pointer; font-size: 13px; font-weight: 650; }
 .library-topics button.active { border-color: var(--teal); background: var(--mint); color: var(--teal-dark); }
 .library-count { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+.library-fallback { display: grid; gap: 4px; margin-top: 10px; padding: 12px; border: 1px solid #ecd6bf; border-radius: 12px; background: var(--apricot-soft); }
+.library-fallback strong { color: var(--apricot-dark); font-size: 13px; }
+.library-fallback span { color: #5f554d; font-size: 13px; }
+.library-fallback button { justify-self: start; min-height: 40px; margin-top: 5px; padding: 6px 10px; border: 1px solid #d9a77a; border-radius: 9px; background: #fff; color: var(--apricot-dark); cursor: pointer; font-weight: 700; }
 .library-list { display: grid; gap: 12px; margin-top: 10px; }
 .library-card { padding: 15px; border: 1px solid var(--line); border-radius: 15px; background: var(--panel); box-shadow: 0 5px 18px rgba(24, 32, 31, .05); }
 .library-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
