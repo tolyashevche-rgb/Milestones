@@ -465,8 +465,12 @@ main {
 .motion-session-transfer .btn { width: fit-content; min-height: 44px; }
 .motion-session-readiness { display: grid !important; gap: 3px !important; padding: 9px 10px; border: 1px solid #ecd6bf; border-radius: 10px; background: var(--apricot-soft); }
 .motion-session-readiness.complete { border-color: #b9d8d0; background: var(--mint); }
+.motion-session-readiness.stale { border-color: #d9a77a; background: #fff3e8; }
 .motion-session-readiness strong { color: var(--teal-dark); font-size: 13px; }
 .motion-session-readiness span { color: #40504d; font-size: 11px; }
+.motion-review-version-warning { display: grid; gap: 6px; margin-top: 10px; padding: 10px; border: 1px solid #d9a77a; border-radius: 10px; background: #fff3e8; color: #604f43; }
+.motion-review-version-warning p { margin: 0; font-size: 12px; }
+.motion-review-version-warning .btn { width: fit-content; min-height: 44px; }
 .motion-release-gate { display: grid; gap: 10px; margin-top: 13px; padding-top: 13px; border-top: 1px solid #cfe2dd; }
 .motion-release-gate > div:first-child { display: grid; gap: 3px; }
 .motion-release-gate > div:first-child span, .motion-release-gate > p { margin: 0; color: var(--muted); font-size: 12px; }
