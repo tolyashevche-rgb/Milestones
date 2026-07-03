@@ -433,6 +433,10 @@ main {
 .motion-reviewer-banner span { color: var(--teal-dark); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
 .motion-reviewer-banner strong { color: var(--teal-dark); font-size: 18px; }
 .motion-reviewer-banner p { margin: 0; font-size: 12px; line-height: 1.45; }
+.motion-reviewer-protocol { display: grid; gap: 8px; margin-bottom: 12px; }
+.motion-reviewer-protocol h1 { margin: 0; }
+.motion-reviewer-protocol > p { margin: 0; color: #40504d; font-size: 14px; line-height: 1.5; }
+.motion-reviewer-protocol ol { display: grid; gap: 5px; margin: 0; padding-left: 20px; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .motion-review-filters { display: grid; gap: 7px; margin-top: 13px; padding-top: 13px; border-top: 1px solid #cfe2dd; }
 .motion-review-filters > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .motion-review-filters > div:first-child span { color: var(--muted); font-size: 12px; }

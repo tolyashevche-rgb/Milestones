@@ -1544,7 +1544,12 @@ function renderVisualPilot() {
   }).join("");
   return `<section class="screen-pad visual-pilot-screen">
     ${reviewerMode ? `<aside class="motion-reviewer-banner"><span>Ізольований режим рецензента</span><strong>${esc(reviewMeta.label)}</strong><p>Одна картка за раз. Після повної відповіді відкриється наступна. Профіль дитини, чужі відповіді й загальний gate недоступні.</p></aside>` : '<button type="button" class="pilot-back" data-go="program">← До розділу «Гра»</button>'}
-    <div class="pilot-kicker">Пілот нового формату</div>
+    ${reviewerMode ? `<section class="motion-reviewer-protocol" aria-labelledby="reviewerProtocolTitle">
+      <div class="pilot-kicker">Коротка незалежна перевірка</div>
+      <h1 id="reviewerProtocolTitle" tabindex="-1">Що зрозуміло з ілюстрації?</h1>
+      <p>Спочатку подивіться на картку 5–8 секунд. Потім відкрито позначте «Так» або «Ні» для кожного критерію.</p>
+      <ol><li>Не шукайте «правильну» відповідь.</li><li>Нотатка потрібна лише коли хочеться пояснити проблему.</li><li>Можна зупинитися й повернутися пізніше на цьому пристрої.</li></ol>
+    </section>` : `<div class="pilot-kicker">Пілот нового формату</div>
     <h1 tabindex="-1">Ілюстрована підказка до гри</h1>
     <p class="muted">Приклад власного стилю Milestones: одна послідовність, яку можна зрозуміти без довгого тексту.</p>
     <figure class="pilot-figure">
@@ -1556,7 +1561,7 @@ function renderVisualPilot() {
       <span><b>3</b> Спостерігайте</span><span><b>4</b> Спокійно завершіть</span>
     </div>
     <div class="pilot-safety"><strong>Важливо:</strong> лише коли дитина не спить, на твердій рівній поверхні та під постійним наглядом дорослого.</div>
-    <div class="pilot-gallery-head"><h2>Бібліотека з ${visualCount} карток</h2><p class="muted">Єдина візуальна мова, три повторювані сім’ї та фони, що пояснюють дію. Це робочі чернетки до перевірки фахівцем.</p></div>
+    <div class="pilot-gallery-head"><h2>Бібліотека з ${visualCount} карток</h2><p class="muted">Єдина візуальна мова, три повторювані сім’ї та фони, що пояснюють дію. Це робочі чернетки до перевірки фахівцем.</p></div>`}
     <section class="motion-review-toolbar" aria-labelledby="motionReviewTitle">
       <div><strong id="motionReviewTitle">Режим перевірки</strong><span id="motionReviewProgress" role="status">${motionReviewProgressText()}</span></div>
       <div class="motion-review-sessions" role="group" aria-label="Учасник перевірки">${sessionButtons}</div>
@@ -1572,10 +1577,11 @@ function renderVisualPilot() {
       ${reviewerHistoryHtml}
       ${overviewHtml}
       ${reviewerLinksHtml}
-      ${transferHtml}
+      ${reviewerMode ? "" : transferHtml}
       ${releaseGateHtml}
     </section>
     <div class="pilot-gallery${reviewerMode ? " reviewer-focus" : ""}">${gallery || `<div class="motion-review-empty"><strong>${reviewerMode && reviewView.status === "pending" && reviewerStats.reviewed === reviewerStats.total ? "Сесію повністю перевірено" : "У цій партії карток немає"}</strong><p>${reviewerMode && reviewView.status === "pending" && reviewerStats.reviewed === reviewerStats.total ? "Збережіть завершену сесію та передайте файл координатору." : reviewView.status === "issues" ? "Тут ще немає відповідей «Ні»." : "Оберіть інший вік або статус."}</p></div>`}</div>
+    ${reviewerMode ? transferHtml : ""}
   </section>`;
 }
 
