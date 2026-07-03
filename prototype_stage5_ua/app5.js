@@ -59,18 +59,27 @@ const MOTION_REVIEW_CRITERIA = {
     { id: "supervision", label: "Нагляд дорослого показано коректно" }
   ]
 };
+const MOTION_REVIEW_STATUS_FILTERS = [
+  { id: "pending", label: "Не перевірено" },
+  { id: "issues", label: "Є «Ні»" },
+  { id: "all", label: "Усі" }
+];
+const MOTION_REVIEW_AGE_FILTERS = ["all", "2", "4", "6", "9", "12"];
 const BACKUP_SCHEMA = "milestones.stage5.ua.backup";
 const BACKUP_VERSION = 1;
 const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
 const CORRECTED_AGE_MIN_DAYS = 21;
 let storageProblem = "";
 
-function freshMotionReview() { return { active: "parent_1", sessions: {} }; }
+function freshMotionReview() { return { active: "parent_1", view: { status: "pending", age: "all" }, sessions: {} }; }
 function loadMotionReview() {
   try {
     const parsed = JSON.parse(localStorage.getItem(MOTION_REVIEW_KEY) || "null");
     if (!parsed || typeof parsed !== "object" || !MOTION_REVIEW_SESSIONS.some((session) => session.id === parsed.active)) return freshMotionReview();
     parsed.sessions = parsed.sessions && typeof parsed.sessions === "object" ? parsed.sessions : {};
+    parsed.view = parsed.view && typeof parsed.view === "object" ? parsed.view : {};
+    parsed.view.status = MOTION_REVIEW_STATUS_FILTERS.some((item) => item.id === parsed.view.status) ? parsed.view.status : "pending";
+    parsed.view.age = MOTION_REVIEW_AGE_FILTERS.includes(String(parsed.view.age)) ? String(parsed.view.age) : "all";
     return parsed;
   } catch { return freshMotionReview(); }
 }
@@ -111,6 +120,34 @@ function motionReviewOverview() {
     sessions,
     completeSessions: sessions.filter((item) => item.total > 0 && item.reviewed === item.total).length,
     issues: sessions.reduce((sum, item) => sum + item.issues, 0)
+  };
+}
+function motionReviewView() {
+  motionReview.view = motionReview.view && typeof motionReview.view === "object" ? motionReview.view : {};
+  if (!MOTION_REVIEW_STATUS_FILTERS.some((item) => item.id === motionReview.view.status)) motionReview.view.status = "pending";
+  if (!MOTION_REVIEW_AGE_FILTERS.includes(String(motionReview.view.age))) motionReview.view.age = "all";
+  motionReview.view.age = String(motionReview.view.age);
+  return motionReview.view;
+}
+function motionReviewEntries(meta, data) {
+  const criteria = MOTION_REVIEW_CRITERIA[meta.type];
+  const view = motionReviewView();
+  return (typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.entries(ACTIVITY_RASTER_GUIDES) : []).filter(([id]) => {
+    if (view.age !== "all" && Number(id.slice(4, 7)) !== Number(view.age)) return false;
+    const card = data.cards[id] || {};
+    if (view.status === "pending") return !motionReviewCardComplete(card, criteria);
+    if (view.status === "issues") return criteria.some((criterion) => card[criterion.id] === "no");
+    return true;
+  });
+}
+function motionReviewStatusCounts(meta, data) {
+  const criteria = MOTION_REVIEW_CRITERIA[meta.type];
+  const view = motionReviewView();
+  const ids = motionReviewCardIds().filter((id) => view.age === "all" || Number(id.slice(4, 7)) === Number(view.age));
+  return {
+    all: ids.length,
+    pending: ids.filter((id) => !motionReviewCardComplete(data.cards[id], criteria)).length,
+    issues: ids.filter((id) => criteria.some((criterion) => data.cards[id]?.[criterion.id] === "no")).length
   };
 }
 function motionReviewCsvCell(value) {
@@ -1278,8 +1315,11 @@ function renderVisualPilot() {
   const { meta: reviewMeta, data: reviewData } = activeMotionReviewSession();
   const reviewCriteria = MOTION_REVIEW_CRITERIA[reviewMeta.type];
   const reviewOverview = motionReviewOverview();
+  const reviewView = motionReviewView();
   const visualCount = typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES).length : 0;
-  const gallery = (typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.entries(ACTIVITY_RASTER_GUIDES) : []).map(([id, guide]) => {
+  const filteredEntries = motionReviewEntries(reviewMeta, reviewData);
+  const filterCounts = motionReviewStatusCounts(reviewMeta, reviewData);
+  const gallery = filteredEntries.map(([id, guide]) => {
     const age = Number(id.slice(4, 7));
     const activity = activityById(age, id);
     const review = reviewData.cards[id] || {};
@@ -1320,6 +1360,13 @@ function renderVisualPilot() {
       <div><strong id="motionReviewTitle">Режим перевірки</strong><span id="motionReviewProgress" role="status">${motionReviewProgressText()}</span></div>
       <div class="motion-review-sessions" role="group" aria-label="Учасник перевірки">${MOTION_REVIEW_SESSIONS.map((session) => `<button type="button" data-review-session="${session.id}" aria-pressed="${session.id === reviewMeta.id}" class="${session.id === reviewMeta.id ? "active" : ""}">${esc(session.label)}</button>`).join("")}</div>
       <p>Відповіді зберігаються лише в цьому браузері. Для кожної мами є окремий набір, а фахівець бачить критерії безпеки.</p>
+      <section class="motion-review-filters" aria-labelledby="motionReviewFiltersTitle">
+        <div><strong id="motionReviewFiltersTitle">Коротка review-партія</strong><span id="motionReviewShown">Показано ${filteredEntries.length} із ${visualCount}</span></div>
+        <span class="motion-filter-label">Вік</span>
+        <div class="motion-filter-row" role="group" aria-label="Фільтр за віком">${MOTION_REVIEW_AGE_FILTERS.map((age) => `<button type="button" data-review-age-filter="${age}" aria-pressed="${reviewView.age === age}" class="${reviewView.age === age ? "active" : ""}">${age === "all" ? "Усі віки" : `${age} міс`}</button>`).join("")}</div>
+        <span class="motion-filter-label">Статус</span>
+        <div class="motion-filter-row" role="group" aria-label="Фільтр за статусом">${MOTION_REVIEW_STATUS_FILTERS.map((filter) => `<button type="button" data-review-status-filter="${filter.id}" aria-pressed="${reviewView.status === filter.id}" class="${reviewView.status === filter.id ? "active" : ""}">${esc(filter.label)} <b>${filterCounts[filter.id]}</b></button>`).join("")}</div>
+      </section>
       <div class="motion-review-overview" aria-label="Зведення перевірки">
         <div><strong>Зведення всіх сесій</strong><span>Завершено сесій: ${reviewOverview.completeSessions} із ${MOTION_REVIEW_SESSIONS.length} · Відповідей «Ні»: ${reviewOverview.issues}</span></div>
         <ul>${reviewOverview.sessions.map((item) => `<li><span>${esc(item.meta.label)}</span><b>${item.reviewed}/${item.total}</b>${item.issues ? `<em>${item.issues} «Ні»</em>` : ""}</li>`).join("")}</ul>
@@ -1328,7 +1375,7 @@ function renderVisualPilot() {
         <span id="motionReviewExportStatus" class="sr-status" role="status"></span>
       </div>
     </section>
-    <div class="pilot-gallery">${gallery}</div>
+    <div class="pilot-gallery">${gallery || `<div class="motion-review-empty"><strong>У цій партії карток немає</strong><p>${reviewView.status === "issues" ? "Тут ще немає відповідей «Ні»." : "Оберіть інший вік або статус."}</p></div>`}</div>
   </section>`;
 }
 
@@ -1796,6 +1843,27 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
+  const reviewAgeFilter = e.target.closest("[data-review-age-filter]");
+  if (reviewAgeFilter) {
+    const requested = String(reviewAgeFilter.dataset.reviewAgeFilter);
+    if (!MOTION_REVIEW_AGE_FILTERS.includes(requested)) return;
+    motionReviewView().age = requested;
+    saveMotionReview();
+    route();
+    document.querySelector(`[data-review-age-filter="${requested}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  const reviewStatusFilter = e.target.closest("[data-review-status-filter]");
+  if (reviewStatusFilter) {
+    const requested = reviewStatusFilter.dataset.reviewStatusFilter;
+    if (!MOTION_REVIEW_STATUS_FILTERS.some((item) => item.id === requested)) return;
+    motionReviewView().status = requested;
+    saveMotionReview();
+    route();
+    document.querySelector(`[data-review-status-filter="${requested}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+
   const reviewSessionButton = e.target.closest("[data-review-session]");
   if (reviewSessionButton) {
     const requested = reviewSessionButton.dataset.reviewSession;
@@ -1832,6 +1900,21 @@ document.addEventListener("click", async (e) => {
     if (summary) summary.textContent = complete ? "✓ Перевірено" : "Перевірити картку";
     const progress = document.getElementById("motionReviewProgress");
     if (progress) progress.textContent = motionReviewProgressText();
+    const counts = motionReviewStatusCounts(meta, data);
+    document.querySelectorAll("[data-review-status-filter]").forEach((button) => {
+      const count = button.querySelector("b");
+      if (count) count.textContent = String(counts[button.dataset.reviewStatusFilter] || 0);
+    });
+    const view = motionReviewView();
+    const hasIssue = criteria.some((item) => data.cards[id]?.[item.id] === "no");
+    if ((view.status === "pending" && complete) || (view.status === "issues" && !hasIssue)) card?.remove();
+    const shownCards = document.querySelectorAll(".pilot-gallery-card").length;
+    const shown = document.getElementById("motionReviewShown");
+    if (shown) shown.textContent = `Показано ${shownCards} із ${motionReviewCardIds().length}`;
+    const gallery = document.querySelector(".pilot-gallery");
+    if (gallery && shownCards === 0 && !gallery.querySelector(".motion-review-empty")) {
+      gallery.innerHTML = `<div class="motion-review-empty"><strong>У цій партії карток немає</strong><p>${view.status === "issues" ? "Тут ще немає відповідей «Ні»." : "Оберіть інший вік або статус."}</p></div>`;
+    }
     return;
   }
 

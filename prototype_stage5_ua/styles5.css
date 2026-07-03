@@ -427,6 +427,16 @@ main {
 .motion-review-sessions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .motion-review-sessions button { min-height: 40px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink); cursor: pointer; }
 .motion-review-sessions button.active { border-color: var(--teal); background: var(--mint); color: var(--teal-dark); font-weight: 750; }
+.motion-review-filters { display: grid; gap: 7px; margin-top: 13px; padding-top: 13px; border-top: 1px solid #cfe2dd; }
+.motion-review-filters > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.motion-review-filters > div:first-child span { color: var(--muted); font-size: 12px; }
+.motion-filter-label { margin-top: 3px; color: #40504d; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.motion-filter-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.motion-filter-row button { min-height: 40px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink); cursor: pointer; }
+.motion-filter-row button.active { border-color: var(--teal); background: var(--mint); color: var(--teal-dark); font-weight: 750; }
+.motion-filter-row button b { display: inline-grid; min-width: 19px; height: 19px; place-items: center; margin-left: 3px; padding: 0 4px; border-radius: 999px; background: #edf3f1; color: var(--teal-dark); font-size: 10px; }
+.motion-review-empty { grid-column: 1 / -1; padding: 24px 16px; border: 1px dashed var(--line); border-radius: 14px; background: #fff; text-align: center; }
+.motion-review-empty p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
 .motion-review-overview { display: grid; gap: 10px; margin-top: 13px; padding-top: 13px; border-top: 1px solid #cfe2dd; }
 .motion-review-overview > div { display: grid; gap: 3px; }
 .motion-review-overview > div span { color: var(--muted); font-size: 12px; }
