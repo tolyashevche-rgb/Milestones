@@ -1460,12 +1460,24 @@ function renderVisualPilot() {
   const reviewView = motionReviewView();
   const reviewerSession = motionReviewReviewerSession();
   const reviewerMode = Boolean(reviewerSession);
+  if (reviewerMode) {
+    reviewView.status = "pending";
+    reviewView.age = "all";
+  }
   const reviewerStats = motionReviewSessionStats(reviewMeta);
   const reviewSessionStale = reviewerStats.stale;
   const visualCount = typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES).length : 0;
   const matchingEntries = motionReviewEntries(reviewMeta, reviewData);
-  const filteredEntries = reviewerMode ? matchingEntries.slice(0, 1) : matchingEntries;
+  const revisitId = reviewerMode && ACTIVITY_RASTER_GUIDES[reviewData.revisitId] ? reviewData.revisitId : "";
+  const revisitEntry = revisitId ? [revisitId, ACTIVITY_RASTER_GUIDES[revisitId]] : null;
+  const filteredEntries = reviewerMode ? (revisitEntry ? [revisitEntry] : matchingEntries.slice(0, 1)) : matchingEntries;
   const filterCounts = motionReviewStatusCounts(reviewMeta, reviewData);
+  const lastReviewedId = reviewerMode && ACTIVITY_RASTER_GUIDES[reviewData.lastReviewedId] ? reviewData.lastReviewedId : "";
+  const lastReviewedAge = lastReviewedId ? Number(lastReviewedId.slice(4, 7)) : 0;
+  const lastReviewedActivity = lastReviewedId ? activityById(lastReviewedAge, lastReviewedId) : null;
+  const reviewerHistoryHtml = reviewerMode && !reviewSessionStale && (revisitId || lastReviewedId)
+    ? `<div class="motion-reviewer-history"><span>${revisitId ? "Редагуєте попередню картку" : `Остання: ${esc(lastReviewedActivity?.title || lastReviewedId)}`}</span><button type="button" class="btn ghost" data-reviewer-history="${revisitId ? "queue" : "previous"}">${revisitId ? "Повернутися до черги" : "Виправити попередню відповідь"}</button></div>`
+    : "";
   const sessionButtons = (reviewerMode ? [reviewMeta] : MOTION_REVIEW_SESSIONS).map((session) =>
     `<button type="button" data-review-session="${session.id}" aria-pressed="${session.id === reviewMeta.id}" class="${session.id === reviewMeta.id ? "active" : ""}"${reviewerMode ? " disabled" : ""}>${esc(session.label)}</button>`).join("");
   const overviewHtml = reviewerMode ? "" : `<div class="motion-review-overview" aria-label="Зведення перевірки">
@@ -1552,11 +1564,12 @@ function renderVisualPilot() {
       ${reviewSessionStale ? `<aside class="motion-review-version-warning"><strong>Картки змінилися після цієї перевірки</strong><p>Старі відповіді збережено для історії, але вони не входять до release-gate.</p><button type="button" id="restartMotionReviewVersion" class="btn">Почати рев’ю актуальної версії</button></aside>` : ""}
       <section class="motion-review-filters" aria-labelledby="motionReviewFiltersTitle">
         <div><strong id="motionReviewFiltersTitle">${reviewerMode ? "Картка у фокусі" : "Коротка review-партія"}</strong><span id="motionReviewShown">${reviewerMode ? `У черзі ${matchingEntries.length}` : `Показано ${filteredEntries.length} із ${visualCount}`}</span></div>
-        <span class="motion-filter-label">Вік</span>
+        ${reviewerMode ? '<p class="motion-reviewer-queue-note">Усі віки · лише неперевірені картки</p>' : `<span class="motion-filter-label">Вік</span>
         <div class="motion-filter-row" role="group" aria-label="Фільтр за віком">${MOTION_REVIEW_AGE_FILTERS.map((age) => `<button type="button" data-review-age-filter="${age}" aria-pressed="${reviewView.age === age}" class="${reviewView.age === age ? "active" : ""}">${age === "all" ? "Усі віки" : `${age} міс`}</button>`).join("")}</div>
         <span class="motion-filter-label">Статус</span>
-        <div class="motion-filter-row" role="group" aria-label="Фільтр за статусом">${MOTION_REVIEW_STATUS_FILTERS.map((filter) => `<button type="button" data-review-status-filter="${filter.id}" aria-pressed="${reviewView.status === filter.id}" class="${reviewView.status === filter.id ? "active" : ""}">${esc(filter.label)} <b>${filterCounts[filter.id]}</b></button>`).join("")}</div>
+        <div class="motion-filter-row" role="group" aria-label="Фільтр за статусом">${MOTION_REVIEW_STATUS_FILTERS.map((filter) => `<button type="button" data-review-status-filter="${filter.id}" aria-pressed="${reviewView.status === filter.id}" class="${reviewView.status === filter.id ? "active" : ""}">${esc(filter.label)} <b>${filterCounts[filter.id]}</b></button>`).join("")}</div>`}
       </section>
+      ${reviewerHistoryHtml}
       ${overviewHtml}
       ${reviewerLinksHtml}
       ${transferHtml}
@@ -2072,6 +2085,19 @@ document.addEventListener("click", async (e) => {
     route();
     return;
   }
+  const reviewerHistory = e.target.closest("[data-reviewer-history]");
+  if (reviewerHistory && motionReviewReviewerSession()) {
+    const { data } = activeMotionReviewSession();
+    if (data.contentVersion !== MOTION_REVIEW_CONTENT_VERSION) return;
+    if (reviewerHistory.dataset.reviewerHistory === "previous" && ACTIVITY_RASTER_GUIDES[data.lastReviewedId]) {
+      data.revisitId = data.lastReviewedId;
+    } else if (reviewerHistory.dataset.reviewerHistory === "queue") {
+      delete data.revisitId;
+    } else return;
+    saveMotionReview();
+    route();
+    return;
+  }
   const copyReviewLink = e.target.closest("[data-copy-review-link]");
   if (copyReviewLink) {
     const sessionId = copyReviewLink.dataset.copyReviewLink;
@@ -2156,6 +2182,9 @@ document.addEventListener("click", async (e) => {
     const hasIssue = criteria.some((item) => data.cards[id]?.[item.id] === "no");
     const leavesCurrentQueue = (view.status === "pending" && complete) || (view.status === "issues" && !hasIssue);
     if (motionReviewReviewerSession() && leavesCurrentQueue) {
+      data.lastReviewedId = id;
+      delete data.revisitId;
+      saveMotionReview();
       route();
       return;
     }
