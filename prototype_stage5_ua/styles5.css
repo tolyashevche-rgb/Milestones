@@ -446,6 +446,19 @@ main {
 .motion-review-overview li em { grid-column: 1 / -1; color: #855021; font-size: 11px; font-style: normal; }
 .motion-review-overview .btn { width: fit-content; min-height: 44px; }
 .motion-review-overview > p { margin: 0; }
+.motion-release-gate { display: grid; gap: 10px; margin-top: 13px; padding-top: 13px; border-top: 1px solid #cfe2dd; }
+.motion-release-gate > div:first-child { display: grid; gap: 3px; }
+.motion-release-gate > div:first-child span, .motion-release-gate > p { margin: 0; color: var(--muted); font-size: 12px; }
+.motion-gate-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.motion-gate-stats div { display: grid; gap: 2px; padding: 9px 7px; border-radius: 10px; background: #fff; text-align: center; }
+.motion-gate-stats b { color: var(--teal-dark); font-size: 20px; }
+.motion-gate-stats span { color: #40504d; font-size: 11px; line-height: 1.25; }
+.motion-release-gate details { border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.motion-release-gate summary { min-height: 44px; display: flex; align-items: center; padding: 8px 10px; color: var(--teal-dark); cursor: pointer; font-size: 12px; font-weight: 750; }
+.motion-release-gate ul { display: grid; gap: 5px; max-height: 280px; margin: 0; padding: 0 10px 10px; overflow: auto; list-style: none; }
+.motion-release-gate li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 8px; background: #f5f8f7; color: #40504d; font-size: 11px; }
+.motion-release-gate li b { flex: 0 0 auto; color: #855021; }
+.motion-release-gate .btn { width: fit-content; min-height: 44px; }
 .pilot-gallery-card.review-complete { border-color: #8ebbb0; box-shadow: 0 0 0 2px rgba(76, 132, 119, .1); }
 .pilot-review { border-top: 1px solid #d8e8e4; }
 .pilot-review summary { min-height: 44px; display: flex; align-items: center; padding: 8px 13px; color: var(--teal-dark); cursor: pointer; font-size: 13px; font-weight: 750; }

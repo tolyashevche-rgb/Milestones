@@ -43,8 +43,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260703-p2-31-r1"), "Stage5 assets must use the P2.31 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260703-p2-31-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260703-p2-32-r1"), "Stage5 assets must use the P2.32 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260703-p2-32-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -63,7 +63,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-31-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-32-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -443,9 +443,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260703-p2-31-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260703-p2-31-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260703-p2-31-r1"), "offline shell must cache the sourced library");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260703-p2-32-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260703-p2-32-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260703-p2-32-r1"), "offline shell must cache the sourced library");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -715,6 +715,7 @@ function testAppState() {
     const motionReviewMarkup = renderVisualPilot();
     const motionReviewExport = motionReviewCsv();
     const motionReviewSummary = motionReviewOverview();
+    const initialReleaseGate = motionReviewReleaseGate();
     const ageFourReviewIds = rasterVisualIds.filter((id) => id.startsWith("act_004_"));
     motionReview.view = { status: "pending", age: "4" };
     const ageBatchMarkup = renderVisualPilot();
@@ -730,12 +731,15 @@ function testAppState() {
       && (ageBatchMarkup.match(/data-review-status-filter=/g) || []).length === 3
       && (issueBatchMarkup.match(/class="pilot-review"/g) || []).length === 1
       && issueBatchMarkup.includes("Є «Ні» <b>1</b>");
-    const motionReviewOkay = motionReviewProgressText() === "Перевірено 1 із 59"
+    const motionReviewBaseOkay = motionReviewProgressText() === "Перевірено 1 із 59"
       && (motionReviewMarkup.match(/data-review-session=/g) || []).length === 6
       && (motionReviewMarkup.match(/class="pilot-review"/g) || []).length === 59
       && motionReviewMarkup.includes('data-motion-review="' + rasterVisualIds[0] + '"')
       && motionReviewMarkup.includes("Відповіді зберігаються лише в цьому браузері")
       && motionReviewMarkup.includes('id="exportMotionReview"')
+      && motionReviewMarkup.includes('id="exportMotionGate"')
+      && motionReviewMarkup.includes("Gate публікації")
+      && initialReleaseGate.pending === 59 && initialReleaseGate.ready === 0 && initialReleaseGate.issues === 0
       && motionReviewMarkup.includes("Завершено сесій: 0 із 6")
       && motionReviewExport.startsWith("\uFEFF")
       && motionReviewExport.includes('"session_id","учасник","роль"')
@@ -745,6 +749,23 @@ function testAppState() {
       && motionReviewFiltersOkay
       && MOTION_REVIEW_CRITERIA.parent.length === 3
       && MOTION_REVIEW_CRITERIA.expert.length === 4;
+    const releaseReadyId = rasterVisualIds.find((id) => !id.startsWith("act_004_"));
+    MOTION_REVIEW_SESSIONS.forEach((meta) => {
+      motionReview.sessions[meta.id] = motionReview.sessions[meta.id] || { cards: {} };
+      motionReview.sessions[meta.id].cards = motionReview.sessions[meta.id].cards || {};
+      motionReview.sessions[meta.id].cards[releaseReadyId] = {};
+      MOTION_REVIEW_CRITERIA[meta.type].forEach((criterion) => {
+        motionReview.sessions[meta.id].cards[releaseReadyId][criterion.id] = "yes";
+      });
+    });
+    const releaseGate = motionReviewReleaseGate();
+    const releaseGateExport = motionReviewReleaseCsv();
+    const motionReviewOkay = motionReviewBaseOkay
+      && releaseGate.ready === 1 && releaseGate.issues === 1 && releaseGate.pending === 57
+      && releaseGateExport.startsWith("\uFEFF")
+      && releaseGateExport.includes('"стан_gate","завершено_сесій"')
+      && releaseGateExport.includes('"готова до рішення"')
+      && releaseGateExport.includes('"потрібне виправлення"');
     libraryUi = { query: "сон", topic: "all" };
     const librarySearchResults = filteredLibraryItems();
     libraryUi = { query: "", topic: "safety" };
@@ -934,7 +955,7 @@ function testAppState() {
   assert.equal(result.privateMomentsOkay, true, "private moments must reuse local notes, show at most three, and support individual deletion without social mechanics");
   assert.equal(result.contextFilterOkay, true, "context picker must use honest activity attributes and authored low-energy variants across all ages");
   assert.equal(result.visualGuideOkay, true, "all 60 activities need four-frame guides and unchanged detailed safety steps");
-  assert.equal(result.motionReviewOkay, true, "Motion Cards need five isolated parent sessions and one expert safety review session");
+  assert.equal(result.motionReviewOkay, true, "Motion Cards need isolated review sessions plus a per-card release gate that never auto-approves drafts");
   assert.equal(result.libraryOkay, true, "E4 library must stay searchable, source-visible, draft-labelled, and secondary to the four-item navigation");
   assert.equal(result.followUpRoutingOkay, true, "not-yet must route to discussion while not-sure gets a 7–14 day re-observation window");
 }

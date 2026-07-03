@@ -122,6 +122,26 @@ function motionReviewOverview() {
     issues: sessions.reduce((sum, item) => sum + item.issues, 0)
   };
 }
+function motionReviewReleaseGate() {
+  const cards = motionReviewCardIds().map((id) => {
+    let completedSessions = 0;
+    let issues = 0;
+    MOTION_REVIEW_SESSIONS.forEach((meta) => {
+      const criteria = MOTION_REVIEW_CRITERIA[meta.type];
+      const card = motionReview.sessions?.[meta.id]?.cards?.[id] || {};
+      if (motionReviewCardComplete(card, criteria)) completedSessions += 1;
+      issues += criteria.filter((criterion) => card[criterion.id] === "no").length;
+    });
+    const status = issues > 0 ? "issues" : completedSessions === MOTION_REVIEW_SESSIONS.length ? "ready" : "pending";
+    return { id, status, completedSessions, issues };
+  });
+  return {
+    cards,
+    ready: cards.filter((card) => card.status === "ready").length,
+    issues: cards.filter((card) => card.status === "issues").length,
+    pending: cards.filter((card) => card.status === "pending").length
+  };
+}
 function motionReviewView() {
   motionReview.view = motionReview.view && typeof motionReview.view === "object" ? motionReview.view : {};
   if (!MOTION_REVIEW_STATUS_FILTERS.some((item) => item.id === motionReview.view.status)) motionReview.view.status = "pending";
@@ -178,6 +198,24 @@ function motionReviewCsv() {
         card.note || ""
       ]));
     });
+  });
+  return "\uFEFF" + rows.map((row) => row.map(motionReviewCsvCell).join(",")).join("\r\n");
+}
+function motionReviewReleaseCsv() {
+  const gate = motionReviewReleaseGate();
+  const rows = [["activity_id", "назва_картки", "вік_міс", "стан_gate", "завершено_сесій", "усього_сесій", "відповідей_ні"]];
+  gate.cards.forEach((card) => {
+    const age = Number(card.id.slice(4, 7));
+    const activity = activityById(age, card.id);
+    rows.push([
+      card.id,
+      activity?.title || card.id,
+      age,
+      card.status === "ready" ? "готова до рішення" : card.status === "issues" ? "потрібне виправлення" : "очікує перевірки",
+      card.completedSessions,
+      MOTION_REVIEW_SESSIONS.length,
+      card.issues
+    ]);
   });
   return "\uFEFF" + rows.map((row) => row.map(motionReviewCsvCell).join(",")).join("\r\n");
 }
@@ -1315,6 +1353,7 @@ function renderVisualPilot() {
   const { meta: reviewMeta, data: reviewData } = activeMotionReviewSession();
   const reviewCriteria = MOTION_REVIEW_CRITERIA[reviewMeta.type];
   const reviewOverview = motionReviewOverview();
+  const releaseGate = motionReviewReleaseGate();
   const reviewView = motionReviewView();
   const visualCount = typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES).length : 0;
   const filteredEntries = motionReviewEntries(reviewMeta, reviewData);
@@ -1374,6 +1413,23 @@ function renderVisualPilot() {
         <p>CSV містить критерії, відповіді та нотатки, але не профіль дитини. Перед надсиланням перегляньте нотатки.</p>
         <span id="motionReviewExportStatus" class="sr-status" role="status"></span>
       </div>
+      <section class="motion-release-gate" aria-labelledby="motionReleaseGateTitle">
+        <div><strong id="motionReleaseGateTitle">Gate публікації</strong><span>Статус <code>approved</code> не встановлюється автоматично</span></div>
+        <div class="motion-gate-stats">
+          <div><b>${releaseGate.ready}</b><span>готові до рішення</span></div>
+          <div><b>${releaseGate.issues}</b><span>потребують виправлення</span></div>
+          <div><b>${releaseGate.pending}</b><span>очікують сесій</span></div>
+        </div>
+        <details><summary>Картки, що блокують випуск (${releaseGate.issues + releaseGate.pending})</summary>
+          <ul>${releaseGate.cards.filter((card) => card.status !== "ready").map((card) => {
+            const age = Number(card.id.slice(4, 7));
+            const activity = activityById(age, card.id);
+            return `<li><span>${esc(activity?.title || card.id)} · ${age} міс</span><b>${card.issues ? `${card.issues} «Ні»` : `${card.completedSessions}/${MOTION_REVIEW_SESSIONS.length} сесій`}</b></li>`;
+          }).join("")}</ul>
+        </details>
+        <button type="button" id="exportMotionGate" class="btn ghost">Експортувати gate CSV</button>
+        <p>Картка готова до фінального рішення лише після всіх шести сесій і без жодної відповіді «Ні».</p>
+      </section>
     </section>
     <div class="pilot-gallery">${gallery || `<div class="motion-review-empty"><strong>У цій партії карток немає</strong><p>${reviewView.status === "issues" ? "Тут ще немає відповідей «Ні»." : "Оберіть інший вік або статус."}</p></div>`}</div>
   </section>`;
@@ -1796,6 +1852,15 @@ function downloadMotionReviewCsv() {
   URL.revokeObjectURL(url);
 }
 
+function downloadMotionReviewReleaseCsv() {
+  const url = URL.createObjectURL(new Blob([motionReviewReleaseCsv()], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `milestones-motion-release-gate-${localDateString()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ---- events ----
 document.addEventListener("click", async (e) => {
   const go = e.target.closest("[data-go]");
@@ -1840,6 +1905,12 @@ document.addEventListener("click", async (e) => {
     downloadMotionReviewCsv();
     const status = document.getElementById("motionReviewExportStatus");
     if (status) status.textContent = "CSV збережено. Перед передаванням перевірте нотатки.";
+    return;
+  }
+  if (e.target.id === "exportMotionGate") {
+    downloadMotionReviewReleaseCsv();
+    const status = document.getElementById("motionReviewExportStatus");
+    if (status) status.textContent = "Gate CSV збережено. Це зведення для рішення, а не автоматичне схвалення.";
     return;
   }
 
