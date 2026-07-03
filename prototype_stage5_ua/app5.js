@@ -90,8 +90,35 @@ function saveMotionReview() {
   try { localStorage.setItem(MOTION_REVIEW_KEY, JSON.stringify(motionReview)); return true; }
   catch { return false; }
 }
+function decodeQueryPart(value) {
+  try { return decodeURIComponent(value || ""); }
+  catch { return ""; }
+}
+function queryParam(name) {
+  const query = String(location.search || "").replace(/^\?/, "");
+  for (const part of query.split("&")) {
+    if (!part) continue;
+    const [rawKey, ...rawValue] = part.split("=");
+    if (decodeQueryPart(rawKey) === name) return decodeQueryPart(rawValue.join("="));
+  }
+  return "";
+}
+function motionReviewReviewerSession() {
+  const requested = queryParam("reviewSession");
+  return MOTION_REVIEW_SESSIONS.find((session) => session.id === requested) || null;
+}
+function motionReviewReviewerUrl(sessionId) {
+  const meta = MOTION_REVIEW_SESSIONS.find((session) => session.id === sessionId);
+  if (!meta) return "";
+  const pairs = String(location.search || "").replace(/^\?/, "").split("&").filter(Boolean)
+    .filter((part) => decodeQueryPart(part.split("=")[0]) !== "reviewSession");
+  pairs.push(`reviewSession=${encodeURIComponent(meta.id)}`);
+  return `${location.origin || ""}${location.pathname || ""}?${pairs.join("&")}#/visual-pilot`;
+}
 function activeMotionReviewSession() {
-  const meta = MOTION_REVIEW_SESSIONS.find((session) => session.id === motionReview.active) || MOTION_REVIEW_SESSIONS[0];
+  const reviewerSession = motionReviewReviewerSession();
+  const meta = reviewerSession || MOTION_REVIEW_SESSIONS.find((session) => session.id === motionReview.active) || MOTION_REVIEW_SESSIONS[0];
+  if (reviewerSession) motionReview.active = reviewerSession.id;
   motionReview.sessions[meta.id] = motionReview.sessions[meta.id] || { cards: {} };
   motionReview.sessions[meta.id].cards = motionReview.sessions[meta.id].cards || {};
   return { meta, data: motionReview.sessions[meta.id] };
@@ -728,6 +755,7 @@ function currentRoute() { return (location.hash.replace(/^#\//, "") || "home").s
 
 function route() {
   const r = currentRoute();
+  if (motionReviewReviewerSession()) return show("visual-pilot");
   // Onboarding gate: welcome first, then consent, then child profile.
   if (!store.consent || !store.consent.accepted) return show(r === "consent" ? "consent" : "welcome");
   if (!store.children.length) return show("profile");
@@ -755,7 +783,7 @@ function show(screen) {
 
 function renderNav(active) {
   const nav = document.getElementById("bottomNav");
-  const onboarding = ["welcome", "consent", "profile"].includes(active);
+  const onboarding = ["welcome", "consent", "profile"].includes(active) || Boolean(motionReviewReviewerSession());
   nav.style.display = onboarding ? "none" : "flex";
   nav.innerHTML = NAV.map((n) => {
     const survey = cc() && cc().surveys[currentAge()];
@@ -772,6 +800,11 @@ function renderNav(active) {
 function renderAppbar(screen) {
   const slot = document.getElementById("appbarChild");
   if (!slot) return;
+  const reviewerSession = motionReviewReviewerSession();
+  if (reviewerSession) {
+    slot.innerHTML = `<strong>Перевірка Motion Cards</strong><span class="appbar-tag">${esc(reviewerSession.label)}</span>`;
+    return;
+  }
   const onboarding = ["welcome", "consent", "profile"].includes(screen);
   if (onboarding || !store.children.length) {
     slot.innerHTML = `<strong>Карта розвитку</strong><span class="appbar-tag">0–12 міс</span>`;
@@ -1403,6 +1436,49 @@ function renderVisualPilot() {
   const visualCount = typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES).length : 0;
   const filteredEntries = motionReviewEntries(reviewMeta, reviewData);
   const filterCounts = motionReviewStatusCounts(reviewMeta, reviewData);
+  const reviewerSession = motionReviewReviewerSession();
+  const reviewerMode = Boolean(reviewerSession);
+  const sessionButtons = (reviewerMode ? [reviewMeta] : MOTION_REVIEW_SESSIONS).map((session) =>
+    `<button type="button" data-review-session="${session.id}" aria-pressed="${session.id === reviewMeta.id}" class="${session.id === reviewMeta.id ? "active" : ""}"${reviewerMode ? " disabled" : ""}>${esc(session.label)}</button>`).join("");
+  const overviewHtml = reviewerMode ? "" : `<div class="motion-review-overview" aria-label="Зведення перевірки">
+    <div><strong>Зведення всіх сесій</strong><span>Завершено сесій: ${reviewOverview.completeSessions} із ${MOTION_REVIEW_SESSIONS.length} · Відповідей «Ні»: ${reviewOverview.issues}</span></div>
+    <ul>${reviewOverview.sessions.map((item) => `<li><span>${esc(item.meta.label)}</span><b>${item.reviewed}/${item.total}</b>${item.issues ? `<em>${item.issues} «Ні»</em>` : ""}</li>`).join("")}</ul>
+    <button type="button" id="exportMotionReview" class="btn ghost">Експортувати CSV</button>
+    <p>CSV містить критерії, відповіді та нотатки, але не профіль дитини. Перед надсиланням перегляньте нотатки.</p>
+    <span id="motionReviewExportStatus" class="sr-status" role="status"></span>
+  </div>`;
+  const reviewerLinksHtml = reviewerMode ? "" : `<details class="motion-review-invites">
+    <summary>Посилання для рецензентів</summary>
+    <p>Кожне посилання відкриває лише одну заблоковану сесію без профілю дитини та основної навігації.</p>
+    <ul>${MOTION_REVIEW_SESSIONS.map((session) => `<li><span>${esc(session.label)}</span><a class="btn ghost" href="${esc(motionReviewReviewerUrl(session.id))}" target="_blank" rel="noopener">Відкрити</a><button type="button" class="btn ghost" data-copy-review-link="${session.id}">Копіювати</button></li>`).join("")}</ul>
+    <p id="motionReviewLinkStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
+  </details>`;
+  const transferHtml = `<section class="motion-session-transfer" aria-labelledby="motionSessionTransferTitle">
+    <div><strong id="motionSessionTransferTitle">${reviewerMode ? "Завершити й передати сесію" : "Передати окрему сесію"}</strong><span>Зараз обрано: ${esc(reviewMeta.label)}</span></div>
+    <p>Файл містить лише відповіді та нотатки цієї review-сесії — без профілю дитини й інших учасників.</p>
+    <div>
+      <button type="button" id="exportMotionSession" class="btn ghost">Зберегти сесію</button>
+      ${reviewerMode ? "" : '<button type="button" id="chooseMotionSession" class="btn">Імпортувати сесію</button><input id="importMotionSession" class="visually-hidden" type="file" accept="application/json,.json" tabindex="-1">'}
+    </div>
+    <p id="motionReviewTransferStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
+  </section>`;
+  const releaseGateHtml = reviewerMode ? "" : `<section class="motion-release-gate" aria-labelledby="motionReleaseGateTitle">
+    <div><strong id="motionReleaseGateTitle">Gate публікації</strong><span>Статус <code>approved</code> не встановлюється автоматично</span></div>
+    <div class="motion-gate-stats">
+      <div><b>${releaseGate.ready}</b><span>готові до рішення</span></div>
+      <div><b>${releaseGate.issues}</b><span>потребують виправлення</span></div>
+      <div><b>${releaseGate.pending}</b><span>очікують сесій</span></div>
+    </div>
+    <details><summary>Картки, що блокують випуск (${releaseGate.issues + releaseGate.pending})</summary>
+      <ul>${releaseGate.cards.filter((card) => card.status !== "ready").map((card) => {
+        const age = Number(card.id.slice(4, 7));
+        const activity = activityById(age, card.id);
+        return `<li><span>${esc(activity?.title || card.id)} · ${age} міс</span><b>${card.issues ? `${card.issues} «Ні»` : `${card.completedSessions}/${MOTION_REVIEW_SESSIONS.length} сесій`}</b></li>`;
+      }).join("")}</ul>
+    </details>
+    <button type="button" id="exportMotionGate" class="btn ghost">Експортувати gate CSV</button>
+    <p>Картка готова до фінального рішення лише після всіх шести сесій і без жодної відповіді «Ні».</p>
+  </section>`;
   const gallery = filteredEntries.map(([id, guide]) => {
     const age = Number(id.slice(4, 7));
     const activity = activityById(age, id);
@@ -1426,7 +1502,7 @@ function renderVisualPilot() {
     </figure>`;
   }).join("");
   return `<section class="screen-pad visual-pilot-screen">
-    <button type="button" class="pilot-back" data-go="program">← До розділу «Гра»</button>
+    ${reviewerMode ? `<aside class="motion-reviewer-banner"><span>Ізольований режим рецензента</span><strong>${esc(reviewMeta.label)}</strong><p>Ви бачите лише свою сесію. Профіль дитини, відповіді інших учасників і загальний gate недоступні.</p></aside>` : '<button type="button" class="pilot-back" data-go="program">← До розділу «Гра»</button>'}
     <div class="pilot-kicker">Пілот нового формату</div>
     <h1 tabindex="-1">Ілюстрована підказка до гри</h1>
     <p class="muted">Приклад власного стилю Milestones: одна послідовність, яку можна зрозуміти без довгого тексту.</p>
@@ -1442,8 +1518,8 @@ function renderVisualPilot() {
     <div class="pilot-gallery-head"><h2>Бібліотека з ${visualCount} карток</h2><p class="muted">Єдина візуальна мова, три повторювані сім’ї та фони, що пояснюють дію. Це робочі чернетки до перевірки фахівцем.</p></div>
     <section class="motion-review-toolbar" aria-labelledby="motionReviewTitle">
       <div><strong id="motionReviewTitle">Режим перевірки</strong><span id="motionReviewProgress" role="status">${motionReviewProgressText()}</span></div>
-      <div class="motion-review-sessions" role="group" aria-label="Учасник перевірки">${MOTION_REVIEW_SESSIONS.map((session) => `<button type="button" data-review-session="${session.id}" aria-pressed="${session.id === reviewMeta.id}" class="${session.id === reviewMeta.id ? "active" : ""}">${esc(session.label)}</button>`).join("")}</div>
-      <p>Відповіді зберігаються лише в цьому браузері. Для кожної мами є окремий набір, а фахівець бачить критерії безпеки.</p>
+      <div class="motion-review-sessions" role="group" aria-label="Учасник перевірки">${sessionButtons}</div>
+      <p>${reviewerMode ? "Відповіді зберігаються лише в цьому браузері. Після завершення збережіть файл сесії та передайте його координатору." : "Відповіді зберігаються лише в цьому браузері. Для кожної мами є окремий набір, а фахівець бачить критерії безпеки."}</p>
       <section class="motion-review-filters" aria-labelledby="motionReviewFiltersTitle">
         <div><strong id="motionReviewFiltersTitle">Коротка review-партія</strong><span id="motionReviewShown">Показано ${filteredEntries.length} із ${visualCount}</span></div>
         <span class="motion-filter-label">Вік</span>
@@ -1451,40 +1527,10 @@ function renderVisualPilot() {
         <span class="motion-filter-label">Статус</span>
         <div class="motion-filter-row" role="group" aria-label="Фільтр за статусом">${MOTION_REVIEW_STATUS_FILTERS.map((filter) => `<button type="button" data-review-status-filter="${filter.id}" aria-pressed="${reviewView.status === filter.id}" class="${reviewView.status === filter.id ? "active" : ""}">${esc(filter.label)} <b>${filterCounts[filter.id]}</b></button>`).join("")}</div>
       </section>
-      <div class="motion-review-overview" aria-label="Зведення перевірки">
-        <div><strong>Зведення всіх сесій</strong><span>Завершено сесій: ${reviewOverview.completeSessions} із ${MOTION_REVIEW_SESSIONS.length} · Відповідей «Ні»: ${reviewOverview.issues}</span></div>
-        <ul>${reviewOverview.sessions.map((item) => `<li><span>${esc(item.meta.label)}</span><b>${item.reviewed}/${item.total}</b>${item.issues ? `<em>${item.issues} «Ні»</em>` : ""}</li>`).join("")}</ul>
-        <button type="button" id="exportMotionReview" class="btn ghost">Експортувати CSV</button>
-        <p>CSV містить критерії, відповіді та нотатки, але не профіль дитини. Перед надсиланням перегляньте нотатки.</p>
-        <span id="motionReviewExportStatus" class="sr-status" role="status"></span>
-      </div>
-      <section class="motion-session-transfer" aria-labelledby="motionSessionTransferTitle">
-        <div><strong id="motionSessionTransferTitle">Передати окрему сесію</strong><span>Зараз обрано: ${esc(reviewMeta.label)}</span></div>
-        <p>Файл містить лише відповіді та нотатки цієї review-сесії — без профілю дитини й інших учасників.</p>
-        <div>
-          <button type="button" id="exportMotionSession" class="btn ghost">Зберегти сесію</button>
-          <button type="button" id="chooseMotionSession" class="btn">Імпортувати сесію</button>
-          <input id="importMotionSession" class="visually-hidden" type="file" accept="application/json,.json" tabindex="-1">
-        </div>
-        <p id="motionReviewTransferStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
-      </section>
-      <section class="motion-release-gate" aria-labelledby="motionReleaseGateTitle">
-        <div><strong id="motionReleaseGateTitle">Gate публікації</strong><span>Статус <code>approved</code> не встановлюється автоматично</span></div>
-        <div class="motion-gate-stats">
-          <div><b>${releaseGate.ready}</b><span>готові до рішення</span></div>
-          <div><b>${releaseGate.issues}</b><span>потребують виправлення</span></div>
-          <div><b>${releaseGate.pending}</b><span>очікують сесій</span></div>
-        </div>
-        <details><summary>Картки, що блокують випуск (${releaseGate.issues + releaseGate.pending})</summary>
-          <ul>${releaseGate.cards.filter((card) => card.status !== "ready").map((card) => {
-            const age = Number(card.id.slice(4, 7));
-            const activity = activityById(age, card.id);
-            return `<li><span>${esc(activity?.title || card.id)} · ${age} міс</span><b>${card.issues ? `${card.issues} «Ні»` : `${card.completedSessions}/${MOTION_REVIEW_SESSIONS.length} сесій`}</b></li>`;
-          }).join("")}</ul>
-        </details>
-        <button type="button" id="exportMotionGate" class="btn ghost">Експортувати gate CSV</button>
-        <p>Картка готова до фінального рішення лише після всіх шести сесій і без жодної відповіді «Ні».</p>
-      </section>
+      ${overviewHtml}
+      ${reviewerLinksHtml}
+      ${transferHtml}
+      ${releaseGateHtml}
     </section>
     <div class="pilot-gallery">${gallery || `<div class="motion-review-empty"><strong>У цій партії карток немає</strong><p>${reviewView.status === "issues" ? "Тут ще немає відповідей «Ні»." : "Оберіть інший вік або статус."}</p></div>`}</div>
   </section>`;
@@ -1988,6 +2034,21 @@ document.addEventListener("click", async (e) => {
     document.getElementById("importMotionSession")?.click();
     return;
   }
+  const copyReviewLink = e.target.closest("[data-copy-review-link]");
+  if (copyReviewLink) {
+    const sessionId = copyReviewLink.dataset.copyReviewLink;
+    const meta = MOTION_REVIEW_SESSIONS.find((session) => session.id === sessionId);
+    const status = document.getElementById("motionReviewLinkStatus");
+    if (!meta) return;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(motionReviewReviewerUrl(meta.id));
+      if (status) status.textContent = `Посилання для «${meta.label}» скопійовано.`;
+    } catch {
+      if (status) status.textContent = "Не вдалося скопіювати. Відкрийте посилання й скопіюйте адресу браузера.";
+    }
+    return;
+  }
 
   const reviewAgeFilter = e.target.closest("[data-review-age-filter]");
   if (reviewAgeFilter) {
@@ -2013,6 +2074,7 @@ document.addEventListener("click", async (e) => {
   const reviewSessionButton = e.target.closest("[data-review-session]");
   if (reviewSessionButton) {
     const requested = reviewSessionButton.dataset.reviewSession;
+    if (motionReviewReviewerSession()) return;
     if (!MOTION_REVIEW_SESSIONS.some((session) => session.id === requested)) return;
     motionReview.active = requested;
     saveMotionReview();
