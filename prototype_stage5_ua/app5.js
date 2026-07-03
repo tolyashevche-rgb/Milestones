@@ -1433,11 +1433,13 @@ function renderVisualPilot() {
   const reviewOverview = motionReviewOverview();
   const releaseGate = motionReviewReleaseGate();
   const reviewView = motionReviewView();
-  const visualCount = typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES).length : 0;
-  const filteredEntries = motionReviewEntries(reviewMeta, reviewData);
-  const filterCounts = motionReviewStatusCounts(reviewMeta, reviewData);
   const reviewerSession = motionReviewReviewerSession();
   const reviewerMode = Boolean(reviewerSession);
+  const reviewerStats = motionReviewSessionStats(reviewMeta);
+  const visualCount = typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES).length : 0;
+  const matchingEntries = motionReviewEntries(reviewMeta, reviewData);
+  const filteredEntries = reviewerMode ? matchingEntries.slice(0, 1) : matchingEntries;
+  const filterCounts = motionReviewStatusCounts(reviewMeta, reviewData);
   const sessionButtons = (reviewerMode ? [reviewMeta] : MOTION_REVIEW_SESSIONS).map((session) =>
     `<button type="button" data-review-session="${session.id}" aria-pressed="${session.id === reviewMeta.id}" class="${session.id === reviewMeta.id ? "active" : ""}"${reviewerMode ? " disabled" : ""}>${esc(session.label)}</button>`).join("");
   const overviewHtml = reviewerMode ? "" : `<div class="motion-review-overview" aria-label="Зведення перевірки">
@@ -1456,8 +1458,9 @@ function renderVisualPilot() {
   const transferHtml = `<section class="motion-session-transfer" aria-labelledby="motionSessionTransferTitle">
     <div><strong id="motionSessionTransferTitle">${reviewerMode ? "Завершити й передати сесію" : "Передати окрему сесію"}</strong><span>Зараз обрано: ${esc(reviewMeta.label)}</span></div>
     <p>Файл містить лише відповіді та нотатки цієї review-сесії — без профілю дитини й інших учасників.</p>
+    ${reviewerMode ? `<div class="motion-session-readiness ${reviewerStats.reviewed === reviewerStats.total ? "complete" : ""}"><strong>${reviewerStats.reviewed === reviewerStats.total ? "Сесію завершено" : `${reviewerStats.reviewed} із ${reviewerStats.total} карток`}</strong><span>${reviewerStats.reviewed === reviewerStats.total ? "Файл готовий до передачі координатору." : "Збережений файл буде чернеткою; до перевірки можна повернутися на цьому пристрої."}</span></div>` : ""}
     <div>
-      <button type="button" id="exportMotionSession" class="btn ghost">Зберегти сесію</button>
+      <button type="button" id="exportMotionSession" class="btn ghost">${reviewerMode && reviewerStats.reviewed < reviewerStats.total ? "Зберегти чернетку" : "Зберегти сесію"}</button>
       ${reviewerMode ? "" : '<button type="button" id="chooseMotionSession" class="btn">Імпортувати сесію</button><input id="importMotionSession" class="visually-hidden" type="file" accept="application/json,.json" tabindex="-1">'}
     </div>
     <p id="motionReviewTransferStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
@@ -1494,7 +1497,7 @@ function renderVisualPilot() {
     return `<figure class="pilot-figure pilot-gallery-card${complete ? " review-complete" : ""}" data-review-card="${id}">
       <img src="${esc(guide.image)}" alt="${esc(guide.imageAlt)}" loading="lazy" decoding="async">
       <figcaption><strong>${esc(activity ? activity.title : id)}</strong><span>${age} міс · чернетка до експертної перевірки</span></figcaption>
-      <details class="pilot-review"><summary>${complete ? "✓ Перевірено" : "Перевірити картку"}</summary>
+      <details class="pilot-review"${reviewerMode ? " open" : ""}><summary>${complete ? "✓ Перевірено" : "Перевірити картку"}</summary>
         <div class="pilot-review-body">${criteriaHtml}
           <label>Нотатка<textarea rows="2" data-motion-review-note="${id}" placeholder="Що було незрозуміло або небезпечно?">${esc(review.note || "")}</textarea></label>
         </div>
@@ -1502,7 +1505,7 @@ function renderVisualPilot() {
     </figure>`;
   }).join("");
   return `<section class="screen-pad visual-pilot-screen">
-    ${reviewerMode ? `<aside class="motion-reviewer-banner"><span>Ізольований режим рецензента</span><strong>${esc(reviewMeta.label)}</strong><p>Ви бачите лише свою сесію. Профіль дитини, відповіді інших учасників і загальний gate недоступні.</p></aside>` : '<button type="button" class="pilot-back" data-go="program">← До розділу «Гра»</button>'}
+    ${reviewerMode ? `<aside class="motion-reviewer-banner"><span>Ізольований режим рецензента</span><strong>${esc(reviewMeta.label)}</strong><p>Одна картка за раз. Після повної відповіді відкриється наступна. Профіль дитини, чужі відповіді й загальний gate недоступні.</p></aside>` : '<button type="button" class="pilot-back" data-go="program">← До розділу «Гра»</button>'}
     <div class="pilot-kicker">Пілот нового формату</div>
     <h1 tabindex="-1">Ілюстрована підказка до гри</h1>
     <p class="muted">Приклад власного стилю Milestones: одна послідовність, яку можна зрозуміти без довгого тексту.</p>
@@ -1521,7 +1524,7 @@ function renderVisualPilot() {
       <div class="motion-review-sessions" role="group" aria-label="Учасник перевірки">${sessionButtons}</div>
       <p>${reviewerMode ? "Відповіді зберігаються лише в цьому браузері. Після завершення збережіть файл сесії та передайте його координатору." : "Відповіді зберігаються лише в цьому браузері. Для кожної мами є окремий набір, а фахівець бачить критерії безпеки."}</p>
       <section class="motion-review-filters" aria-labelledby="motionReviewFiltersTitle">
-        <div><strong id="motionReviewFiltersTitle">Коротка review-партія</strong><span id="motionReviewShown">Показано ${filteredEntries.length} із ${visualCount}</span></div>
+        <div><strong id="motionReviewFiltersTitle">${reviewerMode ? "Картка у фокусі" : "Коротка review-партія"}</strong><span id="motionReviewShown">${reviewerMode ? `У черзі ${matchingEntries.length}` : `Показано ${filteredEntries.length} із ${visualCount}`}</span></div>
         <span class="motion-filter-label">Вік</span>
         <div class="motion-filter-row" role="group" aria-label="Фільтр за віком">${MOTION_REVIEW_AGE_FILTERS.map((age) => `<button type="button" data-review-age-filter="${age}" aria-pressed="${reviewView.age === age}" class="${reviewView.age === age ? "active" : ""}">${age === "all" ? "Усі віки" : `${age} міс`}</button>`).join("")}</div>
         <span class="motion-filter-label">Статус</span>
@@ -1532,7 +1535,7 @@ function renderVisualPilot() {
       ${transferHtml}
       ${releaseGateHtml}
     </section>
-    <div class="pilot-gallery">${gallery || `<div class="motion-review-empty"><strong>У цій партії карток немає</strong><p>${reviewView.status === "issues" ? "Тут ще немає відповідей «Ні»." : "Оберіть інший вік або статус."}</p></div>`}</div>
+    <div class="pilot-gallery${reviewerMode ? " reviewer-focus" : ""}">${gallery || `<div class="motion-review-empty"><strong>${reviewerMode && reviewView.status === "pending" && reviewerStats.reviewed === reviewerStats.total ? "Сесію повністю перевірено" : "У цій партії карток немає"}</strong><p>${reviewerMode && reviewView.status === "pending" && reviewerStats.reviewed === reviewerStats.total ? "Збережіть завершену сесію та передайте файл координатору." : reviewView.status === "issues" ? "Тут ще немає відповідей «Ні»." : "Оберіть інший вік або статус."}</p></div>`}</div>
   </section>`;
 }
 
@@ -2115,7 +2118,12 @@ document.addEventListener("click", async (e) => {
     });
     const view = motionReviewView();
     const hasIssue = criteria.some((item) => data.cards[id]?.[item.id] === "no");
-    if ((view.status === "pending" && complete) || (view.status === "issues" && !hasIssue)) card?.remove();
+    const leavesCurrentQueue = (view.status === "pending" && complete) || (view.status === "issues" && !hasIssue);
+    if (motionReviewReviewerSession() && leavesCurrentQueue) {
+      route();
+      return;
+    }
+    if (leavesCurrentQueue) card?.remove();
     const shownCards = document.querySelectorAll(".pilot-gallery-card").length;
     const shown = document.getElementById("motionReviewShown");
     if (shown) shown.textContent = `Показано ${shownCards} із ${motionReviewCardIds().length}`;

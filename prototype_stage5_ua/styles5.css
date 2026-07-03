@@ -416,6 +416,7 @@ main {
 .pilot-gallery-head { margin-top: 28px; padding-top: 22px; border-top: 1px solid #d8e8e4; }
 .pilot-gallery-head h2 { margin-bottom: 6px; }
 .pilot-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.pilot-gallery.reviewer-focus { grid-template-columns: minmax(0, 520px); justify-content: center; }
 .pilot-gallery-card { margin: 0; box-shadow: none; }
 .pilot-gallery-card figcaption { display: grid; gap: 4px; }
 .pilot-gallery-card figcaption strong { color: var(--teal-dark); }
@@ -462,6 +463,10 @@ main {
 .motion-session-transfer > div:first-child span, .motion-session-transfer > p { margin: 0; color: var(--muted); font-size: 12px; }
 .motion-session-transfer > div:not(:first-child) { display: flex; flex-wrap: wrap; gap: 7px; }
 .motion-session-transfer .btn { width: fit-content; min-height: 44px; }
+.motion-session-readiness { display: grid !important; gap: 3px !important; padding: 9px 10px; border: 1px solid #ecd6bf; border-radius: 10px; background: var(--apricot-soft); }
+.motion-session-readiness.complete { border-color: #b9d8d0; background: var(--mint); }
+.motion-session-readiness strong { color: var(--teal-dark); font-size: 13px; }
+.motion-session-readiness span { color: #40504d; font-size: 11px; }
 .motion-release-gate { display: grid; gap: 10px; margin-top: 13px; padding-top: 13px; border-top: 1px solid #cfe2dd; }
 .motion-release-gate > div:first-child { display: grid; gap: 3px; }
 .motion-release-gate > div:first-child span, .motion-release-gate > p { margin: 0; color: var(--muted); font-size: 12px; }
