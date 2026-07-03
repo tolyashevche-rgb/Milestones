@@ -43,8 +43,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260703-p2-32-r1"), "Stage5 assets must use the P2.32 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260703-p2-32-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260703-p2-33-r1"), "Stage5 assets must use the P2.33 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260703-p2-33-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -63,7 +63,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-32-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-33-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -443,9 +443,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260703-p2-32-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260703-p2-32-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260703-p2-32-r1"), "offline shell must cache the sourced library");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260703-p2-33-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260703-p2-33-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260703-p2-33-r1"), "offline shell must cache the sourced library");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -716,6 +716,11 @@ function testAppState() {
     const motionReviewExport = motionReviewCsv();
     const motionReviewSummary = motionReviewOverview();
     const initialReleaseGate = motionReviewReleaseGate();
+    const motionSessionPayload = motionReviewSessionPayload("parent_1");
+    const motionSessionRoundTrip = validateMotionReviewSessionPayload(motionSessionPayload);
+    const tamperedMotionSession = JSON.parse(JSON.stringify(motionSessionPayload));
+    tamperedMotionSession.cards[rasterVisualIds[0]].unexpected = "yes";
+    const rejectedMotionSession = validateMotionReviewSessionPayload(tamperedMotionSession);
     const ageFourReviewIds = rasterVisualIds.filter((id) => id.startsWith("act_004_"));
     motionReview.view = { status: "pending", age: "4" };
     const ageBatchMarkup = renderVisualPilot();
@@ -738,6 +743,9 @@ function testAppState() {
       && motionReviewMarkup.includes("Відповіді зберігаються лише в цьому браузері")
       && motionReviewMarkup.includes('id="exportMotionReview"')
       && motionReviewMarkup.includes('id="exportMotionGate"')
+      && motionReviewMarkup.includes('id="exportMotionSession"')
+      && motionReviewMarkup.includes('id="importMotionSession"')
+      && motionReviewMarkup.includes("Передати окрему сесію")
       && motionReviewMarkup.includes("Gate публікації")
       && initialReleaseGate.pending === 59 && initialReleaseGate.ready === 0 && initialReleaseGate.issues === 0
       && motionReviewMarkup.includes("Завершено сесій: 0 із 6")
@@ -746,6 +754,12 @@ function testAppState() {
       && motionReviewExport.includes('"Мама 1"')
       && motionReviewExport.includes('"зрозуміло"')
       && motionReviewSummary.completeSessions === 0 && motionReviewSummary.issues === 0
+      && motionSessionPayload.schema === MOTION_REVIEW_SESSION_SCHEMA
+      && motionSessionPayload.version === MOTION_REVIEW_SESSION_VERSION
+      && motionSessionPayload.sessionId === "parent_1"
+      && !JSON.stringify(motionSessionPayload).includes("children")
+      && motionSessionRoundTrip.ok && motionSessionRoundTrip.cards[rasterVisualIds[0]].action === "yes"
+      && !rejectedMotionSession.ok
       && motionReviewFiltersOkay
       && MOTION_REVIEW_CRITERIA.parent.length === 3
       && MOTION_REVIEW_CRITERIA.expert.length === 4;

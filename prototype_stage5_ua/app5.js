@@ -65,6 +65,9 @@ const MOTION_REVIEW_STATUS_FILTERS = [
   { id: "all", label: "Усі" }
 ];
 const MOTION_REVIEW_AGE_FILTERS = ["all", "2", "4", "6", "9", "12"];
+const MOTION_REVIEW_SESSION_SCHEMA = "milestones.motion-review-session.ua";
+const MOTION_REVIEW_SESSION_VERSION = 1;
+const MAX_MOTION_REVIEW_SESSION_BYTES = 512 * 1024;
 const BACKUP_SCHEMA = "milestones.stage5.ua.backup";
 const BACKUP_VERSION = 1;
 const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
@@ -218,6 +221,48 @@ function motionReviewReleaseCsv() {
     ]);
   });
   return "\uFEFF" + rows.map((row) => row.map(motionReviewCsvCell).join(",")).join("\r\n");
+}
+function motionReviewSessionPayload(sessionId = motionReview.active) {
+  const meta = MOTION_REVIEW_SESSIONS.find((session) => session.id === sessionId) || MOTION_REVIEW_SESSIONS[0];
+  const cards = motionReview.sessions?.[meta.id]?.cards || {};
+  return {
+    schema: MOTION_REVIEW_SESSION_SCHEMA,
+    version: MOTION_REVIEW_SESSION_VERSION,
+    sessionId: meta.id,
+    exportedAt: new Date().toISOString(),
+    cards: JSON.parse(JSON.stringify(cards))
+  };
+}
+function validateMotionReviewSessionPayload(payload) {
+  const fail = (error) => ({ ok: false, error });
+  if (!isRecord(payload) || payload.schema !== MOTION_REVIEW_SESSION_SCHEMA
+    || payload.version !== MOTION_REVIEW_SESSION_VERSION || !isRecord(payload.cards)) {
+    return fail("Це не схоже на файл review-сесії Milestones.");
+  }
+  const meta = MOTION_REVIEW_SESSIONS.find((session) => session.id === payload.sessionId);
+  if (!meta) return fail("У файлі вказано невідому review-сесію.");
+  const entries = Object.entries(payload.cards);
+  if (entries.length > motionReviewCardIds().length) return fail("У файлі забагато карток.");
+  const knownIds = new Set(motionReviewCardIds());
+  const criteria = MOTION_REVIEW_CRITERIA[meta.type];
+  const allowedFields = new Set([...criteria.map((criterion) => criterion.id), "note"]);
+  const cards = {};
+  for (const [id, card] of entries) {
+    if (!knownIds.has(id) || !isRecord(card)) return fail("У файлі є невідома або пошкоджена картка.");
+    if (Object.keys(card).some((key) => !allowedFields.has(key))) return fail("У файлі є невідомий критерій перевірки.");
+    const normalized = {};
+    for (const criterion of criteria) {
+      if (card[criterion.id] == null) continue;
+      if (!["yes", "no"].includes(card[criterion.id])) return fail("У файлі є невідома відповідь.");
+      normalized[criterion.id] = card[criterion.id];
+    }
+    if (card.note != null) {
+      if (typeof card.note !== "string" || card.note.length > 1000) return fail("У файлі є пошкоджена або задовга нотатка.");
+      normalized.note = card.note;
+    }
+    cards[id] = normalized;
+  }
+  return { ok: true, sessionId: meta.id, cards };
 }
 
 // ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
@@ -1413,6 +1458,16 @@ function renderVisualPilot() {
         <p>CSV містить критерії, відповіді та нотатки, але не профіль дитини. Перед надсиланням перегляньте нотатки.</p>
         <span id="motionReviewExportStatus" class="sr-status" role="status"></span>
       </div>
+      <section class="motion-session-transfer" aria-labelledby="motionSessionTransferTitle">
+        <div><strong id="motionSessionTransferTitle">Передати окрему сесію</strong><span>Зараз обрано: ${esc(reviewMeta.label)}</span></div>
+        <p>Файл містить лише відповіді та нотатки цієї review-сесії — без профілю дитини й інших учасників.</p>
+        <div>
+          <button type="button" id="exportMotionSession" class="btn ghost">Зберегти сесію</button>
+          <button type="button" id="chooseMotionSession" class="btn">Імпортувати сесію</button>
+          <input id="importMotionSession" class="visually-hidden" type="file" accept="application/json,.json" tabindex="-1">
+        </div>
+        <p id="motionReviewTransferStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
+      </section>
       <section class="motion-release-gate" aria-labelledby="motionReleaseGateTitle">
         <div><strong id="motionReleaseGateTitle">Gate публікації</strong><span>Статус <code>approved</code> не встановлюється автоматично</span></div>
         <div class="motion-gate-stats">
@@ -1861,6 +1916,16 @@ function downloadMotionReviewReleaseCsv() {
   URL.revokeObjectURL(url);
 }
 
+function downloadMotionReviewSession() {
+  const payload = motionReviewSessionPayload();
+  const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `milestones-motion-review-${payload.sessionId}-${localDateString()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ---- events ----
 document.addEventListener("click", async (e) => {
   const go = e.target.closest("[data-go]");
@@ -1911,6 +1976,16 @@ document.addEventListener("click", async (e) => {
     downloadMotionReviewReleaseCsv();
     const status = document.getElementById("motionReviewExportStatus");
     if (status) status.textContent = "Gate CSV збережено. Це зведення для рішення, а не автоматичне схвалення.";
+    return;
+  }
+  if (e.target.id === "exportMotionSession") {
+    downloadMotionReviewSession();
+    const status = document.getElementById("motionReviewTransferStatus");
+    if (status) status.textContent = "Сесію збережено локально. Перед передаванням перегляньте нотатки.";
+    return;
+  }
+  if (e.target.id === "chooseMotionSession") {
+    document.getElementById("importMotionSession")?.click();
     return;
   }
 
@@ -2277,6 +2352,47 @@ document.addEventListener("input", (e) => {
 });
 
 document.addEventListener("change", async (e) => {
+  if (e.target.id === "importMotionSession") {
+    const input = e.target;
+    const file = input.files && input.files[0];
+    const status = document.getElementById("motionReviewTransferStatus");
+    if (!file) return;
+    if (file.size > MAX_MOTION_REVIEW_SESSION_BYTES) {
+      if (status) status.textContent = "Файл завеликий для однієї review-сесії.";
+      input.value = "";
+      return;
+    }
+    try {
+      let parsed;
+      try { parsed = JSON.parse(await file.text()); }
+      catch {
+        if (status) status.textContent = "Файл не є коректною review-сесією Milestones.";
+        return;
+      }
+      const checked = validateMotionReviewSessionPayload(parsed);
+      if (!checked.ok) {
+        if (status) status.textContent = checked.error;
+        return;
+      }
+      const meta = MOTION_REVIEW_SESSIONS.find((session) => session.id === checked.sessionId);
+      const existingCards = motionReview.sessions?.[checked.sessionId]?.cards || {};
+      const hasExistingAnswers = Object.values(existingCards).some((card) => isRecord(card) && Object.keys(card).length > 0);
+      if (hasExistingAnswers && !confirm(`Імпорт замінить локальні відповіді сесії «${meta.label}». Продовжити?`)) return;
+      motionReview.sessions[checked.sessionId] = { cards: checked.cards };
+      motionReview.active = checked.sessionId;
+      const saved = saveMotionReview();
+      route();
+      const nextStatus = document.getElementById("motionReviewTransferStatus");
+      if (nextStatus) nextStatus.textContent = saved
+        ? `Сесію «${meta.label}» імпортовано й додано до зведеного gate.`
+        : `Сесію «${meta.label}» відкрито, але браузер не зберіг її надовго.`;
+    } catch {
+      if (status) status.textContent = "Не вдалося прочитати review-сесію.";
+    } finally {
+      input.value = "";
+    }
+    return;
+  }
   if (e.target.id !== "importBackup") return;
   const input = e.target;
   const file = input.files && input.files[0];
