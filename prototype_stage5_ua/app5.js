@@ -1525,6 +1525,7 @@ function renderVisualPilot() {
     const activity = activityById(age, id);
     const review = reviewData.cards[id] || {};
     const complete = !reviewSessionStale && motionReviewCardComplete(review, reviewCriteria);
+    const revisitingThisCard = reviewerMode && revisitId === id;
     const criteriaHtml = reviewCriteria.map((criterion) => `<div class="pilot-review-row">
       <span>${esc(criterion.label)}</span>
       <div class="pilot-review-options" role="group" aria-label="${esc(criterion.label)}">
@@ -1533,9 +1534,9 @@ function renderVisualPilot() {
       </div>
     </div>`).join("");
     return `<figure class="pilot-figure pilot-gallery-card${complete ? " review-complete" : ""}" data-review-card="${id}">
-      <img src="${esc(guide.image)}" alt="${esc(guide.imageAlt)}" loading="lazy" decoding="async">
-      <figcaption><strong>${esc(activity ? activity.title : id)}</strong><span>${age} міс · чернетка до експертної перевірки</span></figcaption>
-      <details class="pilot-review"${reviewerMode ? " open" : ""}><summary>${complete ? "✓ Перевірено" : "Перевірити картку"}</summary>
+      <img src="${esc(guide.image)}" alt="${reviewerMode ? "Ілюстрація Motion Card для незалежної перевірки" : esc(guide.imageAlt)}" loading="lazy" decoding="async">
+      ${reviewerMode ? `<figcaption><strong>Картка без назви</strong><span>${reviewMeta.type === "expert" ? `${age} міс · оцініть відповідність віку й безпеку` : "Оцініть лише те, що видно на зображенні"}</span></figcaption>` : `<figcaption><strong>${esc(activity ? activity.title : id)}</strong><span>${age} міс · чернетка до експертної перевірки</span></figcaption>`}
+      <details class="pilot-review"${revisitingThisCard ? " open" : ""}><summary>${reviewerMode ? revisitingThisCard ? "Редагувати відповіді" : "Показати критерії після першого погляду" : complete ? "✓ Перевірено" : "Перевірити картку"}</summary>
         <div class="pilot-review-body">${criteriaHtml}
           <label>Нотатка<textarea rows="2" data-motion-review-note="${id}" placeholder="Що було незрозуміло або небезпечно?"${reviewSessionStale ? " disabled" : ""}>${esc(review.note || "")}</textarea></label>
         </div>
@@ -1547,8 +1548,8 @@ function renderVisualPilot() {
     ${reviewerMode ? `<section class="motion-reviewer-protocol" aria-labelledby="reviewerProtocolTitle">
       <div class="pilot-kicker">Коротка незалежна перевірка</div>
       <h1 id="reviewerProtocolTitle" tabindex="-1">Що зрозуміло з ілюстрації?</h1>
-      <p>Спочатку подивіться на картку 5–8 секунд. Потім відкрито позначте «Так» або «Ні» для кожного критерію.</p>
-      <ol><li>Не шукайте «правильну» відповідь.</li><li>Нотатка потрібна лише коли хочеться пояснити проблему.</li><li>Можна зупинитися й повернутися пізніше на цьому пристрої.</li></ol>
+      <p>Спочатку подивіться лише на картку 5–8 секунд. Потім відкрийте критерії та позначте «Так» або «Ні».</p>
+      <ol><li>Не відкривайте питання до першого погляду.</li><li>Не шукайте «правильну» відповідь.</li><li>Нотатка потрібна лише коли хочеться пояснити проблему.</li><li>Можна зупинитися й повернутися пізніше на цьому пристрої.</li></ol>
     </section>` : `<div class="pilot-kicker">Пілот нового формату</div>
     <h1 tabindex="-1">Ілюстрована підказка до гри</h1>
     <p class="muted">Приклад власного стилю Milestones: одна послідовність, яку можна зрозуміти без довгого тексту.</p>
