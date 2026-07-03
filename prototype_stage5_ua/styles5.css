@@ -414,6 +414,15 @@ main {
 .motion-review-sessions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .motion-review-sessions button { min-height: 40px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink); cursor: pointer; }
 .motion-review-sessions button.active { border-color: var(--teal); background: var(--mint); color: var(--teal-dark); font-weight: 750; }
+.motion-review-overview { display: grid; gap: 10px; margin-top: 13px; padding-top: 13px; border-top: 1px solid #cfe2dd; }
+.motion-review-overview > div { display: grid; gap: 3px; }
+.motion-review-overview > div span { color: var(--muted); font-size: 12px; }
+.motion-review-overview ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.motion-review-overview li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 7px; padding: 7px 9px; border-radius: 9px; background: #fff; color: #40504d; font-size: 12px; }
+.motion-review-overview li b { color: var(--teal-dark); }
+.motion-review-overview li em { grid-column: 1 / -1; color: #855021; font-size: 11px; font-style: normal; }
+.motion-review-overview .btn { width: fit-content; min-height: 44px; }
+.motion-review-overview > p { margin: 0; }
 .pilot-gallery-card.review-complete { border-color: #8ebbb0; box-shadow: 0 0 0 2px rgba(76, 132, 119, .1); }
 .pilot-review { border-top: 1px solid #d8e8e4; }
 .pilot-review summary { min-height: 44px; display: flex; align-items: center; padding: 8px 13px; color: var(--teal-dark); cursor: pointer; font-size: 13px; font-weight: 750; }
@@ -438,6 +447,7 @@ main {
   .motion-image-steps { grid-template-columns: 1fr; }
   .pilot-legend { grid-template-columns: 1fr; }
   .pilot-gallery { grid-template-columns: 1fr; }
+  .motion-review-overview ul { grid-template-columns: 1fr; }
 }
 
 /* history */

@@ -94,6 +94,56 @@ function motionReviewProgressText() {
   const reviewed = Object.values(data.cards).filter((card) => motionReviewCardComplete(card, criteria)).length;
   return `Перевірено ${reviewed} із ${total}`;
 }
+function motionReviewCardIds() {
+  return typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES) : [];
+}
+function motionReviewSessionStats(meta) {
+  const ids = motionReviewCardIds();
+  const criteria = MOTION_REVIEW_CRITERIA[meta.type];
+  const cards = motionReview.sessions?.[meta.id]?.cards || {};
+  const reviewed = ids.filter((id) => motionReviewCardComplete(cards[id], criteria)).length;
+  const issues = ids.reduce((sum, id) => sum + criteria.filter((criterion) => cards[id]?.[criterion.id] === "no").length, 0);
+  return { reviewed, total: ids.length, issues };
+}
+function motionReviewOverview() {
+  const sessions = MOTION_REVIEW_SESSIONS.map((meta) => ({ meta, ...motionReviewSessionStats(meta) }));
+  return {
+    sessions,
+    completeSessions: sessions.filter((item) => item.total > 0 && item.reviewed === item.total).length,
+    issues: sessions.reduce((sum, item) => sum + item.issues, 0)
+  };
+}
+function motionReviewCsvCell(value) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+function motionReviewCsv() {
+  const ids = motionReviewCardIds();
+  const rows = [["session_id", "учасник", "роль", "activity_id", "назва_картки", "вік_міс", "criterion_id", "критерій", "відповідь", "картку_завершено", "нотатка"]];
+  MOTION_REVIEW_SESSIONS.forEach((meta) => {
+    const criteria = MOTION_REVIEW_CRITERIA[meta.type];
+    const cards = motionReview.sessions?.[meta.id]?.cards || {};
+    ids.forEach((id) => {
+      const age = Number(id.slice(4, 7));
+      const activity = activityById(age, id);
+      const card = cards[id] || {};
+      const complete = motionReviewCardComplete(card, criteria) ? "так" : "ні";
+      criteria.forEach((criterion) => rows.push([
+        meta.id,
+        meta.label,
+        meta.type === "expert" ? "фахівець" : "батьківська сесія",
+        id,
+        activity?.title || id,
+        age,
+        criterion.id,
+        criterion.label,
+        card[criterion.id] === "yes" ? "Так" : card[criterion.id] === "no" ? "Ні" : "",
+        complete,
+        card.note || ""
+      ]));
+    });
+  });
+  return "\uFEFF" + rows.map((row) => row.map(motionReviewCsvCell).join(",")).join("\r\n");
+}
 
 // ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
 function emptySpecialistPrep(noticed = "") {
@@ -1204,6 +1254,7 @@ function renderProgram() {
 function renderVisualPilot() {
   const { meta: reviewMeta, data: reviewData } = activeMotionReviewSession();
   const reviewCriteria = MOTION_REVIEW_CRITERIA[reviewMeta.type];
+  const reviewOverview = motionReviewOverview();
   const visualCount = typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES).length : 0;
   const gallery = (typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.entries(ACTIVITY_RASTER_GUIDES) : []).map(([id, guide]) => {
     const age = Number(id.slice(4, 7));
@@ -1246,6 +1297,13 @@ function renderVisualPilot() {
       <div><strong id="motionReviewTitle">Режим перевірки</strong><span id="motionReviewProgress" role="status">${motionReviewProgressText()}</span></div>
       <div class="motion-review-sessions" role="group" aria-label="Учасник перевірки">${MOTION_REVIEW_SESSIONS.map((session) => `<button type="button" data-review-session="${session.id}" aria-pressed="${session.id === reviewMeta.id}" class="${session.id === reviewMeta.id ? "active" : ""}">${esc(session.label)}</button>`).join("")}</div>
       <p>Відповіді зберігаються лише в цьому браузері. Для кожної мами є окремий набір, а фахівець бачить критерії безпеки.</p>
+      <div class="motion-review-overview" aria-label="Зведення перевірки">
+        <div><strong>Зведення всіх сесій</strong><span>Завершено сесій: ${reviewOverview.completeSessions} із ${MOTION_REVIEW_SESSIONS.length} · Відповідей «Ні»: ${reviewOverview.issues}</span></div>
+        <ul>${reviewOverview.sessions.map((item) => `<li><span>${esc(item.meta.label)}</span><b>${item.reviewed}/${item.total}</b>${item.issues ? `<em>${item.issues} «Ні»</em>` : ""}</li>`).join("")}</ul>
+        <button type="button" id="exportMotionReview" class="btn ghost">Експортувати CSV</button>
+        <p>CSV містить критерії, відповіді та нотатки, але не профіль дитини. Перед надсиланням перегляньте нотатки.</p>
+        <span id="motionReviewExportStatus" class="sr-status" role="status"></span>
+      </div>
     </section>
     <div class="pilot-gallery">${gallery}</div>
   </section>`;
@@ -1658,6 +1716,15 @@ function downloadBackup() {
   URL.revokeObjectURL(url);
 }
 
+function downloadMotionReviewCsv() {
+  const url = URL.createObjectURL(new Blob([motionReviewCsv()], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `milestones-motion-review-${localDateString()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ---- events ----
 document.addEventListener("click", async (e) => {
   const go = e.target.closest("[data-go]");
@@ -1684,6 +1751,13 @@ document.addEventListener("click", async (e) => {
     libraryUi.query = "";
     route();
     document.getElementById("librarySearch")?.focus({ preventScroll: true });
+    return;
+  }
+
+  if (e.target.id === "exportMotionReview") {
+    downloadMotionReviewCsv();
+    const status = document.getElementById("motionReviewExportStatus");
+    if (status) status.textContent = "CSV збережено. Перед передаванням перевірте нотатки.";
     return;
   }
 
