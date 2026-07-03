@@ -31,6 +31,10 @@ function testContentAndEngine() {
   const libraryReviewPacket = read("docs/library_expert_review_packet_ua.md");
   const libraryReviewTracker = read("docs/library_expert_review_tracker_ua.csv");
   const libraryReviewBuilder = read("tools/build_library_review_packet.js");
+  const feedingSchema = read("docs/feeding_pilot_schema_ua.md");
+  const feedingDrafts = read("docs/feeding_pilot_drafts_ua.md");
+  const feedingReviewPacket = read("docs/feeding_expert_review_packet_ua.md");
+  const feedingReviewTracker = read("docs/feeding_expert_review_tracker_ua.md");
   const authorCardFiles = fs.readdirSync(path.join(root, "knowledge_base/author_source_cards"))
     .filter((name) => name.startsWith("auth_") && name.endsWith(".md"));
   const authorMap = read("knowledge_base/recommendation_author_map.csv");
@@ -241,6 +245,17 @@ function testContentAndEngine() {
   assert.ok(trackerLines[0].includes('"decision"') && trackerLines[0].includes('"reviewer_name_and_role"') && trackerLines[0].includes('"reviewed_at"'), "E4 tracker needs an attributable decision gate");
   assert.ok(api.LIBRARY_MATERIALS.every((item) => libraryReviewPacket.includes(`\`${item.id}\``) && libraryReviewPacket.includes(item.source.url)), "E4 review packet must expose every live card and official source");
   assert.ok(libraryReviewBuilder.includes("if (!fs.existsSync(TRACKER))"), "packet regeneration must preserve an existing expert tracker");
+  const feedingIds = Array.from(feedingDrafts.matchAll(/\*\*ID:\*\* `([^`]+)`/g), (match) => match[1]);
+  const feedingTrackerIds = Array.from(feedingReviewTracker.matchAll(/\| `([^`]+)` \|/g), (match) => match[1]);
+  assert.equal(feedingIds.length, 12, "E5 review-only pilot needs exactly twelve candidate meal templates");
+  assert.equal(new Set(feedingIds).size, 12, "E5 template IDs must be unique");
+  assert.deepEqual(feedingTrackerIds.sort(), [...feedingIds].sort(), "E5 Markdown tracker must cover every draft exactly once");
+  assert.ok(feedingDrafts.includes("Статус усіх карток: `generated_draft`") && feedingDrafts.includes("NEEDS_LOCAL_REVIEW"), "E5 drafts must stay blocked on real review and localization");
+  assert.ok(feedingSchema.includes("Runtime: не підключено")
+    && feedingSchema.includes("https://www.who.int/publications/i/item/9789240081864")
+    && feedingSchema.includes("https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/choking-hazards.html"), "E5 schema needs an explicit runtime boundary and official sources");
+  assert.ok(feedingReviewPacket.includes("`approved`, `revise` або `remove`")
+    && feedingReviewPacket.includes("Автоматично забороняє approval"), "E5 expert packet needs attributable decisions and hard blocking criteria");
 
   const milestoneIds = new Set();
   const activityIds = new Set();
