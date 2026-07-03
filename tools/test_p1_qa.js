@@ -35,6 +35,7 @@ function testContentAndEngine() {
   const feedingDrafts = read("docs/feeding_pilot_drafts_ua.md");
   const feedingReviewPacket = read("docs/feeding_expert_review_packet_ua.md");
   const feedingReviewTracker = read("docs/feeding_expert_review_tracker_ua.md");
+  const privateMomentsPrivacy = read("docs/private_moments_privacy_decision_ua.md");
   const authorCardFiles = fs.readdirSync(path.join(root, "knowledge_base/author_source_cards"))
     .filter((name) => name.startsWith("auth_") && name.endsWith(".md"));
   const authorMap = read("knowledge_base/recommendation_author_map.csv");
@@ -42,14 +43,16 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260703-p2-29-r1"), "Stage5 assets must use the P2.29 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260703-p2-29-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260703-p2-30-r1"), "Stage5 assets must use the P2.30 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260703-p2-30-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
   assert.ok(stage5Styles.includes("@media (forced-colors: active)"), "high-contrast mode needs explicit active-state support");
   assert.ok(stage5Styles.includes("@media (prefers-reduced-motion: reduce)"), "reduced-motion preference must stay supported");
   assert.ok(stage5App.includes('document.getElementById("toggleTodayDone")?.focus'), "program updates must restore focus to the thumb action");
+  assert.ok(stage5App.includes('class="private-moments"') && stage5App.includes('data-delete-moment='), "E6 needs a bounded local moments view with individual deletion");
+  assert.ok(stage5App.includes('"DTEND:"') && !stage5App.includes("RRULE:FREQ=DAILY"), "calendar reminders must be single events without a hidden recurring series");
   assert.ok(stage5App.includes('id="installApp"') && stage5App.includes('id="installHelp"'), "data settings need install guidance without changing the primary home action");
   assert.ok(stage5App.includes('id="updateControls"') && stage5App.includes('id="applyUpdate"'), "PWA updates need an explicit action in collapsed settings");
   assert.equal(manifest.display, "standalone", "PWA manifest must request standalone display");
@@ -60,7 +63,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-29-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-30-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -256,6 +259,9 @@ function testContentAndEngine() {
     && feedingSchema.includes("https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/choking-hazards.html"), "E5 schema needs an explicit runtime boundary and official sources");
   assert.ok(feedingReviewPacket.includes("`approved`, `revise` або `remove`")
     && feedingReviewPacket.includes("Автоматично забороняє approval"), "E5 expert packet needs attributable decisions and hard blocking criteria");
+  assert.ok(privateMomentsPrivacy.includes("локальна текстова добірка без фото, хмари, акаунта й аналітики")
+    && privateMomentsPrivacy.includes("максимум три")
+    && privateMomentsPrivacy.includes("одну подію"), "E6 needs a documented data-minimizing privacy decision and non-recurring reminder boundary");
 
   const milestoneIds = new Set();
   const activityIds = new Set();
@@ -437,9 +443,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260703-p2-29-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260703-p2-29-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260703-p2-29-r1"), "offline shell must cache the sourced library");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260703-p2-30-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260703-p2-30-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260703-p2-30-r1"), "offline shell must cache the sourced library");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -769,6 +775,15 @@ function testAppState() {
       && weeklyMarkup.includes("немає обов'язкової серії")
       && !weeklyMarkup.includes('role="progressbar"')
       && !weeklyMarkup.includes("data-go=");
+    const moments = privateMoments(first);
+    const momentsMarkup = privateMomentsHtml(moments);
+    const privateMomentsOkay = moments.length === 2
+      && moments[0].key === completionKey(4)
+      && momentsMarkup.includes("Маленькі моменти")
+      && momentsMarkup.includes("Показуємо максимум три записи")
+      && (momentsMarkup.match(/data-delete-moment=/g) || []).length === 2
+      && !momentsMarkup.includes('role="progressbar"')
+      && !momentsMarkup.includes("поділитися");
     const doneStep = homeNextStep(4);
     const doneMarkup = renderHome();
     const currentProgramDay = programState.program[programState.currentIndex];
@@ -880,7 +895,7 @@ function testAppState() {
       && changes.newlyObserved.length === 2
       && changes.changed.length === 1;
 
-    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, gentleEngagementOkay, weeklyRecapOkay, contextFilterOkay, visualGuideOkay, motionReviewOkay, libraryOkay, followUpRoutingOkay };
+    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, gentleEngagementOkay, weeklyRecapOkay, privateMomentsOkay, contextFilterOkay, visualGuideOkay, motionReviewOkay, libraryOkay, followUpRoutingOkay };
   })()`, context);
 
   assert.equal(result.restartOkay, true, "re-test must clear only the active plan and today's completion");
@@ -899,6 +914,7 @@ function testAppState() {
   assert.equal(result.correctedAgeOkay, true, "optional expected due date must select the corrected-age window without exposing a score");
   assert.equal(result.gentleEngagementOkay, true, "favorites and optional post-play feedback must stay calm and local per child");
   assert.equal(result.weeklyRecapOkay, true, "weekly recap must describe recent play without a streak, progress bar, or competing action");
+  assert.equal(result.privateMomentsOkay, true, "private moments must reuse local notes, show at most three, and support individual deletion without social mechanics");
   assert.equal(result.contextFilterOkay, true, "context picker must use honest activity attributes and authored low-energy variants across all ages");
   assert.equal(result.visualGuideOkay, true, "all 60 activities need four-frame guides and unchanged detailed safety steps");
   assert.equal(result.motionReviewOkay, true, "Motion Cards need five isolated parent sessions and one expert safety review session");

@@ -564,6 +564,26 @@ function recentActivityNoteLines(age, child = cc(), now = new Date(), days = 14)
     return [`- ${match[1]} · ${activity ? activity.title : "Гра"}: ${String(note).trim()}`];
   });
 }
+function privateMoments(child = cc(), limit = 3) {
+  if (!child) return [];
+  return Object.entries(child.activityNotes || {}).flatMap(([key, note]) => {
+    const match = /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(key);
+    if (!match || !String(note).trim()) return [];
+    const age = Number(match[2]);
+    const completion = child.activityCompletions?.[key];
+    const activity = completion?.activityId ? activityById(age, completion.activityId) : null;
+    return [{ key, date: match[1], age, title: activity?.title || "Гра разом", note: String(note).trim() }];
+  }).sort((a, b) => b.date.localeCompare(a.date)).slice(0, Math.max(0, limit));
+}
+function privateMomentsHtml(moments) {
+  if (!Array.isArray(moments) || !moments.length) return "";
+  return `<section class="private-moments" aria-labelledby="privateMomentsTitle">
+    <div class="private-moments-head"><div><span class="mini-label">Лише в цьому профілі</span><h2 id="privateMomentsTitle">Маленькі моменти</h2></div><span>${moments.length} останні</span></div>
+    <p>Це не стрічка досягнень і не оцінка розвитку — лише ваші короткі нотатки після гри.</p>
+    <ul>${moments.map((moment) => `<li><div><time datetime="${esc(moment.date)}">${esc(shortDate(parseLocalDate(moment.date)))}</time><strong>${esc(moment.title)}</strong><p>${esc(moment.note)}</p></div><button type="button" data-delete-moment="${esc(moment.key)}" aria-label="Видалити момент: ${esc(moment.title)}">Видалити</button></li>`).join("")}</ul>
+    <small>Показуємо максимум три записи. Вони не передаються назовні й входять до вашої приватної резервної копії.</small>
+  </section>`;
+}
 
 // ---- routing ----
 const NAV = [
@@ -812,6 +832,7 @@ function renderHome() {
   const task = todaysTask(age);
   const nextStep = homeNextStep(age);
   const weekly = weeklyPlaySummary();
+  const moments = privateMoments();
   const next = nextCheckAge(age);
   const tested = survey && survey.date;
   return `
@@ -824,6 +845,8 @@ function renderHome() {
 
       ${weeklyRecapHtml(weekly)}
 
+      ${privateMomentsHtml(moments)}
+
       <details class="home-more">
         <summary>Ще корисне</summary>
         <div class="tiles">
@@ -833,7 +856,7 @@ function renderHome() {
           <button type="button" class="tile" data-go="progress"><strong>Історія</strong><span class="muted">ваші спостереження</span></button>
           <button type="button" class="tile" data-go="ask"><strong>Для фахівця</strong><span class="muted">підсумок і нотатки</span></button>
           <button type="button" class="tile" data-go="survey" data-restart="1"><strong>Оновити</strong><span class="muted">пройти ще раз</span></button>
-          ${task ? `<button type="button" class="tile" id="addIcs"><strong>У календар</strong><span class="muted">нагадування про гру</span></button>` : ""}
+          ${task ? `<button type="button" class="tile" id="addIcs"><strong>Разово в календар</strong><span class="muted">одне нагадування без серії</span></button>` : ""}
           ` : ""}
         </div>
       </details>
@@ -1696,11 +1719,12 @@ function finishSurvey() {
 
 // ---- calendar (.ics) ----
 function downloadIcs(title) {
-  const dt = new Date(); dt.setHours(9, 0, 0, 0);
+  const dt = new Date(); dt.setDate(dt.getDate() + 1); dt.setHours(9, 0, 0, 0);
+  const end = new Date(dt); end.setMinutes(end.getMinutes() + 15);
   const stamp = (d) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
   const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Milestones//UA//", "BEGIN:VEVENT",
     "UID:" + Date.now() + "@milestones", "DTSTAMP:" + stamp(new Date()), "DTSTART:" + stamp(dt),
-    "RRULE:FREQ=DAILY;COUNT=14", "SUMMARY:" + title, "DESCRIPTION:Коротка гра з дитиною (Карта розвитку)", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    "DTEND:" + stamp(end), "SUMMARY:" + title, "DESCRIPTION:Одне добровільне нагадування відкрити Milestones. Без серії та прострочення.", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
   const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
   const a = document.createElement("a"); a.href = url; a.download = "milestones-task.ics"; a.click();
   URL.revokeObjectURL(url);
@@ -1735,6 +1759,17 @@ document.addEventListener("click", async (e) => {
       restartSurvey(currentAge());
     }
     setHash(go.dataset.go);
+    return;
+  }
+
+  const deleteMoment = e.target.closest("[data-delete-moment]");
+  if (deleteMoment) {
+    const key = deleteMoment.dataset.deleteMoment;
+    if (!/^\d{4}-\d{2}-\d{2}:\d+$/.test(key) || !cc()?.activityNotes?.[key]) return;
+    if (!confirm("Видалити цей приватний момент? Відновити його можна буде лише з раніше збереженої резервної копії.")) return;
+    delete cc().activityNotes[key];
+    save();
+    route();
     return;
   }
 

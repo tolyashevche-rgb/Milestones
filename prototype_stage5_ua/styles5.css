@@ -144,6 +144,19 @@ main {
 .week-recap p { margin: 0; color: #5f554d; font-size: 14px; }
 .week-recap .mini-label { color: var(--apricot-dark); margin-bottom: 2px; }
 .week-recap .week-recap-note { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(138, 76, 24, 0.13); color: #71563f; }
+.private-moments { margin-top: 14px; padding: 15px; border: 1px solid #cfe2dd; border-radius: 16px; background: #f5faf8; }
+.private-moments-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.private-moments-head h2 { margin: 2px 0 0; font-size: 18px; }
+.private-moments-head > span { padding: 4px 8px; border-radius: 999px; background: #fff; color: var(--teal-dark); font-size: 11px; font-weight: 800; }
+.private-moments > p { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+.private-moments ul { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.private-moments li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px; border-radius: 11px; background: #fff; }
+.private-moments li div { display: grid; gap: 3px; min-width: 0; }
+.private-moments time { color: var(--muted); font-size: 11px; }
+.private-moments li strong { color: var(--teal-dark); font-size: 13px; }
+.private-moments li p { margin: 1px 0 0; color: #40504d; font-size: 13px; overflow-wrap: anywhere; }
+.private-moments li button { min-height: 40px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: #855021; cursor: pointer; font-size: 12px; }
+.private-moments > small { display: block; margin-top: 10px; color: var(--muted); line-height: 1.4; }
 
 /* tiles */
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
