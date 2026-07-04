@@ -43,8 +43,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260704-p2-42-r1"), "Stage5 assets must use the P2.42 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260704-p2-42-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260704-p2-43-r1"), "Stage5 assets must use the P2.43 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260704-p2-43-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -63,7 +63,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-42-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-43-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -443,9 +443,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260704-p2-42-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260704-p2-42-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260704-p2-42-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260704-p2-43-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260704-p2-43-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260704-p2-43-r1"), "the sourced library must be cached offline");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -735,7 +735,7 @@ function testAppState() {
       && JSON.stringify([...parentOneOrder].sort()) === JSON.stringify([...rasterVisualIds].sort())
       && new Set(parentOneOrder.slice(0, 5).map((id) => Number(id.slice(4, 7)))).size === 5;
     const coordinatorStore = store;
-    location.search = "?v=p2-42-r1&reviewSession=parent_3";
+    location.search = "?v=p2-43-r1&reviewSession=parent_3";
     location.hash = "#/visual-pilot";
     store = freshStore();
     motionReview.active = "parent_1";
@@ -830,6 +830,12 @@ function testAppState() {
     const initialReleaseGate = motionReviewReleaseGate();
     const motionSessionPayload = motionReviewSessionPayload("parent_1");
     const motionSessionRoundTrip = validateMotionReviewSessionPayload(motionSessionPayload);
+    const completeMotionSession = JSON.parse(JSON.stringify(motionSessionPayload));
+    rasterVisualIds.forEach((id) => {
+      completeMotionSession.cards[id] = {};
+      MOTION_REVIEW_CRITERIA.parent.forEach((criterion) => { completeMotionSession.cards[id][criterion.id] = "yes"; });
+    });
+    const completeMotionSessionRoundTrip = validateMotionReviewSessionPayload(completeMotionSession);
     const tamperedMotionSession = JSON.parse(JSON.stringify(motionSessionPayload));
     tamperedMotionSession.cards[rasterVisualIds[0]].unexpected = "yes";
     const rejectedMotionSession = validateMotionReviewSessionPayload(tamperedMotionSession);
@@ -867,6 +873,7 @@ function testAppState() {
       && motionReviewMarkup.includes('id="exportMotionSession"')
       && motionReviewMarkup.includes('id="importMotionSession"')
       && motionReviewMarkup.includes("Передати окрему сесію")
+      && motionReviewMarkup.includes("59 із 59 перевірених карток")
       && motionReviewMarkup.includes("Запуск рев’ю: посилання та запрошення")
       && expertReviewerUrl.includes("reviewSession=expert") && expertReviewerUrl.endsWith("#/visual-pilot")
       && invitationsOkay
@@ -887,6 +894,8 @@ function testAppState() {
       && motionSessionPayload.sessionId === "parent_1"
       && !JSON.stringify(motionSessionPayload).includes("children")
       && motionSessionRoundTrip.ok && motionSessionRoundTrip.cards[rasterVisualIds[0]].action === "yes"
+      && motionSessionRoundTrip.reviewed === 1 && motionSessionRoundTrip.total === 59 && !motionSessionRoundTrip.complete
+      && completeMotionSessionRoundTrip.ok && completeMotionSessionRoundTrip.reviewed === 59 && completeMotionSessionRoundTrip.complete
       && !rejectedMotionSession.ok && !rejectedStaleMotionSession.ok
       && motionReviewFiltersOkay
       && MOTION_REVIEW_CRITERIA.parent.length === 3

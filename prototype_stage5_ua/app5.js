@@ -378,7 +378,17 @@ function validateMotionReviewSessionPayload(payload) {
     }
     cards[id] = normalized;
   }
-  return { ok: true, contentVersion: payload.contentVersion, sessionId: meta.id, cards };
+  const allIds = motionReviewCardIds();
+  const reviewed = allIds.filter((id) => motionReviewCardComplete(cards[id], criteria)).length;
+  return {
+    ok: true,
+    contentVersion: payload.contentVersion,
+    sessionId: meta.id,
+    cards,
+    reviewed,
+    total: allIds.length,
+    complete: allIds.length > 0 && reviewed === allIds.length
+  };
 }
 
 // ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
@@ -1567,7 +1577,7 @@ function renderVisualPilot() {
   </details>`;
   const transferHtml = `<section class="motion-session-transfer" aria-labelledby="motionSessionTransferTitle">
     <div><strong id="motionSessionTransferTitle">${reviewerMode ? "Завершити й передати сесію" : "Передати окрему сесію"}</strong><span>Зараз обрано: ${esc(reviewMeta.label)}</span></div>
-    <p>Файл містить лише відповіді та нотатки цієї review-сесії — без профілю дитини й інших учасників.</p>
+    <p>Файл містить лише відповіді та нотатки цієї review-сесії — без профілю дитини й інших учасників. Завершена сесія має містити 59 із 59 перевірених карток; неповний файл імпортується лише як чернетка.</p>
     ${reviewerMode ? `<div class="motion-session-readiness ${reviewSessionStale ? "stale" : reviewerStats.reviewed === reviewerStats.total ? "complete" : ""}"><strong>${reviewSessionStale ? "Сесія застаріла" : reviewerStats.reviewed === reviewerStats.total ? "Сесію завершено" : `${reviewerStats.reviewed} із ${reviewerStats.total} карток`}</strong><span>${reviewSessionStale ? "Ці відповіді не можна передавати як рев’ю поточної версії." : reviewerStats.reviewed === reviewerStats.total ? "Файл готовий до передачі координатору." : "Збережений файл буде чернеткою; до перевірки можна повернутися на цьому пристрої."}</span></div>` : ""}
     <div>
       <button type="button" id="exportMotionSession" class="btn ghost">${reviewSessionStale ? "Зберегти стару копію" : reviewerMode && reviewerStats.reviewed < reviewerStats.total ? "Зберегти чернетку" : "Зберегти сесію"}</button>
@@ -2603,14 +2613,19 @@ document.addEventListener("change", async (e) => {
       const meta = MOTION_REVIEW_SESSIONS.find((session) => session.id === checked.sessionId);
       const existingCards = motionReview.sessions?.[checked.sessionId]?.cards || {};
       const hasExistingAnswers = Object.values(existingCards).some((card) => isRecord(card) && Object.keys(card).length > 0);
-      if (hasExistingAnswers && !confirm(`Імпорт замінить локальні відповіді сесії «${meta.label}». Продовжити?`)) return;
+      const importWarnings = [];
+      if (!checked.complete) importWarnings.push(`Файл є чернеткою: завершено ${checked.reviewed} із ${checked.total} карток.`);
+      if (hasExistingAnswers) importWarnings.push(`Імпорт замінить локальні відповіді сесії «${meta.label}».`);
+      if (importWarnings.length && !confirm(`${importWarnings.join("\n")}\nПродовжити?`)) return;
       motionReview.sessions[checked.sessionId] = { contentVersion: checked.contentVersion, cards: checked.cards };
       motionReview.active = checked.sessionId;
       const saved = saveMotionReview();
       route();
       const nextStatus = document.getElementById("motionReviewTransferStatus");
       if (nextStatus) nextStatus.textContent = saved
-        ? `Сесію «${meta.label}» імпортовано й додано до зведеного gate.`
+        ? checked.complete
+          ? `Завершену сесію «${meta.label}» імпортовано: ${checked.reviewed} із ${checked.total} карток. Дані додано до зведеного gate.`
+          : `Чернетку «${meta.label}» імпортовано: ${checked.reviewed} із ${checked.total} карток. Gate врахує лише завершені картки.`
         : `Сесію «${meta.label}» відкрито, але браузер не зберіг її надовго.`;
     } catch {
       if (status) status.textContent = "Не вдалося прочитати review-сесію.";
