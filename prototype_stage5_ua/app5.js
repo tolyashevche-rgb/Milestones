@@ -162,6 +162,14 @@ function motionReviewSessionStale(meta) {
 function motionReviewCardComplete(card, criteria) {
   return criteria.every((criterion) => ["yes", "no"].includes(card?.[criterion.id]));
 }
+function motionReviewReviewedCount(meta, cards = {}) {
+  const criteria = MOTION_REVIEW_CRITERIA[meta.type];
+  return motionReviewCardIds().filter((id) => motionReviewCardComplete(cards[id], criteria)).length;
+}
+function motionReviewTimestamp(value) {
+  const date = new Date(value || "");
+  return isNaN(date) ? "" : date.toLocaleString("uk-UA", { dateStyle: "medium", timeStyle: "short" });
+}
 function motionReviewProgressText() {
   const { meta } = activeMotionReviewSession();
   const stats = motionReviewSessionStats(meta);
@@ -205,9 +213,16 @@ function motionReviewSessionStats(meta) {
   const data = motionReview.sessions?.[meta.id] || {};
   const cards = data.cards || {};
   const stale = data.contentVersion != null && data.contentVersion !== MOTION_REVIEW_CONTENT_VERSION;
-  const reviewed = stale ? 0 : ids.filter((id) => motionReviewCardComplete(cards[id], criteria)).length;
+  const reviewed = stale ? 0 : motionReviewReviewedCount(meta, cards);
   const issues = ids.reduce((sum, id) => sum + criteria.filter((criterion) => cards[id]?.[criterion.id] === "no").length, 0);
-  return { reviewed, total: ids.length, issues, stale };
+  return {
+    reviewed,
+    total: ids.length,
+    issues,
+    stale,
+    sourceExportedAt: typeof data.sourceExportedAt === "string" ? data.sourceExportedAt : "",
+    importedAt: typeof data.importedAt === "string" ? data.importedAt : ""
+  };
 }
 function motionReviewCheckpoint(meta, data) {
   const stats = motionReviewSessionStats(meta);
@@ -355,6 +370,9 @@ function validateMotionReviewSessionPayload(payload) {
   if (payload.contentVersion !== MOTION_REVIEW_CONTENT_VERSION) {
     return fail("Цю сесію створено для іншої версії Motion Cards. Потрібне повторне рев’ю актуальних карток.");
   }
+  if (typeof payload.exportedAt !== "string" || payload.exportedAt.length > 64 || isNaN(new Date(payload.exportedAt))) {
+    return fail("У файлі немає коректної дати експорту review-сесії.");
+  }
   const meta = MOTION_REVIEW_SESSIONS.find((session) => session.id === payload.sessionId);
   if (!meta) return fail("У файлі вказано невідому review-сесію.");
   const entries = Object.entries(payload.cards);
@@ -379,16 +397,29 @@ function validateMotionReviewSessionPayload(payload) {
     cards[id] = normalized;
   }
   const allIds = motionReviewCardIds();
-  const reviewed = allIds.filter((id) => motionReviewCardComplete(cards[id], criteria)).length;
+  const reviewed = motionReviewReviewedCount(meta, cards);
   return {
     ok: true,
     contentVersion: payload.contentVersion,
     sessionId: meta.id,
+    exportedAt: new Date(payload.exportedAt).toISOString(),
     cards,
     reviewed,
     total: allIds.length,
     complete: allIds.length > 0 && reviewed === allIds.length
   };
+}
+function motionReviewImportWarnings(meta, checked, existingCards = {}) {
+  const warnings = [];
+  const existingReviewed = motionReviewReviewedCount(meta, existingCards);
+  if (!checked.complete) warnings.push(`Файл є чернеткою: завершено ${checked.reviewed} із ${checked.total} карток.`);
+  if (existingReviewed > 0) {
+    if (checked.reviewed < existingReviewed) {
+      warnings.push(`У браузері вже є повніша версія: ${existingReviewed} із ${checked.total} карток. Імпорт зменшить збережений прогрес.`);
+    }
+    warnings.push(`Імпорт замінить локальні відповіді сесії «${meta.label}».`);
+  }
+  return warnings;
 }
 
 // ---- storage (per-child data under children[]; shaped so optional sync can be added later) ----
@@ -1564,7 +1595,7 @@ function renderVisualPilot() {
     `<button type="button" data-review-session="${session.id}" aria-pressed="${session.id === reviewMeta.id}" class="${session.id === reviewMeta.id ? "active" : ""}"${reviewerMode ? " disabled" : ""}>${esc(session.label)}</button>`).join("");
   const overviewHtml = reviewerMode ? "" : `<div class="motion-review-overview" aria-label="Зведення перевірки">
     <div><strong>Зведення всіх сесій</strong><span>Завершено сесій: ${reviewOverview.completeSessions} із ${MOTION_REVIEW_SESSIONS.length} · Відповідей «Ні»: ${reviewOverview.issues}</span></div>
-    <ul>${reviewOverview.sessions.map((item) => `<li><span>${esc(item.meta.label)}</span><b>${item.reviewed}/${item.total}</b>${item.stale ? "<em>Застаріла версія</em>" : item.issues ? `<em>${item.issues} «Ні»</em>` : ""}</li>`).join("")}</ul>
+    <ul>${reviewOverview.sessions.map((item) => `<li><span>${esc(item.meta.label)}</span><b>${item.reviewed}/${item.total}</b>${item.stale ? "<em>Застаріла версія</em>" : item.issues ? `<em>${item.issues} «Ні»</em>` : ""}${item.sourceExportedAt ? `<small>Файл від ${esc(motionReviewTimestamp(item.sourceExportedAt))}${item.importedAt ? ` · імпортовано ${esc(motionReviewTimestamp(item.importedAt))}` : ""}</small>` : ""}</li>`).join("")}</ul>
     <button type="button" id="exportMotionReview" class="btn ghost">Експортувати CSV</button>
     <p>CSV містить критерії, відповіді та нотатки, але не профіль дитини. Перед надсиланням перегляньте нотатки.</p>
     <span id="motionReviewExportStatus" class="sr-status" role="status"></span>
@@ -2612,12 +2643,14 @@ document.addEventListener("change", async (e) => {
       }
       const meta = MOTION_REVIEW_SESSIONS.find((session) => session.id === checked.sessionId);
       const existingCards = motionReview.sessions?.[checked.sessionId]?.cards || {};
-      const hasExistingAnswers = Object.values(existingCards).some((card) => isRecord(card) && Object.keys(card).length > 0);
-      const importWarnings = [];
-      if (!checked.complete) importWarnings.push(`Файл є чернеткою: завершено ${checked.reviewed} із ${checked.total} карток.`);
-      if (hasExistingAnswers) importWarnings.push(`Імпорт замінить локальні відповіді сесії «${meta.label}».`);
+      const importWarnings = motionReviewImportWarnings(meta, checked, existingCards);
       if (importWarnings.length && !confirm(`${importWarnings.join("\n")}\nПродовжити?`)) return;
-      motionReview.sessions[checked.sessionId] = { contentVersion: checked.contentVersion, cards: checked.cards };
+      motionReview.sessions[checked.sessionId] = {
+        contentVersion: checked.contentVersion,
+        cards: checked.cards,
+        sourceExportedAt: checked.exportedAt,
+        importedAt: new Date().toISOString()
+      };
       motionReview.active = checked.sessionId;
       const saved = saveMotionReview();
       route();
