@@ -470,6 +470,8 @@ main {
 .motion-review-invites > p { margin: 0 0 9px; color: var(--muted); font-size: 12px; }
 .motion-review-invites ul { display: grid; gap: 6px; margin: 0 0 9px; padding: 0; list-style: none; }
 .motion-review-invites li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 9px; background: #fff; color: #40504d; font-size: 12px; }
+.motion-review-invites li > span { display: grid; gap: 2px; }
+.motion-review-invites li small { color: var(--muted); font-size: 10px; }
 .motion-review-invites .btn { min-height: 40px; padding: 7px 9px; }
 .motion-session-transfer { display: grid; gap: 9px; margin-top: 13px; padding-top: 13px; border-top: 1px solid #cfe2dd; }
 .motion-session-transfer > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 10px; }

@@ -43,8 +43,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260704-p2-41-r1"), "Stage5 assets must use the P2.41 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260704-p2-41-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260704-p2-42-r1"), "Stage5 assets must use the P2.42 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260704-p2-42-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -63,7 +63,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-41-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-42-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -443,9 +443,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260704-p2-41-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260704-p2-41-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260704-p2-41-r1"), "offline shell must cache the sourced library");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260704-p2-42-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260704-p2-42-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260704-p2-42-r1"), "the sourced library must be cached offline");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -714,6 +714,18 @@ function testAppState() {
     motionReview.view = { status: "all", age: "all" };
     const motionReviewMarkup = renderVisualPilot();
     const expertReviewerUrl = motionReviewReviewerUrl("expert");
+    const parentInvitation = motionReviewInvitationText("parent_1");
+    const expertInvitation = motionReviewInvitationText("expert");
+    const invitationUrls = MOTION_REVIEW_SESSIONS.map((session) => motionReviewReviewerUrl(session.id));
+    const invitationsOkay = new Set(invitationUrls).size === MOTION_REVIEW_SESSIONS.length
+      && parentInvitation.includes("Ваша окрема сесія: Мама 1")
+      && parentInvitation.includes("після кожних 10 карток")
+      && parentInvitation.includes("Після 59 карток")
+      && parentInvitation.includes("JSON-файл")
+      && parentInvitation.includes("reviewSession=parent_1")
+      && expertInvitation.includes("відповідність віку")
+      && expertInvitation.includes(expertReviewerUrl)
+      && motionReviewInvitationText("unknown") === "";
     const parentOneOrder = motionReviewSessionCardIds(MOTION_REVIEW_SESSIONS[0]);
     const parentTwoOrder = motionReviewSessionCardIds(MOTION_REVIEW_SESSIONS[1]);
     const parentThreeOrder = motionReviewSessionCardIds(MOTION_REVIEW_SESSIONS[2]);
@@ -723,7 +735,7 @@ function testAppState() {
       && JSON.stringify([...parentOneOrder].sort()) === JSON.stringify([...rasterVisualIds].sort())
       && new Set(parentOneOrder.slice(0, 5).map((id) => Number(id.slice(4, 7)))).size === 5;
     const coordinatorStore = store;
-    location.search = "?v=p2-41-r1&reviewSession=parent_3";
+    location.search = "?v=p2-42-r1&reviewSession=parent_3";
     location.hash = "#/visual-pilot";
     store = freshStore();
     motionReview.active = "parent_1";
@@ -843,6 +855,7 @@ function testAppState() {
     const motionReviewBaseOkay = motionReviewProgressText() === "Перевірено 1 із 59"
       && (motionReviewMarkup.match(/data-review-session=/g) || []).length === 6
       && (motionReviewMarkup.match(/data-copy-review-link=/g) || []).length === 6
+      && (motionReviewMarkup.match(/Копіювати запрошення/g) || []).length === 6
       && (motionReviewMarkup.match(/class="pilot-review"/g) || []).length === 59
       && motionReviewMarkup.includes("activity-tummy-time-guide-v1.png")
       && motionReviewMarkup.includes("Бібліотека з 59 карток")
@@ -854,8 +867,9 @@ function testAppState() {
       && motionReviewMarkup.includes('id="exportMotionSession"')
       && motionReviewMarkup.includes('id="importMotionSession"')
       && motionReviewMarkup.includes("Передати окрему сесію")
-      && motionReviewMarkup.includes("Посилання для рецензентів")
+      && motionReviewMarkup.includes("Запуск рев’ю: посилання та запрошення")
       && expertReviewerUrl.includes("reviewSession=expert") && expertReviewerUrl.endsWith("#/visual-pilot")
+      && invitationsOkay
       && reviewerRouteBypassOkay && reviewerHistoryOkay && checkpointOkay && reviewerCompletionOkay
       && reviewOrderOkay
       && motionReviewMarkup.includes("Gate публікації")

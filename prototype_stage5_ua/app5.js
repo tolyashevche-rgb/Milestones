@@ -125,6 +125,27 @@ function motionReviewReviewerUrl(sessionId) {
   pairs.push(`reviewSession=${encodeURIComponent(meta.id)}`);
   return `${location.origin || ""}${location.pathname || ""}?${pairs.join("&")}#/visual-pilot`;
 }
+function motionReviewInvitationText(sessionId) {
+  const meta = MOTION_REVIEW_SESSIONS.find((session) => session.id === sessionId);
+  if (!meta) return "";
+  const roleInstruction = meta.type === "expert"
+    ? "Оцініть відповідність віку, підтримку тіла, безпечність предметів і нагляд дорослого."
+    : "Оцініть, чи зрозумілі дія, положення рук дорослого та момент зупинки.";
+  return [
+    "Вітаю! Допоможіть перевірити ілюстрації Milestones.",
+    `Ваша окрема сесія: ${meta.label}.`,
+    roleInstruction,
+    "",
+    "Як пройти перевірку:",
+    "1. Відкрийте персональне посилання на телефоні.",
+    "2. Спочатку дивіться на кожну картку 5–8 секунд, а потім відкривайте критерії.",
+    "3. Прогрес зберігається на цьому пристрої; після кожних 10 карток можна зробити паузу.",
+    "4. Після 59 карток натисніть «Зберегти сесію» та поверніть координатору JSON-файл.",
+    "",
+    `Персональне посилання: ${motionReviewReviewerUrl(meta.id)}`,
+    "Будь ласка, не пересилайте це посилання іншому учаснику."
+  ].join("\n");
+}
 function activeMotionReviewSession() {
   const reviewerSession = motionReviewReviewerSession();
   const meta = reviewerSession || MOTION_REVIEW_SESSIONS.find((session) => session.id === motionReview.active) || MOTION_REVIEW_SESSIONS[0];
@@ -1539,9 +1560,9 @@ function renderVisualPilot() {
     <span id="motionReviewExportStatus" class="sr-status" role="status"></span>
   </div>`;
   const reviewerLinksHtml = reviewerMode ? "" : `<details class="motion-review-invites">
-    <summary>Посилання для рецензентів</summary>
-    <p>Кожне посилання відкриває лише одну заблоковану сесію без профілю дитини та основної навігації.</p>
-    <ul>${MOTION_REVIEW_SESSIONS.map((session) => `<li><span>${esc(session.label)}</span><a class="btn ghost" href="${esc(motionReviewReviewerUrl(session.id))}" target="_blank" rel="noopener">Відкрити</a><button type="button" class="btn ghost" data-copy-review-link="${session.id}">Копіювати</button></li>`).join("")}</ul>
+    <summary>Запуск рев’ю: посилання та запрошення</summary>
+    <p>Надішліть кожному учаснику лише його готове запрошення. Воно містить персональне посилання, короткий протокол, паузи та інструкцію повернути JSON-файл.</p>
+    <ul>${MOTION_REVIEW_SESSIONS.map((session) => `<li><span><b>${esc(session.label)}</b><small>${session.type === "expert" ? "перевірка безпеки" : "перевірка зрозумілості"}</small></span><a class="btn ghost" href="${esc(motionReviewReviewerUrl(session.id))}" target="_blank" rel="noopener">Відкрити</a><button type="button" class="btn ghost" data-copy-review-link="${session.id}">Копіювати запрошення</button></li>`).join("")}</ul>
     <p id="motionReviewLinkStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
   </details>`;
   const transferHtml = `<section class="motion-session-transfer" aria-labelledby="motionSessionTransferTitle">
@@ -2164,8 +2185,8 @@ document.addEventListener("click", async (e) => {
     if (!meta) return;
     try {
       if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");
-      await navigator.clipboard.writeText(motionReviewReviewerUrl(meta.id));
-      if (status) status.textContent = `Посилання для «${meta.label}» скопійовано.`;
+      await navigator.clipboard.writeText(motionReviewInvitationText(meta.id));
+      if (status) status.textContent = `Запрошення для «${meta.label}» скопійовано.`;
     } catch {
       if (status) status.textContent = "Не вдалося скопіювати. Відкрийте посилання й скопіюйте адресу браузера.";
     }
