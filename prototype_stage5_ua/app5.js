@@ -70,6 +70,7 @@ const MOTION_REVIEW_SESSION_VERSION = 2;
 const MOTION_REVIEW_STORE_VERSION = 2;
 const MOTION_REVIEW_CONTENT_VERSION = "motion-cards-2026-07-02-r1";
 const MOTION_REVIEW_ORDER_VERSION = "balanced-session-order-v1";
+const MOTION_REVIEW_CHECKPOINT_SIZE = 10;
 const MAX_MOTION_REVIEW_SESSION_BYTES = 512 * 1024;
 const BACKUP_SCHEMA = "milestones.stage5.ua.backup";
 const BACKUP_VERSION = 1;
@@ -186,6 +187,15 @@ function motionReviewSessionStats(meta) {
   const reviewed = stale ? 0 : ids.filter((id) => motionReviewCardComplete(cards[id], criteria)).length;
   const issues = ids.reduce((sum, id) => sum + criteria.filter((criterion) => cards[id]?.[criterion.id] === "no").length, 0);
   return { reviewed, total: ids.length, issues, stale };
+}
+function motionReviewCheckpoint(meta, data) {
+  const stats = motionReviewSessionStats(meta);
+  const reviewed = stats.reviewed;
+  const due = !stats.stale && reviewed > 0 && reviewed < stats.total
+    && reviewed % MOTION_REVIEW_CHECKPOINT_SIZE === 0
+    && data.checkpointAcknowledged !== reviewed;
+  const nextAt = Math.min(stats.total, (Math.floor(reviewed / MOTION_REVIEW_CHECKPOINT_SIZE) + 1) * MOTION_REVIEW_CHECKPOINT_SIZE);
+  return { due, reviewed, nextAt, remaining: Math.max(0, nextAt - reviewed) };
 }
 function motionReviewOverview() {
   const sessions = MOTION_REVIEW_SESSIONS.map((meta) => ({ meta, ...motionReviewSessionStats(meta) }));
@@ -1503,7 +1513,9 @@ function renderVisualPilot() {
   const matchingEntries = motionReviewEntries(reviewMeta, reviewData);
   const revisitId = reviewerMode && ACTIVITY_RASTER_GUIDES[reviewData.revisitId] ? reviewData.revisitId : "";
   const revisitEntry = revisitId ? [revisitId, ACTIVITY_RASTER_GUIDES[revisitId]] : null;
-  const filteredEntries = reviewerMode ? (revisitEntry ? [revisitEntry] : matchingEntries.slice(0, 1)) : matchingEntries;
+  const reviewCheckpoint = motionReviewCheckpoint(reviewMeta, reviewData);
+  const checkpointDue = reviewerMode && !revisitId && reviewCheckpoint.due;
+  const filteredEntries = reviewerMode ? (checkpointDue ? [] : revisitEntry ? [revisitEntry] : matchingEntries.slice(0, 1)) : matchingEntries;
   const filterCounts = motionReviewStatusCounts(reviewMeta, reviewData);
   const lastReviewedId = reviewerMode && ACTIVITY_RASTER_GUIDES[reviewData.lastReviewedId] ? reviewData.lastReviewedId : "";
   const lastReviewedAge = lastReviewedId ? Number(lastReviewedId.slice(4, 7)) : 0;
@@ -1511,6 +1523,12 @@ function renderVisualPilot() {
   const reviewerHistoryHtml = reviewerMode && !reviewSessionStale && (revisitId || lastReviewedId)
     ? `<div class="motion-reviewer-history"><span>${revisitId ? "Редагуєте попередню картку" : `Остання: ${esc(lastReviewedActivity?.title || lastReviewedId)}`}</span><button type="button" class="btn ghost" data-reviewer-history="${revisitId ? "queue" : "previous"}">${revisitId ? "Повернутися до черги" : "Виправити попередню відповідь"}</button></div>`
     : "";
+  const checkpointHtml = checkpointDue ? `<section class="motion-review-checkpoint" aria-labelledby="motionReviewCheckpointTitle">
+    <span>Прогрес збережено</span>
+    <h2 id="motionReviewCheckpointTitle">${reviewCheckpoint.reviewed} карток готово — час перепочити</h2>
+    <p>Коротка пауза допомагає дивитися на наступні ілюстрації свіжим поглядом. Можна закрити сторінку й повернутися пізніше або продовжити зараз.</p>
+    <button type="button" id="continueMotionReviewCheckpoint" class="btn">Продовжити перевірку</button>
+  </section>` : "";
   const sessionButtons = (reviewerMode ? [reviewMeta] : MOTION_REVIEW_SESSIONS).map((session) =>
     `<button type="button" data-review-session="${session.id}" aria-pressed="${session.id === reviewMeta.id}" class="${session.id === reviewMeta.id ? "active" : ""}"${reviewerMode ? " disabled" : ""}>${esc(session.label)}</button>`).join("");
   const overviewHtml = reviewerMode ? "" : `<div class="motion-review-overview" aria-label="Зведення перевірки">
@@ -1603,7 +1621,7 @@ function renderVisualPilot() {
       ${reviewSessionStale ? `<aside class="motion-review-version-warning"><strong>Картки змінилися після цієї перевірки</strong><p>Старі відповіді збережено для історії, але вони не входять до release-gate.</p><button type="button" id="restartMotionReviewVersion" class="btn">Почати рев’ю актуальної версії</button></aside>` : ""}
       <section class="motion-review-filters" aria-labelledby="motionReviewFiltersTitle">
         <div><strong id="motionReviewFiltersTitle">${reviewerMode ? "Картка у фокусі" : "Коротка review-партія"}</strong><span id="motionReviewShown">${reviewerMode ? `У черзі ${matchingEntries.length}` : `Показано ${filteredEntries.length} із ${visualCount}`}</span></div>
-        ${reviewerMode ? '<p class="motion-reviewer-queue-note">Лише неперевірені · віки чергуються · порядок збережеться</p>' : `<span class="motion-filter-label">Вік</span>
+        ${reviewerMode ? `<p class="motion-reviewer-queue-note">${checkpointDue ? "Рекомендована пауза · прогрес уже збережено" : `Лише неперевірені · віки чергуються · до паузи ${reviewCheckpoint.remaining} · порядок збережеться`}</p>` : `<span class="motion-filter-label">Вік</span>
         <div class="motion-filter-row" role="group" aria-label="Фільтр за віком">${MOTION_REVIEW_AGE_FILTERS.map((age) => `<button type="button" data-review-age-filter="${age}" aria-pressed="${reviewView.age === age}" class="${reviewView.age === age ? "active" : ""}">${age === "all" ? "Усі віки" : `${age} міс`}</button>`).join("")}</div>
         <span class="motion-filter-label">Статус</span>
         <div class="motion-filter-row" role="group" aria-label="Фільтр за статусом">${MOTION_REVIEW_STATUS_FILTERS.map((filter) => `<button type="button" data-review-status-filter="${filter.id}" aria-pressed="${reviewView.status === filter.id}" class="${reviewView.status === filter.id ? "active" : ""}">${esc(filter.label)} <b>${filterCounts[filter.id]}</b></button>`).join("")}</div>`}
@@ -1614,7 +1632,7 @@ function renderVisualPilot() {
       ${reviewerMode ? "" : transferHtml}
       ${releaseGateHtml}
     </section>
-    <div class="pilot-gallery${reviewerMode ? " reviewer-focus" : ""}">${gallery || `<div class="motion-review-empty"><strong>${reviewerMode && reviewView.status === "pending" && reviewerStats.reviewed === reviewerStats.total ? "Сесію повністю перевірено" : "У цій партії карток немає"}</strong><p>${reviewerMode && reviewView.status === "pending" && reviewerStats.reviewed === reviewerStats.total ? "Збережіть завершену сесію та передайте файл координатору." : reviewView.status === "issues" ? "Тут ще немає відповідей «Ні»." : "Оберіть інший вік або статус."}</p></div>`}</div>
+    <div class="pilot-gallery${reviewerMode ? " reviewer-focus" : ""}">${checkpointHtml || gallery || `<div class="motion-review-empty"><strong>${reviewerMode && reviewView.status === "pending" && reviewerStats.reviewed === reviewerStats.total ? "Сесію повністю перевірено" : "У цій партії карток немає"}</strong><p>${reviewerMode && reviewView.status === "pending" && reviewerStats.reviewed === reviewerStats.total ? "Збережіть завершену сесію та передайте файл координатору." : reviewView.status === "issues" ? "Тут ще немає відповідей «Ні»." : "Оберіть інший вік або статус."}</p></div>`}</div>
     ${reviewerMode ? transferHtml : ""}
   </section>`;
 }
@@ -2184,6 +2202,17 @@ document.addEventListener("click", async (e) => {
     saveMotionReview();
     route();
     document.querySelector(`[data-review-session="${requested}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  if (e.target.id === "continueMotionReviewCheckpoint") {
+    const reviewer = motionReviewReviewerSession();
+    if (!reviewer) return;
+    const { meta, data } = activeMotionReviewSession();
+    const checkpoint = motionReviewCheckpoint(meta, data);
+    if (!checkpoint.due) return;
+    data.checkpointAcknowledged = checkpoint.reviewed;
+    saveMotionReview();
+    route();
     return;
   }
   const motionReviewButton = e.target.closest("[data-motion-review]");

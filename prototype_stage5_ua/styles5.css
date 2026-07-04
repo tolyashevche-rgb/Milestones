@@ -441,6 +441,11 @@ main {
 .motion-review-filters > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .motion-review-filters > div:first-child span { color: var(--muted); font-size: 12px; }
 .motion-reviewer-queue-note { margin: 0; color: #40504d; font-size: 12px; }
+.motion-review-checkpoint { display: grid; justify-items: center; gap: 9px; grid-column: 1 / -1; padding: 28px 20px; border: 1px solid #b9d8d0; border-radius: 18px; background: linear-gradient(145deg, #f5faf8, var(--mint)); text-align: center; }
+.motion-review-checkpoint span { color: var(--teal-dark); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.motion-review-checkpoint h2 { margin: 0; color: var(--teal-dark); font-size: 21px; }
+.motion-review-checkpoint p { max-width: 430px; margin: 0; color: #40504d; font-size: 13px; line-height: 1.5; }
+.motion-review-checkpoint .btn { margin-top: 4px; }
 .motion-reviewer-history { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding: 9px 10px; border: 1px solid #cfe2dd; border-radius: 10px; background: #fff; }
 .motion-reviewer-history span { color: #40504d; font-size: 12px; }
 .motion-reviewer-history .btn { flex: 0 0 auto; min-height: 40px; padding: 7px 9px; }
