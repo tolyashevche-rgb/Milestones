@@ -69,6 +69,7 @@ const MOTION_REVIEW_SESSION_SCHEMA = "milestones.motion-review-session.ua";
 const MOTION_REVIEW_SESSION_VERSION = 2;
 const MOTION_REVIEW_STORE_VERSION = 2;
 const MOTION_REVIEW_CONTENT_VERSION = "motion-cards-2026-07-02-r1";
+const MOTION_REVIEW_ORDER_VERSION = "balanced-session-order-v1";
 const MAX_MOTION_REVIEW_SESSION_BYTES = 512 * 1024;
 const BACKUP_SCHEMA = "milestones.stage5.ua.backup";
 const BACKUP_VERSION = 1;
@@ -147,6 +148,35 @@ function motionReviewProgressText() {
 function motionReviewCardIds() {
   return typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES) : [];
 }
+function motionReviewShuffledIds(ids, seedText) {
+  let state = 2166136261;
+  for (let index = 0; index < seedText.length; index += 1) {
+    state ^= seedText.charCodeAt(index);
+    state = Math.imul(state, 16777619) >>> 0;
+  }
+  const shuffled = [...ids];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    const swapIndex = state % (index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+function motionReviewSessionCardIds(meta) {
+  const ages = MOTION_REVIEW_AGE_FILTERS.filter((age) => age !== "all");
+  const sessionIndex = Math.max(0, MOTION_REVIEW_SESSIONS.findIndex((session) => session.id === meta.id));
+  const rotatedAges = ages.map((_, index) => ages[(index + sessionIndex) % ages.length]);
+  const buckets = Object.fromEntries(ages.map((age) => [age, motionReviewShuffledIds(
+    motionReviewCardIds().filter((id) => Number(id.slice(4, 7)) === Number(age)),
+    `${MOTION_REVIEW_ORDER_VERSION}:${meta.id}:${age}`
+  )]));
+  const ordered = [];
+  const longest = Math.max(...ages.map((age) => buckets[age].length));
+  for (let row = 0; row < longest; row += 1) {
+    rotatedAges.forEach((age) => { if (buckets[age][row]) ordered.push(buckets[age][row]); });
+  }
+  return ordered;
+}
 function motionReviewSessionStats(meta) {
   const ids = motionReviewCardIds();
   const criteria = MOTION_REVIEW_CRITERIA[meta.type];
@@ -198,7 +228,9 @@ function motionReviewEntries(meta, data) {
   const criteria = MOTION_REVIEW_CRITERIA[meta.type];
   const view = motionReviewView();
   const stale = data.contentVersion !== MOTION_REVIEW_CONTENT_VERSION;
-  return (typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.entries(ACTIVITY_RASTER_GUIDES) : []).filter(([id]) => {
+  const reviewerSession = motionReviewReviewerSession();
+  const ids = reviewerSession?.id === meta.id ? motionReviewSessionCardIds(meta) : motionReviewCardIds();
+  return ids.map((id) => [id, ACTIVITY_RASTER_GUIDES[id]]).filter(([id]) => {
     if (view.age !== "all" && Number(id.slice(4, 7)) !== Number(view.age)) return false;
     const card = data.cards[id] || {};
     if (view.status === "pending") return stale || !motionReviewCardComplete(card, criteria);
@@ -277,6 +309,7 @@ function motionReviewSessionPayload(sessionId = motionReview.active) {
     schema: MOTION_REVIEW_SESSION_SCHEMA,
     version: MOTION_REVIEW_SESSION_VERSION,
     contentVersion: session.contentVersion || MOTION_REVIEW_CONTENT_VERSION,
+    reviewOrderVersion: MOTION_REVIEW_ORDER_VERSION,
     sessionId: meta.id,
     exportedAt: new Date().toISOString(),
     cards: JSON.parse(JSON.stringify(cards))
@@ -1570,7 +1603,7 @@ function renderVisualPilot() {
       ${reviewSessionStale ? `<aside class="motion-review-version-warning"><strong>Картки змінилися після цієї перевірки</strong><p>Старі відповіді збережено для історії, але вони не входять до release-gate.</p><button type="button" id="restartMotionReviewVersion" class="btn">Почати рев’ю актуальної версії</button></aside>` : ""}
       <section class="motion-review-filters" aria-labelledby="motionReviewFiltersTitle">
         <div><strong id="motionReviewFiltersTitle">${reviewerMode ? "Картка у фокусі" : "Коротка review-партія"}</strong><span id="motionReviewShown">${reviewerMode ? `У черзі ${matchingEntries.length}` : `Показано ${filteredEntries.length} із ${visualCount}`}</span></div>
-        ${reviewerMode ? '<p class="motion-reviewer-queue-note">Усі віки · лише неперевірені картки</p>' : `<span class="motion-filter-label">Вік</span>
+        ${reviewerMode ? '<p class="motion-reviewer-queue-note">Лише неперевірені · віки чергуються · порядок збережеться</p>' : `<span class="motion-filter-label">Вік</span>
         <div class="motion-filter-row" role="group" aria-label="Фільтр за віком">${MOTION_REVIEW_AGE_FILTERS.map((age) => `<button type="button" data-review-age-filter="${age}" aria-pressed="${reviewView.age === age}" class="${reviewView.age === age ? "active" : ""}">${age === "all" ? "Усі віки" : `${age} міс`}</button>`).join("")}</div>
         <span class="motion-filter-label">Статус</span>
         <div class="motion-filter-row" role="group" aria-label="Фільтр за статусом">${MOTION_REVIEW_STATUS_FILTERS.map((filter) => `<button type="button" data-review-status-filter="${filter.id}" aria-pressed="${reviewView.status === filter.id}" class="${reviewView.status === filter.id ? "active" : ""}">${esc(filter.label)} <b>${filterCounts[filter.id]}</b></button>`).join("")}</div>`}
