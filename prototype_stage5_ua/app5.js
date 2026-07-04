@@ -233,12 +233,26 @@ function motionReviewCheckpoint(meta, data) {
   const nextAt = Math.min(stats.total, (Math.floor(reviewed / MOTION_REVIEW_CHECKPOINT_SIZE) + 1) * MOTION_REVIEW_CHECKPOINT_SIZE);
   return { due, reviewed, nextAt, remaining: Math.max(0, nextAt - reviewed) };
 }
+function motionReviewCollectionState(item) {
+  if (item.stale) return { id: "stale", label: "Застаріла версія · потрібне повторне рев’ю" };
+  if (item.importedAt && item.total > 0 && item.reviewed === item.total) return { id: "complete", label: `Отримано ${item.reviewed}/${item.total}` };
+  if (item.importedAt) return { id: "draft", label: `Отримано чернетку ${item.reviewed}/${item.total}` };
+  if (item.reviewed > 0) return { id: "local", label: `Локально ${item.reviewed}/${item.total} · файл ще не отримано` };
+  return { id: "waiting", label: "Очікуємо файл" };
+}
 function motionReviewOverview() {
-  const sessions = MOTION_REVIEW_SESSIONS.map((meta) => ({ meta, ...motionReviewSessionStats(meta) }));
+  const sessions = MOTION_REVIEW_SESSIONS.map((meta) => {
+    const item = { meta, ...motionReviewSessionStats(meta) };
+    return { ...item, collection: motionReviewCollectionState(item) };
+  });
   return {
     sessions,
     completeSessions: sessions.filter((item) => item.total > 0 && item.reviewed === item.total).length,
-    issues: sessions.reduce((sum, item) => sum + item.issues, 0)
+    issues: sessions.reduce((sum, item) => sum + item.issues, 0),
+    collectionComplete: sessions.filter((item) => item.collection.id === "complete").length,
+    collectionDrafts: sessions.filter((item) => item.collection.id === "draft").length,
+    collectionWaiting: sessions.filter((item) => ["waiting", "local"].includes(item.collection.id)).length,
+    collectionStale: sessions.filter((item) => item.collection.id === "stale").length
   };
 }
 function motionReviewReleaseGate() {
@@ -1595,7 +1609,13 @@ function renderVisualPilot() {
     `<button type="button" data-review-session="${session.id}" aria-pressed="${session.id === reviewMeta.id}" class="${session.id === reviewMeta.id ? "active" : ""}"${reviewerMode ? " disabled" : ""}>${esc(session.label)}</button>`).join("");
   const overviewHtml = reviewerMode ? "" : `<div class="motion-review-overview" aria-label="Зведення перевірки">
     <div><strong>Зведення всіх сесій</strong><span>Завершено сесій: ${reviewOverview.completeSessions} із ${MOTION_REVIEW_SESSIONS.length} · Відповідей «Ні»: ${reviewOverview.issues}</span></div>
-    <ul>${reviewOverview.sessions.map((item) => `<li><span>${esc(item.meta.label)}</span><b>${item.reviewed}/${item.total}</b>${item.stale ? "<em>Застаріла версія</em>" : item.issues ? `<em>${item.issues} «Ні»</em>` : ""}${item.sourceExportedAt ? `<small>Файл від ${esc(motionReviewTimestamp(item.sourceExportedAt))}${item.importedAt ? ` · імпортовано ${esc(motionReviewTimestamp(item.importedAt))}` : ""}</small>` : ""}</li>`).join("")}</ul>
+    <div class="motion-collection-stats" aria-label="Стан збору файлів">
+      <div><b>${reviewOverview.collectionComplete}</b><span>отримано 59/59</span></div>
+      <div><b>${reviewOverview.collectionDrafts}</b><span>чернетки</span></div>
+      <div><b>${reviewOverview.collectionWaiting}</b><span>очікуємо</span></div>
+      <div><b>${reviewOverview.collectionStale}</b><span>повторити</span></div>
+    </div>
+    <ul>${reviewOverview.sessions.map((item) => `<li><span>${esc(item.meta.label)}</span><b>${item.reviewed}/${item.total}</b><em class="collection-${item.collection.id}">${esc(item.collection.label)}</em>${item.issues ? `<em>${item.issues} «Ні»</em>` : ""}${item.sourceExportedAt ? `<small>Файл від ${esc(motionReviewTimestamp(item.sourceExportedAt))}${item.importedAt ? ` · імпортовано ${esc(motionReviewTimestamp(item.importedAt))}` : ""}</small>` : ""}</li>`).join("")}</ul>
     <button type="button" id="exportMotionReview" class="btn ghost">Експортувати CSV</button>
     <p>CSV містить критерії, відповіді та нотатки, але не профіль дитини. Перед надсиланням перегляньте нотатки.</p>
     <span id="motionReviewExportStatus" class="sr-status" role="status"></span>

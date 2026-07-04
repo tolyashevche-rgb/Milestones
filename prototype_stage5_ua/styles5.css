@@ -459,10 +459,16 @@ main {
 .motion-review-overview { display: grid; gap: 10px; margin-top: 13px; padding-top: 13px; border-top: 1px solid #cfe2dd; }
 .motion-review-overview > div { display: grid; gap: 3px; }
 .motion-review-overview > div span { color: var(--muted); font-size: 12px; }
+.motion-collection-stats { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px !important; }
+.motion-collection-stats > div { display: grid; gap: 2px; padding: 8px; border-radius: 9px; background: #fff; text-align: center; }
+.motion-collection-stats b { color: var(--teal-dark); font-size: 18px; }
+.motion-collection-stats span { font-size: 10px !important; }
 .motion-review-overview ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
 .motion-review-overview li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 7px; padding: 7px 9px; border-radius: 9px; background: #fff; color: #40504d; font-size: 12px; }
 .motion-review-overview li b { color: var(--teal-dark); }
 .motion-review-overview li em { grid-column: 1 / -1; color: #855021; font-size: 11px; font-style: normal; }
+.motion-review-overview li em.collection-complete { color: var(--teal-dark); font-weight: 750; }
+.motion-review-overview li em.collection-waiting, .motion-review-overview li em.collection-local { color: var(--muted); }
 .motion-review-overview li small { grid-column: 1 / -1; color: var(--muted); font-size: 10px; }
 .motion-review-overview .btn { width: fit-content; min-height: 44px; }
 .motion-review-overview > p { margin: 0; }
@@ -525,6 +531,7 @@ main {
   .pilot-legend { grid-template-columns: 1fr; }
   .pilot-gallery { grid-template-columns: 1fr; }
   .motion-review-overview ul { grid-template-columns: 1fr; }
+  .motion-collection-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .motion-review-invites li { grid-template-columns: 1fr 1fr; }
   .motion-review-invites li span { grid-column: 1 / -1; }
   .motion-reviewer-history { align-items: stretch; flex-direction: column; }
