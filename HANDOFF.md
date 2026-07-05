@@ -194,7 +194,24 @@ successful recovery clears it, and erase/restore cannot report false persistence
 
 ## Work log (newest first)
 
-### 2026-07-05 — current-build and audit-scope hardening
+### 2026-07-05 — narrow-screen verification and real-device handoff
+- Rechecked `#/home`, `#/survey`, `#/program`, `#/library`, and `#/visual-pilot` with a mobile
+  viewport. At the resulting 304–319 px content width, root/body/main had no horizontal overflow;
+  the Library topic row is the only intentional local horizontal scroller. The earlier clipped
+  screenshot was a capture artifact, so no defensive layout change was added.
+- Added `docs/real_device_smoke_test_ua.md` for the remaining physical Android/iPhone checks:
+  standalone install, offline reopen, local persistence, safe area, backup/restore, and update UX.
+
+### 2026-07-05 — P2.45 re-audit vs competitors (docs only, no code)
+- Ran the CURRENT_BUILD preflight (commit `066b46b`, marker `20260704-p2-45-r1` in
+  index.html + sw.js, `tools/test_p1_qa.js` passed) and re-audited the current UI against the
+  earlier competitor/UX audit that had accidentally targeted the stale `D:\Milestones` copy.
+- Result in `docs/p245_reaudit_vs_competitors_ua.md`: all critical findings (survey wall,
+  small targets, destructive links on Home, alarm copy, Unicode icons, no PWA, no warmth)
+  are closed by P2.1–P2.45; remaining recommendations, in order: dark theme for night use,
+  print/PDF of the specialist summary, optional domain colors, optional TTS. Two watch items
+  for the parent test: discoverability of Історія/Бібліотека behind «Ще корисне», plus the
+  separate physical-device smoke test documented after the responsive browser check.
 - Declared Stage 5 UA / P2.45 and `prototype_stage5_ua/index.html` as the sole current product UI
   in both human-readable and machine-readable manifests. Renamed both Stage 4 entry pages to
   `legacy-reference.html`, added visible archive warnings, and retained only the Stage 4 UA data
