@@ -1,5 +1,8 @@
 # Developmental Memory Plan
 
+> **Historical Stage 4 design note.** Current product and audit scope:
+> [../CURRENT_BUILD.md](../CURRENT_BUILD.md).
+
 Version: Stage 4 addition
 Date: 2026-05-05
 
@@ -123,7 +126,6 @@ The Stage 4 prototype now stores locally:
 
 Files:
 
-- `prototype_stage4/index.html`
+- `prototype_stage4/legacy-reference.html` (historical reference)
 - `prototype_stage4/app.js`
 - `prototype_stage4/styles.css`
-

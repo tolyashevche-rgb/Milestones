@@ -19,6 +19,29 @@ function contentContext() {
   return context;
 }
 
+function testCurrentBuildBoundary() {
+  const currentBuild = read("CURRENT_BUILD.md");
+  const auditScope = JSON.parse(read("audit-scope.json"));
+  const readme = read("README.md");
+  const agentGuide = read("AGENT.md");
+  const stage4Legacy = read("prototype_stage4/legacy-reference.html");
+  const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
+
+  assert.equal(auditScope.release, "P2.45", "audit scope must identify the current release");
+  assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
+  assert.deepEqual(auditScope.runtimeDependencies, [
+    "prototype_stage4_ua/data_ua.js",
+    "prototype_stage4_ua/engine.js"
+  ], "only Stage 4 UA data and engine may be current runtime dependencies");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.45"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.45"), "README must lead with the current build boundary");
+  assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
+  assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
+  assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
+  assert.ok(stage4Legacy.includes("not the current product"), "legacy EN page must show a visible archive warning");
+  assert.ok(stage4UaLegacy.includes("не актуальний продукт"), "legacy UA page must show a visible archive warning");
+}
+
 function testContentAndEngine() {
   const stage5Index = read("prototype_stage5_ua/index.html");
   const stage5Styles = read("prototype_stage5_ua/styles5.css");
@@ -1145,6 +1168,7 @@ function testAppState() {
 }
 
 (async () => {
+  testCurrentBuildBoundary();
   testContentAndEngine();
   testAppState();
   testStorageFailureRecovery();

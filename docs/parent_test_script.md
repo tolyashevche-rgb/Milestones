@@ -30,7 +30,7 @@ Minimum first round:
 
 Show the static prototype:
 
-`prototype_stage4/index.html`
+`prototype_stage4/legacy-reference.html` (historical script only)
 
 Ask the tester to think out loud. Do not explain the product before they use it.
 

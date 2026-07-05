@@ -1,0 +1,25 @@
+{
+  "schema": "milestones.audit-scope.v1",
+  "release": "P2.45",
+  "assetVersion": "20260704-p2-45-r1",
+  "primaryEntryPoint": "prototype_stage5_ua/index.html",
+  "currentUiRoots": [
+    "prototype_stage5_ua"
+  ],
+  "runtimeDependencies": [
+    "prototype_stage4_ua/data_ua.js",
+    "prototype_stage4_ua/engine.js"
+  ],
+  "legacyUiEntryPoints": [
+    "prototype_stage4/legacy-reference.html",
+    "prototype_stage4_ua/legacy-reference.html"
+  ],
+  "excludeFromCurrentProductAudit": [
+    "archive",
+    "tmp",
+    "_tmp_*",
+    "*.zip",
+    "historical review baselines"
+  ],
+  "qaCommand": "node tools/test_p1_qa.js"
+}

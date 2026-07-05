@@ -1,5 +1,8 @@
 # Mobile Access Plan
 
+> **Historical Stage 4 testing plan.** It does not describe the current PWA interface.
+> Start with [../CURRENT_BUILD.md](../CURRENT_BUILD.md).
+
 Version: Stage 4 Ukrainian testing
 Date: 2026-05-05
 
@@ -7,11 +10,11 @@ Date: 2026-05-05
 
 For the first validation round with Ukrainian-speaking parents, use the Ukrainian prototype as the main testing artifact:
 
-- `prototype_stage4_ua/index.html`
+- `prototype_stage4_ua/legacy-reference.html` (historical reference only)
 
 Keep the English prototype as the EU/US reference:
 
-- `prototype_stage4/index.html`
+- `prototype_stage4/legacy-reference.html` (historical reference only)
 
 ## Language Strategy
 
@@ -36,7 +39,7 @@ Works if you manually transfer the folder to the phone.
 
 Files needed:
 
-- `prototype_stage4_ua/index.html`
+- `prototype_stage5_ua/index.html`
 - `prototype_stage4_ua/app.js`
 - `prototype_stage4/styles.css`
 
@@ -99,4 +102,3 @@ Before interviews, check on a real phone:
 Say this before testing:
 
 > Це прототип. Ваші позначки зберігаються тільки у браузері на цьому пристрої. Це не медична карта, не діагностика і не скринінг.
-

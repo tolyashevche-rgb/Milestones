@@ -1,5 +1,10 @@
 # AGENT.md — guide for AI agents working in this repo
 
+> **Mandatory current-build check:** before any product, feature, UI/UX, accessibility,
+> or content-placement audit, read [CURRENT_BUILD.md](CURRENT_BUILD.md) and
+> [audit-scope.json](audit-scope.json). Audit only `prototype_stage5_ua/index.html`.
+> Stage 4 HTML/app files are legacy references and must not be treated as current UI.
+
 Read this before changing anything. It tells you what this product is, the rules it
 must never break, where things live, and how to make a change safely. For **current state +
 what's next** (to resume a session or switch assistants), start with [HANDOFF.md](HANDOFF.md).
@@ -48,9 +53,9 @@ professional. This positioning is the product's main asset — do not erode it.
 - **Logic:** `engine.js` — pure, no DOM, language-independent. `buildProfile` →
   `buildProgram`. **Both copies must stay identical** (see [docs/router_logic.md](docs/router_logic.md)).
   If you change one, change the other.
-- **UI:** `app.js` + `index.html` + shared `prototype_stage4/styles.css`. The UA prototype
-  links the EN stylesheet.
-- **`prototype_stage5_ua/`** is the new guided redesign (bottom-nav app shell): `index.html`
+- **Legacy UI reference:** Stage 4 retains `app.js`, `legacy-reference.html`, and the shared
+  `prototype_stage4/styles.css` for history only. It is not a current audit target.
+- **`prototype_stage5_ua/`** is the current guided app (bottom-nav app shell): `index.html`
   + `app5.js` + `styles5.css`. It **reuses** stage4_ua's `data_ua.js` + `engine.js` via
   relative `<script src>` — no logic/data is duplicated. `app5.js` is presentation +
   navigation only; all developmental logic stays in `engine.js`. Storage is `localStorage`

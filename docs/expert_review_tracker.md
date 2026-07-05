@@ -1,5 +1,8 @@
 # Expert Review Tracker — Stage 5
 
+> **Tracker initialized against the frozen P2.16 baseline.** Reconfirm scope against
+> [../CURRENT_BUILD.md](../CURRENT_BUILD.md) before starting a new P2.45 review round.
+
 Version: Stage 5
 Started: 2026-06-16
 Interface review baseline: Stage 5 UA / P2.16 (2026-06-30)

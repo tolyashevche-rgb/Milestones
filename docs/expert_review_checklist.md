@@ -1,5 +1,8 @@
 # Expert Review Checklist: CDC x Europe Milestones
 
+> **Frozen P2.16 review baseline.** This checklist remains an historical validation record;
+> it must not be used to infer the current UI. Current build: [../CURRENT_BUILD.md](../CURRENT_BUILD.md).
+
 Version: Stage 5 / P2.16 review baseline
 App commit: `74d7f11`
 Date: 2026-06-29

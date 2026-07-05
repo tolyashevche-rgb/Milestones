@@ -1,5 +1,8 @@
 # Action Plan: CDC x Europe Milestones
 
+> **Historical Stage 4 plan.** Do not use this file to identify the current interface or
+> audit target. See [../CURRENT_BUILD.md](../CURRENT_BUILD.md) for Stage 5 UA / P2.45.
+
 Дата старту: 2026-05-05
 
 ## Current Stage
@@ -34,10 +37,10 @@ Goal: перетворити review-ready content pack у перший клік�
   - `parent_test_script.md`
   - `developmental_memory_plan.md`
   - `mobile_access_plan.md`
-  - `prototype_stage4/index.html`
+  - `prototype_stage4/legacy-reference.html` (historical reference)
   - `prototype_stage4/styles.css`
   - `prototype_stage4/app.js`
-  - `prototype_stage4_ua/index.html`
+  - `prototype_stage4_ua/legacy-reference.html` (historical reference)
   - `prototype_stage4_ua/app.js`
 
 ## Stage 1 Deliverables
@@ -118,8 +121,8 @@ Stage 3 is considered complete when:
 | Parent test script | Draft done | `parent_test_script.md` |
 | Developmental memory plan | Draft done | `developmental_memory_plan.md` |
 | Mobile access plan | Draft done | `mobile_access_plan.md` |
-| Clickable static prototype | Draft done | `prototype_stage4/index.html` |
-| Ukrainian clickable prototype | Draft done | `prototype_stage4_ua/index.html` |
+| Clickable static prototype | Historical draft | `prototype_stage4/legacy-reference.html` |
+| Ukrainian clickable prototype | Historical draft | `prototype_stage4_ua/legacy-reference.html` |
 | Prototype styles | Draft done | `prototype_stage4/styles.css` |
 | Prototype interactions | Draft done | `prototype_stage4/app.js` |
 
@@ -153,8 +156,8 @@ Stage 5 should produce expert and parent feedback integration:
 
 First parent validation should be Ukrainian-first:
 
-- use `prototype_stage4_ua/index.html` for Ukrainian-speaking parent interviews;
-- keep `prototype_stage4/index.html` as English/EU reference;
+- use `prototype_stage5_ua/index.html` for Ukrainian-speaking parent interviews;
+- keep `prototype_stage4/legacy-reference.html` as an English/EU historical reference;
 - later combine into one bilingual product after testing the structure.
 
 ## Stage 2 First Build

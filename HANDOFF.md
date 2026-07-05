@@ -1,5 +1,9 @@
 # HANDOFF — read this first to continue
 
+> **Current product baseline: Stage 5 UA / P2.45.** Read
+> [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
+> entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
+
 Purpose: let **any** assistant (or person) resume this project in minutes, without the user
 re-explaining. This is the single "where are we / what next / how to work here" file.
 
@@ -99,6 +103,12 @@ authored `low_energy_option` variants mirrored in `activity_context_ua.js` (all 
 `NEEDS_REVIEW` rows stay unavailable). The chooser searches only the active child's personalized
 plan, changes today's idea, persists per child, never touches observation answers, and locks after
 completion until the parent explicitly undoes it.
+P2.17–P2.45 extend that same primary Stage 5 build with a sourced parent library, intent-aware
+search and inline sources, a safe weekly observation loop, all 59 optimized Motion Card
+illustrations, private local moments, and a review-only Motion Cards workflow with reversible
+queues, blind/balanced review, fatigue checkpoints, provenance, export, and a collection
+dashboard. The visible asset baseline is `20260704-p2-45-r1`; these additions do not change
+the product's safety rules or make draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
 and teal remains the action/trust color. A derived seven-day recap appears only after at least
@@ -135,27 +145,24 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ## What's next (prioritized)
 
 > **Assistant told only "continue" / "давай продовжимо"? Do this:** do not enable GitHub Pages;
-> public preview is paused. Continue the author-card backlog as review-only source work, without
-> adding moderate/high-caution claims to the parent-facing app. The remaining validation gates need
-> people, not more feature code. The operational path and ready-to-send templates are in
-> `docs/validation_launch_kit_ua.md`; the source-checked candidates are in
-> `docs/expert_candidate_shortlist_ua.md`; the four first-wave messages are ready in
-> `docs/expert_outreach_drafts_ua.md`. The registry is populated but nobody has been contacted.
-> Obtain the owner’s sender identity, compensation wording, timeline, and explicit Send approval.
-> After
-> approval in `docs/expert_review_tracker.md`, recruit and run
-> five sessions using `docs/parent_test_facilitator_pack_ua.md`. Do not simulate feedback or call
-> the product validated without live reviewers and parents.
+> public preview is paused. Start from [CURRENT_BUILD.md](CURRENT_BUILD.md), verify P2.45, and
+> continue the human validation gates below. Do not build another parallel UI, reopen the completed
+> author-card backlog, simulate feedback, or call draft content validated.
 
-1. **Expert review** (gate before real users) — fully prepped. Hand a clinician
+1. **Motion Cards review** — use the isolated reviewer flow and collection dashboard already in
+   Stage 5; collect real reviewer decisions for the 59 cards and retain their provenance. The
+   production inventory is `docs/motion_cards_production_manifest_ua.md`.
+2. **Core expert review** (gate before real users) — fully prepped. Hand a clinician
    `docs/expert_review_packet_ua.md`; they review against `docs/expert_review_checklist.md`;
    record in `docs/expert_review_tracker.md`. P2.14 adds a cross-cutting review item for the
    corrected-age input/routing and its Ukrainian wording. Outreach, scope, follow-up, and sign-off workflow:
    `docs/validation_launch_kit_ua.md`. **Needs live reviewers — an assistant cannot do this.**
-2. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
+3. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-3. **Author cards** — 26/26 done; the planned set is complete. Michelle Macias and Jennifer Poon
+4. **Library and feeding pilots** — keep both behind their explicit expert gates:
+   `docs/library_expert_review_packet_ua.md` and `docs/feeding_expert_review_packet_ua.md`.
+5. **Author cards** — 26/26 done; the planned set is complete. Michelle Macias and Jennifer Poon
    complete the no-caution clinical boundary set; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
    joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards; A. R.
    Luria and N. A. Bernstein are historical internal-only guardrails with no activities;
@@ -163,12 +170,11 @@ successful recovery clears it, and erase/restore cannot report false persistence
    Glenn Doman, and Masaru Ibuka are high-caution review-only with no activity IDs. All records
    have explicit claim limits; moderate/high-caution content still requires expert review before
    any parent-facing use.
-4. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
-5. **Deferred / low-value:** IndexedDB backend; EN parity for WHO windows + coverage fix;
+6. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
+7. **Deferred / low-value:** IndexedDB backend; EN parity for WHO windows + coverage fix;
    designer-made illustrations (interim inline-SVG in place).
 
-> The buildable, non-gated engineering backlog is essentially clear. The next real milestones
-> need **people** (expert + parents), not more code.
+> The next credible product milestone is **real review evidence**, not another ungated feature.
 
 ## Key files
 
@@ -176,7 +182,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
   `styles5.css`, `questions_ua.js` (phrasings), `authors_ua.js` (Bronze notes), `who_windows.js`,
   `activity_context_ua.js` (authored low-energy variants only).
 - Canonical data + logic (reused by stage5): `prototype_stage4_ua/data_ua.js`, `engine.js`.
-- EN reference prototype: `prototype_stage4/`.
+- Legacy UI references: `prototype_stage4/legacy-reference.html` and
+  `prototype_stage4_ua/legacy-reference.html`; never use them as current audit targets.
 - Content source of truth (not read at runtime): `data/*.csv`, `knowledge_base/`.
 - Review gate: `docs/expert_review_packet_ua.md` (+ `_checklist` / `_tracker`),
   `tools/build_review_packet.js`.
@@ -186,6 +193,15 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-05 — current-build and audit-scope hardening
+- Declared Stage 5 UA / P2.45 and `prototype_stage5_ua/index.html` as the sole current product UI
+  in both human-readable and machine-readable manifests. Renamed both Stage 4 entry pages to
+  `legacy-reference.html`, added visible archive warnings, and retained only the Stage 4 UA data
+  and engine as intentional Stage 5 runtime dependencies.
+- Moved the local P2.16 review ZIP and extracted copy from the repository root into the ignored
+  archive. Updated the resume instructions so a generic “continue” starts from the current build
+  and real validation gates, not the completed P2.16/author-card backlog.
 
 ### 2026-07-02 — Masaru Ibuka deadline and caregiver-blame boundary audit (26/26)
 - Searched the complete 230-page local Russian edition of *Kindergarten Is Too Late!* by topic and

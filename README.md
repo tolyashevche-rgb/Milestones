@@ -1,5 +1,10 @@
 # Milestones — personalized child-development assistant
 
+> **CURRENT BUILD: Stage 5 UA / P2.45.** Before running or auditing the product, read
+> [CURRENT_BUILD.md](CURRENT_BUILD.md). The only current UI entry point is
+> `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references, not valid
+> evidence for a current UI/UX audit.
+
 **One line:** a calm, evidence-first guide for parents (0–12 months) that turns a
 milestone check into a personalized focus + a weekly play plan, while never diagnosing,
 scoring, or replacing a professional.
@@ -19,14 +24,14 @@ scoring, or replacing a professional.
 Milestones/
 ├── README.md                  ← this file: plan, structure, sequence
 ├── AGENT.md                   ← guide for AI agents: rules, architecture, decisions
-├── prototype_stage4/          ← WORKING web prototype (EN). Self-contained — do not move
-│   ├── index.html  styles.css
+├── prototype_stage4/          ← LEGACY EN UI + engine parity reference
+│   ├── legacy-reference.html  styles.css
 │   ├── data.js                ← all milestones + activities (5 ages)
 │   ├── engine.js              ← personalization engine (buildProfile, buildProgram)
 │   └── app.js                 ← UI wiring
-├── prototype_stage4_ua/       ← WORKING web prototype (UA, testing artifact)
-│   └── data_ua.js  engine.js  app.js  index.html  (now also DISCUSS_BY_ID)
-├── prototype_stage5_ua/       ← NEW guided UA app (bottom-nav shell, redesign)
+├── prototype_stage4_ua/       ← runtime data/engine; UI is a LEGACY reference
+│   └── data_ua.js  engine.js  app.js  legacy-reference.html
+├── prototype_stage5_ua/       ← CURRENT guided UA app (P2.45)
 │   └── index.html app5.js styles5.css questions_ua.js illustrations.js authors_ua.js (reuses stage4 data+engine)
 ├── docs/                      ← project documentation
 │   ├── safety_rules.md        ← SINGLE SOURCE OF TRUTH for claims/guardrails
@@ -107,10 +112,20 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
+> Release **P2.45** is the current product baseline. The P2.16 material below is retained
+> as historical implementation context, not as the current audit target. See
+> [CURRENT_BUILD.md](CURRENT_BUILD.md) for the exact entry point and audit preflight.
+
 - **Validation preview delivery is paused:** `.github/workflows/pages.yml` is manual-only and
   GitHub Pages remains disabled by owner decision. If public review is approved later, the workflow
   will run the full Stage 5 QA suite and deploy only Stage 5 UA plus the two canonical Stage 4 UA
   engine/data files it imports; it cannot run on an ordinary push.
+- **P2.17–P2.45 current expansion layer:** Stage 5 now includes the sourced parent library with
+  intent-aware search and inline sources, a safe weekly observation loop, 59 optimized Motion
+  Card illustrations, private local moments, and an isolated Motion Cards review system with
+  reversible queues, blind/balanced sessions, fatigue checkpoints, provenance, export, and a
+  collection dashboard. Review tooling does not imply expert approval; draft and released states
+  remain explicitly separate.
 - **P2.16 context-aware game choice:** the Game tab adds one compact, optional control for
   «До 3 хв», «Без речей», or «Мало сил» without adding a navigation destination. Selection
   stays inside the personalized 14-day plan, changes only today's activity, and persists per
@@ -186,7 +201,8 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   regression-tests all five ages, content integrity, deterministic plans, re-tests, legacy
   migration, and multi-child isolation.
 - EN + UA prototypes: survey → **focus profile** → **weekly play plan** → progress charts
-  by domain → re-assessment prompt. Open `prototype_stage4_ua/index.html` to try.
+  by domain → re-assessment prompt. This is a historical Stage 4 description; open
+  `prototype_stage5_ua/index.html` to try the current product.
 - Engine is pure, traceable, **never generates content at runtime** — it only selects from
   the curated, sourced activity set.
 - **`allClear` fixed:** maintenance/celebration now triggers only when every milestone is
