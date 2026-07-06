@@ -27,14 +27,14 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.47", "audit scope must identify the current release");
+  assert.equal(auditScope.release, "P2.48", "audit scope must identify the current release");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.47"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.47"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.48"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.48"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -66,8 +66,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260706-p2-47-r1"), "Stage5 assets must use the P2.47 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260706-p2-47-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260706-p2-48-r1"), "Stage5 assets must use the P2.48 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260706-p2-48-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -86,7 +86,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-47-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-48-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -466,9 +466,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260706-p2-47-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260706-p2-47-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260706-p2-47-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260706-p2-48-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260706-p2-48-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260706-p2-48-r1"), "the sourced library must be cached offline");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -634,6 +634,10 @@ function testAppState() {
     tamperedDailyPlayBackup.data.children[0].dailyPlayCompletions = { "2026-07-02:4": [42] };
     const tamperedSignalBackup = JSON.parse(JSON.stringify(backup));
     tamperedSignalBackup.data.children[0].activitySignals = { "2026-07-02:4:activity": "score_child" };
+    const tamperedDiaryBackup = JSON.parse(JSON.stringify(backup));
+    tamperedDiaryBackup.data.children[0].playDiary = [{ id: "bad", activityId: "activity", age: 4, startedAt: "x", endedAt: "x", reaction: "score_child" }];
+    const tamperedSessionBackup = JSON.parse(JSON.stringify(backup));
+    tamperedSessionBackup.data.children[0].activePlaySession = { activityId: 42, age: "bad" };
     const dataBackupOkay = startMarkup.includes('id="exportBackup"')
       && startMarkup.includes('id="chooseBackup"')
       && startMarkup.includes('id="importBackup"')
@@ -646,7 +650,9 @@ function testAppState() {
       && !validateBackupPayload(tamperedContextBackup).ok
       && !validateBackupPayload(tamperedActivityNoteBackup).ok
       && !validateBackupPayload(tamperedDailyPlayBackup).ok
-      && !validateBackupPayload(tamperedSignalBackup).ok;
+      && !validateBackupPayload(tamperedSignalBackup).ok
+      && !validateBackupPayload(tamperedDiaryBackup).ok
+      && !validateBackupPayload(tamperedSessionBackup).ok;
     const emotionalCopyOkay = OBSERVATION_LABELS.not_yet === "Ще не помічаю"
       && surveyMarkup.includes("Ще не помічаю")
       && !surveyMarkup.includes("Поки ні")
@@ -678,8 +684,9 @@ function testAppState() {
       && surveyUi.index === 1;
     const continueStep = homeNextStep(4);
     const continueMarkup = renderHome();
-    const homeProgressAccessibilityOkay = continueMarkup.includes('role="progressbar"')
-      && continueMarkup.includes('aria-valuemin="0"');
+    const homeProgressAccessibilityOkay = continueMarkup.includes('aria-label="Головні розділи"')
+      && continueMarkup.includes('class="home-nudge continue-observation"')
+      && (continueMarkup.match(/class="home-action"/g) || []).length === 4;
     first.surveys[4].states = Object.fromEntries(ids.map((id) => [id, "yes"]));
     first.surveys[4].date = "2026-06-20T10:00:00.000Z";
     const playStep = homeNextStep(4);
@@ -768,7 +775,7 @@ function testAppState() {
       && JSON.stringify([...parentOneOrder].sort()) === JSON.stringify([...rasterVisualIds].sort())
       && new Set(parentOneOrder.slice(0, 5).map((id) => Number(id.slice(4, 7)))).size === 5;
     const coordinatorStore = store;
-    location.search = "?v=p2-47-r1&reviewSession=parent_3";
+    location.search = "?v=p2-48-r1&reviewSession=parent_3";
     location.hash = "#/visual-pilot";
     store = freshStore();
     motionReview.active = "parent_1";
@@ -1041,24 +1048,52 @@ function testAppState() {
     const todayMarkup = todayActivityHtml(4, currentProgramDay);
     const upcomingMarkup = dayAccordionHtml(4, upcomingProgramDay);
     const savedMarkup = savedGamesHtml(4);
+    const selectedPlayId = programState.selected[currentProgramDay.day] || currentProgramDay.options[0];
+    first.activePlaySession = { activityId: selectedPlayId, age: 4, startedAt: new Date().toISOString() };
+    const activeSessionMarkup = playSessionControlsHtml(4, selectedPlayId);
+    first.activePlaySession = null;
+    const diaryProbe = { id: "play_probe", age: 4, activityId: selectedPlayId, startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), durationSeconds: 125, reaction: "liked", signal: "voice", note: "Усміхнулася на голос.", saved: false, nextChoice: "" };
+    first.playDiary.unshift(diaryProbe);
+    const reflectionMarkup = playSessionControlsHtml(4, selectedPlayId);
+    diaryProbe.saved = true;
+    const continueMarkupAfterPlay = playSessionControlsHtml(4, selectedPlayId);
+    diaryProbe.nextChoice = "later";
+    const scheduleMarkup = playSessionControlsHtml(4, selectedPlayId);
+    const diaryMarkup = playDiaryHtml(first);
+    first.playDiary = [];
+    first.activePlaySession = null;
+    const sessionStarted = startPlaySession(4, selectedPlayId);
+    const otherPlayId = dailyPlayChoiceIds(4, currentProgramDay).find((id) => id !== selectedPlayId);
+    const parallelSessionBlocked = otherPlayId ? !startPlaySession(4, otherPlayId) : true;
+    const finishedSession = finishPlaySession(4, selectedPlayId);
+    const sessionLifecycleOkay = sessionStarted && parallelSessionBlocked && finishedSession && !first.activePlaySession
+      && first.playDiary[0].id === finishedSession.id && first.playDiary[0].saved === false;
+    first.playDiary = [];
     const gentleEngagementOkay = todayMarkup.includes('data-favorite-id="' + playStep.task.act.id + '"')
       && todayMarkup.includes("Збережено")
-      && todayMarkup.includes('data-activity-reaction="liked" aria-pressed="true"')
-      && todayMarkup.includes('data-activity-reaction="repeat_later"')
-      && todayMarkup.includes("Не сьогодні")
-      && todayMarkup.includes("Було складно")
-      && todayMarkup.includes('id="activityObservation"')
-      && todayMarkup.includes("Не оцінюйте результат вправи")
+      && reflectionMarkup.includes('data-diary-reaction="liked"')
+      && reflectionMarkup.includes("Не сьогодні")
+      && reflectionMarkup.includes("Було складно")
+      && reflectionMarkup.includes('data-diary-note="play_probe"')
+      && reflectionMarkup.includes("пам’ять про момент, не оцінка дитини")
       && savedMarkup.includes('data-saved-game="' + playStep.task.act.id + '"');
     const livelyDayOkay = (todayMarkup.match(/data-daily-play-choice=/g) || []).length === 3
       && todayMarkup.includes("Однієї гри цілком достатньо")
-      && todayMarkup.includes('class="play-timer"')
-      && [2, 3, 5].every((minutes) => todayMarkup.includes('data-play-timer-minutes="' + minutes + '"'))
-      && todayMarkup.includes('data-activity-signal="voice"')
-      && todayMarkup.includes('data-play-reminder="two-hours"')
+      && activeSessionMarkup.includes('class="play-timer"')
+      && [2, 3, 5].every((minutes) => activeSessionMarkup.includes('data-play-timer-minutes="' + minutes + '"'))
+      && reflectionMarkup.includes('data-diary-signal="voice"')
       && startMarkup.includes("Хвилина для батьків")
       && startMarkup.includes("Перевірити себе")
-      && startMarkup.includes("Освітня чернетка до експертного рев’ю");
+      && startMarkup.includes("Освітня чернетка до експертного рев’ю")
+      && todayMarkup.includes('id="startPlaySession"')
+      && activeSessionMarkup.includes('id="finishPlaySession"')
+      && activeSessionMarkup.includes("таймер")
+      && reflectionMarkup.includes("Зберегти в щоденник")
+      && continueMarkupAfterPlay.includes("Ще одна зараз")
+      && continueMarkupAfterPlay.includes("Нагадати пізніше")
+      && scheduleMarkup.includes('type="time"')
+      && scheduleMarkup.includes("Сьогодні") && scheduleMarkup.includes("Завтра")
+      && diaryMarkup.includes("Щоденник гри") && diaryMarkup.includes("Усміхнулася на голос");
     const livelyProbe = freshChild("Проба", localDateString(fourMonthsAgo));
     const livelyChoiceIds = dailyPlayChoiceIds(4, currentProgramDay);
     const extraLivelyId = ACTIVITIES_BY_AGE[4].map((activity) => activity.id).find((id) => !livelyChoiceIds.includes(id));
@@ -1077,8 +1112,8 @@ function testAppState() {
       && programMarkup.includes("можливість, а не лікувальна доза")
       && todayMarkup.includes('class="day-acc open today-game"')
       && todayMarkup.includes('class="daily-play-menu"')
-      && todayMarkup.includes('class="thumb-action"')
-      && todayMarkup.includes('id="toggleTodayDone"')
+      && todayMarkup.includes('id="startPlaySession"')
+      && !todayMarkup.includes('class="thumb-action"')
       && !todayMarkup.includes('class="illus"')
       && !todayMarkup.includes('data-day-toggle=')
       && upcomingMarkup.includes('data-day-toggle=')
@@ -1088,18 +1123,22 @@ function testAppState() {
       && continueStep.progress.value === 1
       && playStep.kind === "play-today"
       && doneStep.kind === "done-today"
-      && (startMarkup.match(/data-primary-action=/g) || []).length === 1
-      && (continueMarkup.match(/data-primary-action=/g) || []).length === 1
-      && (playMarkup.match(/data-primary-action=/g) || []).length === 1
-      && (doneMarkup.match(/data-primary-action=/g) || []).length === 0
+      && [startMarkup, continueMarkup, playMarkup, doneMarkup].every((markup) => (markup.match(/class="home-action"/g) || []).length === 4)
+      && [startMarkup, continueMarkup, playMarkup, doneMarkup].every((markup) => ["Грати", "Спостерігати", "Дізнатися", "Мої записи"].every((label) => markup.includes(label)))
+      && continueMarkup.includes('class="home-nudge continue-observation"')
+      && !startMarkup.includes('class="home-nudge')
+      && !doneMarkup.includes('class="home-nudge')
       && !startMarkup.includes('class="hello"')
       && !startMarkup.includes('class="profile-meta"')
+      && doneMarkup.includes('<details class="home-day-details">')
       && doneMarkup.includes('<details class="home-more">');
     first.snapshots.push({ id: "snap_existing" });
     first.programSelections["4"] = { "1": "act_004_language_001" };
     first.activityCompletions[completionKey(4)] = { activityId: "act_004_language_001" };
     first.dailyPlayCompletions[completionKey(4)] = ["act_004_language_001", "act_004_movement_001"];
     first.activitySignals[activitySignalKey(4, "act_004_language_001")] = "voice";
+    first.activePlaySession = { activityId: "act_004_language_001", age: 4, startedAt: new Date().toISOString() };
+    first.playDiary = [{ id: "pending", activityId: "act_004_language_001", age: 4, startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), reaction: "", signal: "", note: "", saved: false }];
 
     restartSurvey(4);
     const restartOkay = first.surveys[4].date === null
@@ -1111,6 +1150,8 @@ function testAppState() {
       && !first.activityNotes[completionKey(4)]
       && !first.dailyPlayCompletions[completionKey(4)]
       && !first.activitySignals[activitySignalKey(4, "act_004_language_001")]
+      && first.activePlaySession === null
+      && first.playDiary.length === 0
       && first.favoriteActivities.includes(playStep.task.act.id);
 
     first.surveys[4].states = Object.fromEntries(ids.map((id) => [id, "yes"]));
@@ -1158,6 +1199,8 @@ function testAppState() {
       && Object.keys(migrated.children[0].activityNotes).length === 0
       && Object.keys(migrated.children[0].dailyPlayCompletions).length === 0
       && Object.keys(migrated.children[0].activitySignals).length === 0
+      && migrated.children[0].playDiary.length === 0
+      && migrated.children[0].activePlaySession === null
       && migrated.children[0].playContext === "any";
 
     const oldSnapshot = { age: 4, states: { [ids[0]]: "not_sure", [ids[1]]: "yes" } };
@@ -1170,7 +1213,7 @@ function testAppState() {
       && changes.newlyObserved.length === 2
       && changes.changed.length === 1;
 
-    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, livelyDayOkay: livelyDayOkay && multiDailyOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, gentleEngagementOkay, weeklyRecapOkay, privateMomentsOkay, contextFilterOkay, visualGuideOkay, collectionDashboardOkay, motionReviewOkay, libraryOkay, followUpRoutingOkay };
+    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, livelyDayOkay: livelyDayOkay && multiDailyOkay && sessionLifecycleOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, gentleEngagementOkay, weeklyRecapOkay, privateMomentsOkay, contextFilterOkay, visualGuideOkay, collectionDashboardOkay, motionReviewOkay, libraryOkay, followUpRoutingOkay };
   })()`, context);
 
   assert.equal(result.restartOkay, true, "re-test must clear only the active plan and today's completion");
@@ -1180,7 +1223,7 @@ function testAppState() {
   assert.equal(result.historyOkay, true, "history comparison must support old snapshots and describe answer changes");
   assert.equal(result.homeNextStepOkay, true, "home must expose one contextual primary action and a calm done state");
   assert.equal(result.programUiOkay, true, "program must keep today's game open and future days secondary");
-  assert.equal(result.livelyDayOkay, true, "P2.47 must offer three optional ideas, a calm timer, one-time reminders, reflection, and a sourced parent minute");
+  assert.equal(result.livelyDayOkay, true, "P2.48 must provide an action-first home, explicit play lifecycle, diary, and voluntary reminders");
   assert.equal(result.specialistPrepOkay, true, "specialist prep must keep one overview, three structured notes, and a copyable summary");
   assert.equal(result.oneThumbSurveyOkay, true, "survey answers must save and advance without a separate next button");
   assert.equal(result.emotionalCopyOkay, true, "sensitive observation copy must keep the emotion-aware, explicitly non-conclusive guardrails");
@@ -1206,7 +1249,7 @@ function testAppState() {
   testStorageFailureRecovery();
   await testServiceWorker();
   await testPwaInstallUi();
-  console.log("P1/P2/E4 QA passed: 5 ages, content integrity, deterministic plans, corrected-age profile support, three optional daily play ideas, calm timer/reminder/reflection loop, sourced parent minute, honest context-aware game choice, 33 authored low-energy variants, calm favorites, post-play feedback and weekly recap, warm kite visual layer, contextual home, guarded local storage, installable offline shell, deferred install UX, user-approved PWA updates, service-worker lifecycle, safe local backup/restore, unified SVG navigation, one-thumb survey, accessible focus/status semantics, emotion-aware copy, today-first game, specialist prep, searchable sourced library, re-tests, history comparison, migration, multi-child isolation.");
+  console.log("P1/P2/E4 QA passed: action-first home, explicit start/finish play sessions, optional in-session timer, post-play reflection, private play diary, continue-or-remind flow, 5 ages, content integrity, deterministic plans, corrected-age profile support, three optional daily play ideas, sourced parent minute, honest context-aware game choice, 33 authored low-energy variants, calm favorites, weekly recap, guarded local storage, installable offline shell, safe backup/restore, one-thumb survey, searchable sourced library, migration, and multi-child isolation.");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

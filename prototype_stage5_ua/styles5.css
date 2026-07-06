@@ -169,6 +169,20 @@ main {
 .parent-minute-answer strong { display: block; margin-bottom: 4px; color: var(--apricot-dark); font-size: 13px; }
 .parent-minute-answer a { display: inline-block; min-height: 44px; padding: 10px 0; color: var(--teal-dark); font-weight: 700; }
 .parent-minute-answer small { display: block; color: var(--muted); }
+.home-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.home-action { min-height: 112px; display: grid; grid-template-columns: 38px 1fr; grid-template-rows: auto auto; gap: 3px 9px; align-content: center; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--ink); cursor: pointer; text-align: left; box-shadow: 0 5px 16px rgba(31, 75, 68, .05); }
+.home-action > span { grid-row: 1 / 3; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 13px; background: var(--mint); color: var(--teal-dark); }
+.home-action .nav-icon { width: 23px; height: 23px; }
+.home-action strong { align-self: end; font-size: 17px; }
+.home-action small { align-self: start; color: var(--muted); font-size: 12px; line-height: 1.25; }
+.home-action:first-child { border-color: var(--teal); background: linear-gradient(145deg, #fff, var(--mint)); }
+.home-nudge { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 12px; border: 1px solid #ecd6bf; border-radius: 13px; background: var(--apricot-soft); }
+.home-nudge div { display: grid; gap: 2px; min-width: 0; }
+.home-nudge span { color: var(--apricot-dark); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.home-nudge strong { font-size: 14px; }
+.home-nudge .btn { flex-shrink: 0; }
+.home-day-details { margin-top: 16px; border-top: 1px solid var(--line); }
+.home-day-details > summary { min-height: 48px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-weight: 750; }
 
 /* tiles */
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
@@ -324,6 +338,7 @@ main {
 .daily-play-option > small { color: var(--muted); font-size: 12px; }
 .daily-play-option.active { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(30, 122, 111, .1); }
 .daily-play-option.done { background: var(--mint); }
+.daily-play-option:disabled { opacity: .55; cursor: not-allowed; }
 .today-game-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 0; }
 .day-acc-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 14px; border: 0; background: transparent; cursor: pointer; text-align: left; }
 .day-acc-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
@@ -422,6 +437,32 @@ main {
 .play-reminder > div { padding-bottom: 12px; }
 .play-reminder p { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
 .play-reminder-options { display: grid; grid-template-columns: 1fr; gap: 7px; }
+.play-session-start, .play-session-active, .play-reflection, .play-continue { margin-top: 15px; padding: 14px; border: 1px solid #cfe2dd; border-radius: 14px; background: #f5faf8; }
+.play-session-active { border-color: var(--teal); background: linear-gradient(145deg, #fff, var(--mint)); }
+.play-session-start > small { display: block; margin-top: 8px; color: var(--muted); text-align: center; }
+.play-session-active > p { margin: 8px 0 10px; color: var(--muted); font-size: 13px; }
+.play-step-label { display: flex; align-items: center; gap: 9px; }
+.play-step-label > span { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; background: var(--teal); color: #fff; font-weight: 800; }
+.play-step-label > strong { color: var(--teal-dark); font-size: 17px; }
+.optional-timer { margin: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.optional-timer > summary { min-height: 46px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-weight: 700; }
+.optional-timer .play-timer { margin-top: 0; border: 0; padding: 0 0 12px; background: transparent; }
+.play-reflection-row { margin-top: 14px; }
+.play-reflection-row > span { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; font-weight: 750; }
+.play-reflection-row > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.play-reflection-row button, .play-schedule-days button { min-height: 44px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink); cursor: pointer; }
+.play-reflection-row button.active, .play-schedule-days button.active { border-color: var(--teal); background: var(--mint); color: var(--teal-dark); }
+.play-note { margin: 12px 0; border-top: 1px solid var(--line); }
+.play-note summary { min-height: 44px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-weight: 700; }
+.play-note textarea { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; }
+.play-continue-actions { display: grid; gap: 8px; margin-top: 13px; }
+.play-continue-actions .linklike { justify-self: center; }
+.play-schedule { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
+.play-schedule > strong { display: block; margin-bottom: 8px; }
+.play-schedule-days { display: flex; gap: 8px; }
+.play-schedule label { display: grid; gap: 5px; margin: 10px 0; color: var(--muted); font-size: 12px; }
+.play-schedule input { min-height: 48px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; font-size: 17px; }
+.play-schedule #playReminderStatus { margin: 8px 0 0; color: var(--teal-dark); font-size: 13px; }
 .activity-observation { display: grid; gap: 7px; margin-top: 12px; padding: 12px; border: 1px solid #cfe3de; border-radius: 12px; background: #f5faf8; }
 .activity-observation label { display: grid; gap: 3px; }
 .activity-observation label span { color: var(--muted); font-size: 12px; }
@@ -591,6 +632,20 @@ main {
 }
 
 /* history */
+.play-diary { margin: 14px 0 18px; padding: 14px; border: 1px solid #cfe2dd; border-radius: 15px; background: #f5faf8; }
+.section-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.section-title-row h2 { margin: 0; font-size: 19px; }
+.section-title-row > span { padding: 4px 8px; border-radius: 999px; background: #fff; color: var(--teal-dark); font-size: 11px; font-weight: 800; }
+.play-diary-list { display: grid; gap: 8px; margin-top: 12px; }
+.play-diary-list article { padding: 11px; border-radius: 11px; background: #fff; }
+.play-diary-list article > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.play-diary-list time { color: var(--muted); font-size: 11px; }
+.play-diary-list strong { color: var(--teal-dark); font-size: 14px; text-align: right; }
+.play-diary-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.play-diary-tags span { padding: 3px 7px; border-radius: 999px; background: var(--mint); color: var(--teal-dark); font-size: 11px; }
+.play-diary-list p { margin: 8px 0 0; color: #40504d; font-size: 13px; }
+.observation-history { border-top: 1px solid var(--line); }
+.observation-history > summary { min-height: 50px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-weight: 750; }
 .history-list { display: grid; gap: 14px; margin-top: 16px; }
 .history-item { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 16px; }
 .history-item.latest { border-left: 4px solid var(--teal); box-shadow: var(--shadow); }
