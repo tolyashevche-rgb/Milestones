@@ -157,6 +157,18 @@ main {
 .private-moments li p { margin: 1px 0 0; color: #40504d; font-size: 13px; overflow-wrap: anywhere; }
 .private-moments li button { min-height: 40px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: #855021; cursor: pointer; font-size: 12px; }
 .private-moments > small { display: block; margin-top: 10px; color: var(--muted); line-height: 1.4; }
+.parent-minute { margin-top: 14px; padding: 15px; border: 1px solid #ecd6bf; border-radius: 16px; background: linear-gradient(145deg, #fffaf4, var(--apricot-soft)); }
+.parent-minute-head { display: flex; align-items: flex-start; gap: 11px; }
+.parent-minute-head > span { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 38px; border-radius: 13px; background: #fff; color: var(--apricot-dark); font-size: 20px; font-weight: 800; }
+.parent-minute h2 { margin: 2px 0 0; font-size: 18px; }
+.parent-minute > p { margin: 9px 0; color: #5f554d; font-size: 13px; }
+.parent-minute details { border-top: 1px solid rgba(138, 76, 24, .14); }
+.parent-minute summary { min-height: 46px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-weight: 750; }
+.parent-minute-answer { padding: 0 0 3px; }
+.parent-minute-answer p { margin: 0 0 10px; color: #40504d; font-size: 14px; }
+.parent-minute-answer strong { display: block; margin-bottom: 4px; color: var(--apricot-dark); font-size: 13px; }
+.parent-minute-answer a { display: inline-block; min-height: 44px; padding: 10px 0; color: var(--teal-dark); font-weight: 700; }
+.parent-minute-answer small { display: block; color: var(--muted); }
 
 /* tiles */
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
@@ -300,6 +312,18 @@ main {
 .day-acc { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
 .day-acc.open { border-color: var(--teal); box-shadow: var(--shadow); }
 .today-game { margin-top: 14px; }
+.daily-play-menu { margin-top: 14px; padding: 14px; border: 1px solid #cfe2dd; border-radius: 15px; background: #f5faf8; }
+.daily-play-menu-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.daily-play-menu-head h2 { margin: 2px 0 0; font-size: 19px; }
+.daily-play-menu-head > span { flex-shrink: 0; padding: 4px 8px; border-radius: 999px; background: #fff; color: var(--teal-dark); font-size: 11px; font-weight: 800; }
+.daily-play-menu > p { margin: 8px 0 12px; color: var(--muted); font-size: 13px; }
+.daily-play-options { display: grid; gap: 8px; }
+.daily-play-option { min-height: 70px; display: grid; gap: 2px; align-content: center; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); cursor: pointer; text-align: left; }
+.daily-play-option > span { color: var(--teal-dark); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.daily-play-option > strong { font-size: 15px; }
+.daily-play-option > small { color: var(--muted); font-size: 12px; }
+.daily-play-option.active { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(30, 122, 111, .1); }
+.daily-play-option.done { background: var(--mint); }
 .today-game-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 0; }
 .day-acc-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 14px; border: 0; background: transparent; cursor: pointer; text-align: left; }
 .day-acc-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
@@ -380,6 +404,24 @@ main {
 .feedback-options button { min-height: 44px; border: 1px solid #ddc1a5; border-radius: 10px; background: #fff; color: var(--ink); cursor: pointer; font-weight: 600; }
 .feedback-options button.active { border-color: var(--teal); background: var(--mint); color: var(--teal-dark); }
 .activity-feedback-response { margin: 9px 0 0; padding: 8px 10px; border-radius: 9px; background: #f5faf8; color: var(--teal-dark); font-size: 12px; }
+.play-timer { margin: 15px 0 2px; padding: 13px; border: 1px solid #d8e8e4; border-radius: 13px; background: #f5faf8; }
+.play-timer-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.play-timer-head strong { display: block; color: var(--teal-dark); }
+.play-timer output { min-width: 70px; color: var(--teal-dark); font-size: 25px; font-variant-numeric: tabular-nums; font-weight: 800; text-align: right; }
+.play-timer-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 12px 0 9px; }
+.play-timer-presets button, .play-reminder-options button, .activity-signal button { min-height: 44px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); cursor: pointer; font-weight: 650; }
+.play-timer-presets button.active, .activity-signal button.active { border-color: var(--teal); background: var(--mint); color: var(--teal-dark); }
+.play-timer .btn { min-width: 130px; margin-right: 10px; }
+.play-timer > p { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.activity-signal { margin-top: 12px; padding: 12px; border: 1px solid #cfe2dd; border-radius: 12px; background: #f5faf8; }
+.activity-signal > p { margin: 5px 0 10px; color: var(--muted); font-size: 13px; }
+.activity-signal > div { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.activity-signal button:last-child { grid-column: 1 / -1; }
+.play-reminder { margin-top: 13px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.play-reminder summary { min-height: 48px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-weight: 750; }
+.play-reminder > div { padding-bottom: 12px; }
+.play-reminder p { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+.play-reminder-options { display: grid; grid-template-columns: 1fr; gap: 7px; }
 .activity-observation { display: grid; gap: 7px; margin-top: 12px; padding: 12px; border: 1px solid #cfe3de; border-radius: 12px; background: #f5faf8; }
 .activity-observation label { display: grid; gap: 3px; }
 .activity-observation label span { color: var(--muted); font-size: 12px; }

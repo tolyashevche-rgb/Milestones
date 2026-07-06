@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.45.** Read
+> **Current product baseline: Stage 5 UA / P2.47.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -103,11 +103,14 @@ authored `low_energy_option` variants mirrored in `activity_context_ua.js` (all 
 `NEEDS_REVIEW` rows stay unavailable). The chooser searches only the active child's personalized
 plan, changes today's idea, persists per child, never touches observation answers, and locks after
 completion until the parent explicitly undoes it.
-P2.17–P2.45 extend that same primary Stage 5 build with a sourced parent library, intent-aware
+P2.17–P2.47 extend that same primary Stage 5 build with a sourced parent library, intent-aware
 search and inline sources, a safe weekly observation loop, all 59 optimized Motion Card
 illustrations, private local moments, and a review-only Motion Cards workflow with reversible
 queues, blind/balanced review, fatigue checkpoints, provenance, export, and a collection
-dashboard. The visible asset baseline is `20260704-p2-45-r1`; these additions do not change
+dashboard, one-scene Motion Card carousels, and the optional “Живий день” loop. P2.47 exposes
+three curated play choices while saying one is enough, adds a calm timer, one-time calendar
+reminders, a low-effort post-play cue, and a sourced parent minute. The visible asset baseline is
+`20260706-p2-47-r1`; these additions do not change
 the product's safety rules or make draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
@@ -145,7 +148,7 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ## What's next (prioritized)
 
 > **Assistant told only "continue" / "давай продовжимо"? Do this:** do not enable GitHub Pages;
-> public preview is paused. Start from [CURRENT_BUILD.md](CURRENT_BUILD.md), verify P2.45, and
+> public preview is paused. Start from [CURRENT_BUILD.md](CURRENT_BUILD.md), verify P2.47, and
 > continue the human validation gates below. Do not build another parallel UI, reopen the completed
 > author-card backlog, simulate feedback, or call draft content validated.
 
@@ -193,6 +196,18 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-06 — P2.47 “Живий день” without pressure mechanics
+- Made three personalized play ideas visible on the Game screen, selected only from the existing
+  curated program. One remains enough; up to three moments can be saved per day without a target,
+  streak, overdue state, score, or developmental conclusion. Existing single-completion data and
+  backups migrate into the multi-moment log.
+- Added an in-memory 2/3/5 minute calm timer with pause/reset and no alarm, three explicit one-time
+  calendar reminder choices, and one tap to note what held attention. These observations remain
+  local and do not claim to measure development.
+- Added a daily “Хвилина для батьків” on Home, deterministically drawn from the existing sourced
+  library and visibly marked as pending expert review. Updated the current-build boundary from the
+  stale P2.45 declaration to P2.47 and added regression coverage for the full loop.
 
 ### 2026-07-06 — Motion guide: 4-panel grid → swipeable one-per-slide carousel
 - Reworked `activityVisualGuideHtml` (app5.js) + motion CSS (styles5.css): the step

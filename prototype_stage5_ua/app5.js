@@ -77,6 +77,8 @@ const BACKUP_VERSION = 1;
 const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
 const CORRECTED_AGE_MIN_DAYS = 21;
 let storageProblem = "";
+let playTimer = { activityId: "", duration: 180, remaining: 180, running: false };
+let playTimerInterval = null;
 
 function freshMotionReview() { return { storeVersion: MOTION_REVIEW_STORE_VERSION, active: "parent_1", view: { status: "pending", age: "all" }, sessions: {} }; }
 function loadMotionReview() {
@@ -454,7 +456,7 @@ function freshChild(name, dob, expectedDueDate = "") {
   return { id: "child_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
            name: name || "", dob: dob || "", expectedDueDate: expectedDueDate || "",
            surveys: {}, snapshots: [], programSelections: {}, activityCompletions: {}, triedActivities: [], notes: "",
-           favoriteActivities: [], activityReactions: {}, activityNotes: {}, playContext: "any",
+           favoriteActivities: [], activityReactions: {}, activityNotes: {}, dailyPlayCompletions: {}, activitySignals: {}, playContext: "any",
            specialistPrep: emptySpecialistPrep() };
 }
 function freshStore() { return { consent: null, children: [], activeChildId: null }; }
@@ -473,6 +475,8 @@ function migrate(s) {
     c.favoriteActivities = s.favoriteActivities || [];
     c.activityReactions = s.activityReactions || {};
     c.activityNotes = s.activityNotes || {};
+    c.dailyPlayCompletions = s.dailyPlayCompletions || {};
+    c.activitySignals = s.activitySignals || {};
     c.playContext = PLAY_CONTEXT_IDS.includes(s.playContext) ? s.playContext : "any";
     c.specialistPrep = s.specialistPrep || emptySpecialistPrep(c.notes);
     st.children.push(c); st.activeChildId = c.id;
@@ -526,6 +530,14 @@ function normalizeChild(child) {
   child.favoriteActivities = Array.isArray(child.favoriteActivities) ? child.favoriteActivities : [];
   child.activityReactions = isRecord(child.activityReactions) ? child.activityReactions : {};
   child.activityNotes = isRecord(child.activityNotes) ? child.activityNotes : {};
+  child.dailyPlayCompletions = isRecord(child.dailyPlayCompletions) ? child.dailyPlayCompletions : {};
+  child.activitySignals = isRecord(child.activitySignals) ? child.activitySignals : {};
+  for (const [key, completion] of Object.entries(child.activityCompletions)) {
+    if (!completion || typeof completion.activityId !== "string") continue;
+    const ids = Array.isArray(child.dailyPlayCompletions[key]) ? child.dailyPlayCompletions[key] : [];
+    if (!ids.includes(completion.activityId)) ids.push(completion.activityId);
+    child.dailyPlayCompletions[key] = ids;
+  }
   child.playContext = PLAY_CONTEXT_IDS.includes(child.playContext) ? child.playContext : "any";
   return child;
 }
@@ -572,6 +584,15 @@ function validateBackupPayload(payload) {
     if (child.activityNotes != null && (!isRecord(child.activityNotes)
       || Object.values(child.activityNotes).some((note) => typeof note !== "string" || note.length > 1000))) {
       return fail("У файлі є пошкоджені нотатки після ігор.");
+    }
+    if (child.dailyPlayCompletions != null && (!isRecord(child.dailyPlayCompletions)
+      || Object.values(child.dailyPlayCompletions).some((ids) => !Array.isArray(ids) || ids.length > 20
+        || ids.some((id) => typeof id !== "string")))) {
+      return fail("У файлі є пошкоджений щоденник ігор.");
+    }
+    if (child.activitySignals != null && (!isRecord(child.activitySignals)
+      || Object.values(child.activitySignals).some((signal) => !["voice", "face", "movement", "object", "not_today"].includes(signal)))) {
+      return fail("У файлі є пошкоджені спостереження після гри.");
     }
     if (child.playContext != null && !PLAY_CONTEXT_IDS.includes(child.playContext)) {
       return fail("У файлі є пошкоджені налаштування гри.");
@@ -728,6 +749,8 @@ function restartSurvey(age) {
   delete cc().activityCompletions[completionKey(age)];
   delete cc().activityReactions[completionKey(age)];
   delete cc().activityNotes[completionKey(age)];
+  delete cc().dailyPlayCompletions[completionKey(age)];
+  Object.keys(cc().activitySignals).filter((key) => key.startsWith(completionKey(age) + ":")).forEach((key) => delete cc().activitySignals[key]);
   surveyUi = { age, index: 0 };
   surveyAdvancePending = false;
   surveyAdvanceToken += 1;
@@ -802,13 +825,19 @@ function weeklyPlaySummary(child = cc(), now = new Date()) {
   const summary = { count: 0, liked: 0, repeatLater: 0, notToday: 0, hard: 0, notes: 0 };
   if (!child) return summary;
   const today = calendarDayNumber(now);
+  const daily = { ...(child.dailyPlayCompletions || {}) };
   for (const [key, completion] of Object.entries(child.activityCompletions || {})) {
+    if (!completion?.activityId) continue;
+    daily[key] = Array.isArray(daily[key]) ? daily[key] : [];
+    if (!daily[key].includes(completion.activityId)) daily[key].push(completion.activityId);
+  }
+  for (const [key, activityIds] of Object.entries(daily)) {
     const match = /^(\d{4}-\d{2}-\d{2}):\d+$/.exec(key);
     const date = match ? parseLocalDate(match[1]) : null;
     const day = date ? calendarDayNumber(date) : null;
     const ageInDays = today == null || day == null ? null : today - day;
-    if (ageInDays == null || ageInDays < 0 || ageInDays > 6 || !completion || !completion.activityId) continue;
-    summary.count += 1;
+    if (ageInDays == null || ageInDays < 0 || ageInDays > 6 || !Array.isArray(activityIds) || !activityIds.length) continue;
+    summary.count += activityIds.length;
     if (child.activityReactions?.[key] === "liked") summary.liked += 1;
     if (child.activityReactions?.[key] === "repeat_later") summary.repeatLater += 1;
     if (child.activityReactions?.[key] === "not_today") summary.notToday += 1;
@@ -834,6 +863,22 @@ function weeklyRecapHtml(summary) {
       <p>${memory} Немає мінімуму: навіть один спокійний момент уже достатній.</p>${liked}${repeatLater}${notToday}${hard}${notes}</div>
   </aside>`;
 }
+function parentMinuteMaterial(age, now = new Date()) {
+  if (typeof LIBRARY_MATERIALS === "undefined") return null;
+  const candidates = LIBRARY_MATERIALS.filter((item) => item.ages.includes(age) && !["specialist", "feeding"].includes(item.topic));
+  if (!candidates.length) return null;
+  const day = calendarDayNumber(now) || 0;
+  return candidates[Math.abs(day) % candidates.length];
+}
+function parentMinuteHtml(age) {
+  const item = parentMinuteMaterial(age);
+  if (!item) return "";
+  return `<section class="parent-minute" aria-labelledby="parentMinuteTitle">
+    <div class="parent-minute-head"><span aria-hidden="true">?</span><div><span class="mini-label">Хвилина для батьків</span><h2 id="parentMinuteTitle">${esc(item.title)}</h2></div></div>
+    <p>Спершу подумайте, як відповіли б ви. Тут немає балів або правильної «оцінки батьків».</p>
+    <details><summary>Перевірити себе</summary><div class="parent-minute-answer"><p>${esc(item.answer)}</p><strong>Спробувати сьогодні</strong><p>${esc(item.doNow)}</p><a href="${esc(item.source.url)}" target="_blank" rel="noopener noreferrer">Джерело: ${esc(item.source.publisher)}</a><small>Освітня чернетка до експертного рев’ю.</small></div></details>
+  </section>`;
+}
 function currentProgramDayIndex(survey, programLength) {
   if (!programLength) return 0;
   const started = calendarDayNumber(survey && survey.date);
@@ -843,6 +888,43 @@ function currentProgramDayIndex(survey, programLength) {
 }
 function completionKey(age) { return `${localDateString()}:${age}`; }
 function completedActivityToday(age) { return cc().activityCompletions[completionKey(age)] || null; }
+function completedActivityIdsToday(age, child = cc()) {
+  if (!child) return [];
+  const key = completionKey(age);
+  const ids = Array.isArray(child.dailyPlayCompletions?.[key]) ? [...child.dailyPlayCompletions[key]] : [];
+  const legacy = child.activityCompletions?.[key]?.activityId;
+  if (legacy && !ids.includes(legacy)) ids.push(legacy);
+  return ids;
+}
+function activityCompletedToday(age, activityId, child = cc()) {
+  return completedActivityIdsToday(age, child).includes(activityId);
+}
+function activitySignalKey(age, activityId) { return `${completionKey(age)}:${activityId}`; }
+function toggleActivityCompletion(age, activityId, child = cc(), now = new Date()) {
+  if (!child || !activityById(age, activityId)) return false;
+  const key = completionKey(age);
+  const ids = completedActivityIdsToday(age, child);
+  const existingIndex = ids.indexOf(activityId);
+  if (existingIndex >= 0) {
+    ids.splice(existingIndex, 1);
+    child.dailyPlayCompletions[key] = ids;
+    delete child.activitySignals[activitySignalKey(age, activityId)];
+    if (child.activityCompletions[key]?.activityId === activityId) {
+      const fallback = ids[ids.length - 1];
+      if (fallback) child.activityCompletions[key] = { activityId: fallback, completedAt: now.toISOString() };
+      else delete child.activityCompletions[key];
+    }
+    delete child.activityReactions[key];
+    delete child.activityNotes[key];
+    return true;
+  }
+  if (ids.length >= 3) return false;
+  ids.push(activityId);
+  child.dailyPlayCompletions[key] = ids;
+  child.activityCompletions[key] = { activityId, completedAt: now.toISOString() };
+  delete child.activityReactions[key];
+  return true;
+}
 function recentActivityNoteLines(age, child = cc(), now = new Date(), days = 14) {
   const today = calendarDayNumber(now);
   return Object.entries(child?.activityNotes || {}).flatMap(([key, note]) => {
@@ -908,6 +990,7 @@ function route() {
 }
 
 function show(screen) {
+  if (screen !== "program" && playTimer.running) pausePlayTimer();
   const root = document.getElementById("screen");
   const renderers = {
     welcome: renderWelcome, consent: renderConsent, profile: renderProfile,
@@ -1171,6 +1254,8 @@ function renderHome() {
       ${weeklyRecapHtml(weekly)}
 
       ${privateMomentsHtml(moments)}
+
+      ${parentMinuteHtml(age)}
 
       <details class="home-more">
         <summary>Ще корисне</summary>
@@ -1513,7 +1598,7 @@ function contextActivityId(age, context) {
     .find((id) => activityFitsContext(activityById(age, id), context)) || null;
 }
 function contextStatusText(context, found = true, done = false) {
-  if (done) return "Гру на сьогодні вже збережено. Щоб змінити вибір, спершу скасуйте позначку «Виконано».";
+  if (done) return "Три моменти гри вже збережено. На сьогодні цього більш ніж достатньо.";
   if (!found) return "У персональному плані зараз немає такої гри. Залишили поточну ідею.";
   if (context === "quick") return "Показуємо коротку гру тривалістю до 3 хвилин.";
   if (context === "no_materials") return "Показуємо гру без підготовки речей.";
@@ -1525,7 +1610,7 @@ function contextStatusText(context, found = true, done = false) {
   return "Показуємо основну рекомендацію для сьогодні.";
 }
 function playContextHtml(age) {
-  const done = Boolean(completedActivityToday(age));
+  const done = completedActivityIdsToday(age).length >= 3;
   const active = programState.context || "any";
   const status = done ? contextStatusText(active, true, true) : (programState.contextNotice || contextStatusText(active));
   return `<section class="play-context" aria-labelledby="playContextTitle">
@@ -1536,6 +1621,96 @@ function playContextHtml(age) {
     ).join("")}</div>
     <p id="playContextStatus" class="play-context-status" role="status" aria-live="polite" aria-atomic="true">${esc(status)}</p>
   </section>`;
+}
+
+function dailyPlayChoiceIds(age, day) {
+  if (!day) return [];
+  const selected = programState.selected[day.day] || day.options[0];
+  const pool = [selected, ...(day.options || []), ...(day.bonus || []).map((item) => item.id), ...personalizedActivityIds(programState.program, programState.currentIndex)]
+    .filter((id, index, all) => activityById(age, id) && all.indexOf(id) === index);
+  const chosen = selected ? [selected] : [];
+  const domains = new Set(chosen.map((id) => domainOf(id)));
+  for (const id of pool) {
+    const domain = domainOf(id);
+    if (chosen.length >= 3) break;
+    if (!chosen.includes(id) && !domains.has(domain)) { chosen.push(id); domains.add(domain); }
+  }
+  for (const id of pool) {
+    if (chosen.length >= 3) break;
+    if (!chosen.includes(id)) chosen.push(id);
+  }
+  return chosen;
+}
+function dailyPlayMenuHtml(age, day) {
+  const selected = programState.selected[day.day] || day.options[0];
+  const ids = dailyPlayChoiceIds(age, day);
+  const labels = ["Основна", "Інша сфера", "Ще одна"];
+  return `<section class="daily-play-menu" aria-labelledby="dailyPlayMenuTitle">
+    <div class="daily-play-menu-head"><div><span class="mini-label">Меню дня</span><h2 id="dailyPlayMenuTitle">Оберіть із трьох ідей</h2></div><span>${completedActivityIdsToday(age).length} сьогодні</span></div>
+    <p>Однієї гри цілком достатньо. Друга або третя — лише якщо вам обом хочеться.</p>
+    <div class="daily-play-options">${ids.map((id, index) => {
+      const activity = activityById(age, id);
+      const done = activityCompletedToday(age, id);
+      return `<button type="button" data-daily-play-choice="${id}" aria-pressed="${id === selected}" class="daily-play-option ${id === selected ? "active" : ""} ${done ? "done" : ""}"><span>${labels[index] || "Ідея"}${done ? " · ✓ зіграно" : ""}</span><strong>${esc(activity.title)}</strong><small>${esc(activity.time)} · ${esc(DOMAIN_LABELS_SHORT[domainOf(id)] || domainOf(id))}</small></button>`;
+    }).join("")}</div>
+  </section>`;
+}
+
+function stopPlayTimerInterval() {
+  if (playTimerInterval != null) clearInterval(playTimerInterval);
+  playTimerInterval = null;
+}
+function ensurePlayTimer(activityId) {
+  if (playTimer.activityId === activityId) return;
+  stopPlayTimerInterval();
+  playTimer = { activityId, duration: 180, remaining: 180, running: false };
+}
+function timerClock(seconds) {
+  const safe = Math.max(0, Number(seconds) || 0);
+  return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
+}
+function updatePlayTimerDom() {
+  const clock = document.getElementById("playTimerClock");
+  const status = document.getElementById("playTimerStatus");
+  const toggle = document.getElementById("playTimerToggle");
+  if (clock) clock.textContent = timerClock(playTimer.remaining);
+  if (toggle) toggle.textContent = playTimer.running ? "Пауза" : (playTimer.remaining < playTimer.duration && playTimer.remaining > 0 ? "Продовжити" : "Почати");
+  if (status) status.textContent = playTimer.remaining === 0
+    ? "Час минув. Можна завершити або продовжити, якщо всім комфортно."
+    : (playTimer.running ? "Таймер лише підказує час — зупинитися можна будь-коли." : "Без сигналу тривоги й без обов’язкової тривалості.");
+}
+function startPlayTimer() {
+  if (playTimer.remaining <= 0) playTimer.remaining = playTimer.duration;
+  playTimer.running = true;
+  stopPlayTimerInterval();
+  playTimerInterval = setInterval(() => {
+    playTimer.remaining = Math.max(0, playTimer.remaining - 1);
+    if (playTimer.remaining === 0) { playTimer.running = false; stopPlayTimerInterval(); }
+    updatePlayTimerDom();
+  }, 1000);
+  updatePlayTimerDom();
+}
+function pausePlayTimer() { playTimer.running = false; stopPlayTimerInterval(); updatePlayTimerDom(); }
+function playTimerHtml(activityId) {
+  ensurePlayTimer(activityId);
+  return `<section class="play-timer" aria-labelledby="playTimerTitle">
+    <div class="play-timer-head"><div><span class="mini-label">М’який таймер</span><strong id="playTimerTitle">Стільки, скільки комфортно</strong></div><output id="playTimerClock" aria-live="off">${timerClock(playTimer.remaining)}</output></div>
+    <div class="play-timer-presets" role="group" aria-label="Тривалість таймера">${[2, 3, 5].map((minutes) => `<button type="button" data-play-timer-minutes="${minutes}" aria-pressed="${playTimer.duration === minutes * 60}" class="${playTimer.duration === minutes * 60 ? "active" : ""}">${minutes} хв</button>`).join("")}</div>
+    <button type="button" id="playTimerToggle" class="btn ghost">${playTimer.running ? "Пауза" : (playTimer.remaining < playTimer.duration ? "Продовжити" : "Почати")}</button>
+    <button type="button" id="playTimerReset" class="linklike">Скинути</button>
+    <p id="playTimerStatus" role="status" aria-live="polite">${playTimer.remaining === 0 ? "Час минув. Можна завершити або продовжити, якщо всім комфортно." : "Без сигналу тривоги й без обов’язкової тривалості."}</p>
+  </section>`;
+}
+function activitySignalHtml(age, activityId) {
+  if (!activityCompletedToday(age, activityId)) return "";
+  const active = cc().activitySignals[activitySignalKey(age, activityId)] || "";
+  const options = [
+    ["voice", "Ваш голос"], ["face", "Обличчя"], ["movement", "Рух"], ["object", "Предмет"], ["not_today", "Сьогодні не зацікавило"]
+  ];
+  return `<section class="activity-signal" aria-labelledby="activitySignalTitle"><strong id="activitySignalTitle">Що привернуло увагу?</strong><p>Одне легке спостереження — без висновку про розвиток.</p><div>${options.map(([id, label]) => `<button type="button" data-activity-signal="${id}" data-activity-id="${activityId}" aria-pressed="${active === id}" class="${active === id ? "active" : ""}">${label}</button>`).join("")}</div></section>`;
+}
+function playReminderHtml(activityId) {
+  return `<details class="play-reminder"><summary>Нагадати про ще один момент?</summary><div><p>Необов’язково. Створимо одну подію в календарі — без серії та прострочення.</p><div class="play-reminder-options"><button type="button" data-play-reminder="two-hours" data-activity-id="${activityId}">Через 2 години</button><button type="button" data-play-reminder="evening" data-activity-id="${activityId}">Увечері</button><button type="button" data-play-reminder="tomorrow" data-activity-id="${activityId}">Завтра</button></div><p id="playReminderStatus" role="status" aria-live="polite"></p></div></details>`;
 }
 
 function playWeekCalendarHtml(program, currentIndex, now = new Date()) {
@@ -1799,16 +1974,18 @@ function dayBodyHtml(age, d) {
 function todayActivityHtml(age, d) {
   const sel = programState.selected[d.day] || d.options[0];
   const selectedDomain = domainOf(sel) || d.domain;
-  const done = completedActivityToday(age)?.activityId === sel;
+  const done = activityCompletedToday(age, sel);
+  const completedCount = completedActivityIdsToday(age).length;
   return `
+    ${dailyPlayMenuHtml(age, d)}
     <article class="day-acc open today-game">
       <div class="today-game-head">
         <span class="day-num">Сьогодні</span>
         <span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span>
       </div>
-      <div class="day-acc-body">${dayBodyHtml(age, d)}${done ? `${activityReactionHtml(age, sel)}${activityObservationHtml(age, sel)}` : ""}</div>
+      <div class="day-acc-body">${activityDetailHtml(age, sel, programState.context === "low_energy")}${playTimerHtml(sel)}${done ? `${activityReactionHtml(age, sel)}${activitySignalHtml(age, sel)}${activityObservationHtml(age, sel)}${playReminderHtml(sel)}` : ""}</div>
     </article>
-    <div class="thumb-action"><button type="button" id="toggleTodayDone" class="btn ${done ? "ghost" : "primary"}" data-activity-id="${sel}" aria-pressed="${done}">${done ? "✓ Виконано сьогодні" : "Позначити виконаним"}</button></div>`;
+    <div class="thumb-action"><p class="thumb-status">${done ? (completedCount < 3 ? "Цього достатньо. За бажанням можна обрати ще одну ідею." : "Три моменти збережено — на сьогодні більш ніж достатньо.") : (completedCount >= 3 ? "Три моменти збережено — краще повернутися до спокійної гри іншого дня." : "Одна гра сьогодні — уже достатньо.")}</p><button type="button" id="toggleTodayDone" class="btn ${done ? "ghost" : "primary"}" data-activity-id="${sel}" aria-pressed="${done}" ${!done && completedCount >= 3 ? "disabled" : ""}>${done ? "✓ Зіграно · скасувати" : "Зберегти цей момент"}</button></div>`;
 }
 
 function favoriteIcon(filled = false) {
@@ -2177,8 +2354,13 @@ function finishSurvey() {
 }
 
 // ---- calendar (.ics) ----
-function downloadIcs(title) {
-  const dt = new Date(); dt.setDate(dt.getDate() + 1); dt.setHours(9, 0, 0, 0);
+function downloadIcs(title, when = "tomorrow") {
+  const dt = new Date();
+  if (when === "two-hours") dt.setHours(dt.getHours() + 2, 0, 0, 0);
+  else if (when === "evening") {
+    dt.setHours(19, 0, 0, 0);
+    if (dt <= new Date()) dt.setDate(dt.getDate() + 1);
+  } else { dt.setDate(dt.getDate() + 1); dt.setHours(9, 0, 0, 0); }
   const end = new Date(dt); end.setMinutes(end.getMinutes() + 15);
   const stamp = (d) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
   const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Milestones//UA//", "BEGIN:VEVENT",
@@ -2516,6 +2698,25 @@ document.addEventListener("click", async (e) => {
     document.querySelector(`[data-favorite-id="${id}"]`)?.focus({ preventScroll: true });
     return;
   }
+  const dailyChoice = e.target.closest("[data-daily-play-choice]");
+  if (dailyChoice) {
+    const id = dailyChoice.dataset.dailyPlayChoice;
+    const day = programState.currentDay;
+    if (!activityById(programState.age, id) || day == null) return;
+    programState.context = "any";
+    programState.contextNotice = "";
+    cc().playContext = "any";
+    programState.selected[day] = id;
+    cc().programSelections[String(programState.age)] = cc().programSelections[String(programState.age)] || {};
+    cc().programSelections[String(programState.age)][String(day)] = id;
+    if (activityCompletedToday(programState.age, id)) {
+      cc().activityCompletions[completionKey(programState.age)] = { activityId: id, completedAt: new Date().toISOString() };
+    }
+    save();
+    renderProgramList();
+    document.querySelector(`[data-daily-play-choice="${id}"]`)?.focus({ preventScroll: true });
+    return;
+  }
   const savedGameButton = e.target.closest("[data-saved-game]");
   if (savedGameButton) {
     const id = savedGameButton.dataset.savedGame;
@@ -2544,19 +2745,51 @@ document.addEventListener("click", async (e) => {
     document.querySelector(`[data-activity-reaction="${reaction}"]`)?.focus({ preventScroll: true });
     return;
   }
+  const signalButton = e.target.closest("[data-activity-signal]");
+  if (signalButton) {
+    const activityId = signalButton.dataset.activityId;
+    const signal = signalButton.dataset.activitySignal;
+    if (!activityCompletedToday(programState.age, activityId) || !["voice", "face", "movement", "object", "not_today"].includes(signal)) return;
+    const key = activitySignalKey(programState.age, activityId);
+    if (cc().activitySignals[key] === signal) delete cc().activitySignals[key];
+    else cc().activitySignals[key] = signal;
+    save(); renderProgramList();
+    document.querySelector(`[data-activity-signal="${signal}"][data-activity-id="${activityId}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  const timerPreset = e.target.closest("[data-play-timer-minutes]");
+  if (timerPreset) {
+    const minutes = Number(timerPreset.dataset.playTimerMinutes);
+    if (![2, 3, 5].includes(minutes)) return;
+    stopPlayTimerInterval();
+    playTimer.duration = minutes * 60;
+    playTimer.remaining = playTimer.duration;
+    playTimer.running = false;
+    renderProgramList();
+    document.querySelector(`[data-play-timer-minutes="${minutes}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  if (e.target.id === "playTimerToggle") {
+    if (playTimer.running) pausePlayTimer(); else startPlayTimer();
+    return;
+  }
+  if (e.target.id === "playTimerReset") {
+    stopPlayTimerInterval(); playTimer.remaining = playTimer.duration; playTimer.running = false; updatePlayTimerDom(); return;
+  }
+  const reminderButton = e.target.closest("[data-play-reminder]");
+  if (reminderButton) {
+    const when = reminderButton.dataset.playReminder;
+    const activity = activityById(programState.age, reminderButton.dataset.activityId);
+    if (!activity || !["two-hours", "evening", "tomorrow"].includes(when)) return;
+    downloadIcs(activity.title, when);
+    const status = document.getElementById("playReminderStatus");
+    if (status) status.textContent = "Одну подію підготовлено для вашого календаря.";
+    return;
+  }
   const completionButton = e.target.closest("#toggleTodayDone");
   if (completionButton) {
-    const key = completionKey(programState.age);
     const activityId = completionButton.dataset.activityId;
-    const current = cc().activityCompletions[key];
-    if (current && current.activityId === activityId) {
-      delete cc().activityCompletions[key];
-      delete cc().activityReactions[key];
-      delete cc().activityNotes[key];
-    } else {
-      cc().activityCompletions[key] = { activityId, completedAt: new Date().toISOString() };
-      delete cc().activityReactions[key];
-    }
+    if (!toggleActivityCompletion(programState.age, activityId)) return;
     save();
     renderProgramList();
     document.getElementById("toggleTodayDone")?.focus({ preventScroll: true });
