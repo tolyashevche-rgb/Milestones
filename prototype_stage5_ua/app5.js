@@ -920,9 +920,37 @@ function show(screen) {
   renderAppbar(screen);
   renderStorageStatus();
   if (screen === "program") afterProgramRender();
+  initMotionCarousels();
   window.scrollTo(0, 0);
   const focusTarget = screen === "survey" ? root.querySelector("#questionTitle") : root.querySelector("h1");
   focusTarget?.focus({ preventScroll: true });
+}
+
+// Keep each motion-guide's dots in sync with the swipe position, and let a dot tap scroll to
+// its step. Pure enhancement: swiping already works via CSS scroll-snap without this.
+function initMotionCarousels() {
+  if (typeof document === "undefined" || typeof document.querySelectorAll !== "function") return;
+  document.querySelectorAll("[data-motion-carousel]").forEach((carousel) => {
+    if (carousel.dataset.motionReady) return;
+    carousel.dataset.motionReady = "1";
+    const track = carousel.querySelector(".motion-track");
+    const dots = Array.from(carousel.parentElement.querySelectorAll(".motion-dot"));
+    if (!track || !dots.length) return;
+    const sync = () => {
+      const slideW = track.clientWidth || 1;
+      const idx = Math.round(track.scrollLeft / slideW);
+      dots.forEach((d, i) => d.classList.toggle("active", i === idx));
+    };
+    let ticking = false;
+    track.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { sync(); ticking = false; });
+    }, { passive: true });
+    dots.forEach((dot, i) => dot.addEventListener("click", () => {
+      track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
+    }));
+  });
 }
 
 function renderNav(active) {
@@ -1586,6 +1614,13 @@ function renderVisualPilot() {
   const reviewerStats = motionReviewSessionStats(reviewMeta);
   const reviewSessionStale = reviewerStats.stale;
   const visualCount = typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES).length : 0;
+  // Hero: the tummy-time pilot sequence as a one-scene-at-a-time carousel (its authored
+  // captions ride along inside each slide), falling back to the whole image if data is absent.
+  const heroCards = typeof ACTIVITY_VISUAL_GUIDES === "object" && ACTIVITY_VISUAL_GUIDES.act_002_movement_001
+    ? ACTIVITY_VISUAL_GUIDES.act_002_movement_001.cards : null;
+  const heroGuideHtml = Array.isArray(heroCards) && heroCards.length
+    ? `<div class="motion-guide motion-guide-embed" role="group" aria-label="Чотири послідовні сцени гри на животику">${motionCarouselHtml({ image: "activity-tummy-time-guide-v1.png" }, heroCards)}</div>`
+    : `<img src="activity-tummy-time-guide-v1.png" alt="Чотири послідовні сцени гри на животику: підготовка килимка, положення дитини під наглядом, спокійна взаємодія на рівні очей та завершення гри при втомі.">`;
   const matchingEntries = motionReviewEntries(reviewMeta, reviewData);
   const revisitId = reviewerMode && ACTIVITY_RASTER_GUIDES[reviewData.revisitId] ? reviewData.revisitId : "";
   const revisitEntry = revisitId ? [revisitId, ACTIVITY_RASTER_GUIDES[revisitId]] : null;
@@ -1666,8 +1701,14 @@ function renderVisualPilot() {
         <button type="button" data-motion-review="${id}" data-review-criterion="${criterion.id}" data-review-value="no" aria-pressed="${review[criterion.id] === "no"}" class="${review[criterion.id] === "no" ? "active review-no" : ""}"${reviewSessionStale ? " disabled" : ""}>Ні</button>
       </div>
     </div>`).join("");
+    // Parents/owner browse panels one at a time (enlarged, swipeable); external reviewers
+    // keep the whole 4-scene card — their review protocol depends on seeing it entire.
+    const galleryCards = reviewerMode ? null : motionGuideCards(id, guide);
+    const galleryVisual = galleryCards
+      ? `<div class="motion-guide motion-guide-embed" role="group" aria-label="${esc(guide.imageAlt || "Ілюстрація вправи")}">${motionCarouselHtml(guide, galleryCards)}</div>`
+      : `<img src="${esc(guide.image)}" alt="${reviewerMode ? "Ілюстрація Motion Card для незалежної перевірки" : esc(guide.imageAlt)}" loading="lazy" decoding="async">`;
     return `<figure class="pilot-figure pilot-gallery-card${complete ? " review-complete" : ""}" data-review-card="${id}">
-      <img src="${esc(guide.image)}" alt="${reviewerMode ? "Ілюстрація Motion Card для незалежної перевірки" : esc(guide.imageAlt)}" loading="lazy" decoding="async">
+      ${galleryVisual}
       ${reviewerMode ? `<figcaption><strong>Картка без назви</strong><span>${reviewMeta.type === "expert" ? `${age} міс · оцініть відповідність віку й безпеку` : "Оцініть лише те, що видно на зображенні"}</span></figcaption>` : `<figcaption><strong>${esc(activity ? activity.title : id)}</strong><span>${age} міс · чернетка до експертної перевірки</span></figcaption>`}
       <details class="pilot-review"${revisitingThisCard ? " open" : ""}><summary>${reviewerMode ? revisitingThisCard ? "Редагувати відповіді" : "Показати критерії після першого погляду" : complete ? "✓ Перевірено" : "Перевірити картку"}</summary>
         <div class="pilot-review-body">${criteriaHtml}
@@ -1687,13 +1728,9 @@ function renderVisualPilot() {
     <h1 tabindex="-1">Ілюстрована підказка до гри</h1>
     <p class="muted">Приклад власного стилю Milestones: одна послідовність, яку можна зрозуміти без довгого тексту.</p>
     <figure class="pilot-figure">
-      <img src="activity-tummy-time-guide-v1.png" alt="Чотири послідовні сцени гри на животику: підготовка килимка, положення дитини під наглядом, спокійна взаємодія на рівні очей та завершення гри при втомі.">
-      <figcaption>Міні-хвилинка на животику · візуальний прототип</figcaption>
+      ${heroGuideHtml}
+      <figcaption>Міні-хвилинка на животику · гортайте сцени вбік</figcaption>
     </figure>
-    <div class="pilot-legend" aria-label="Послідовність ілюстрації">
-      <span><b>1</b> Підготуйте</span><span><b>2</b> Розташуйтеся поруч</span>
-      <span><b>3</b> Спостерігайте</span><span><b>4</b> Спокійно завершіть</span>
-    </div>
     <div class="pilot-safety"><strong>Важливо:</strong> лише коли дитина не спить, на твердій рівній поверхні та під постійним наглядом дорослого.</div>
     <div class="pilot-gallery-head"><h2>Бібліотека з ${visualCount} карток</h2><p class="muted">Єдина візуальна мова, три повторювані сім’ї та фони, що пояснюють дію. Це робочі чернетки до перевірки фахівцем.</p></div>`}
     <section class="motion-review-toolbar" aria-labelledby="motionReviewTitle">
@@ -1733,6 +1770,7 @@ function renderProgramList() {
   if (context) context.innerHTML = playContextHtml(programState.age);
   const saved = document.getElementById("savedGames");
   if (saved) saved.innerHTML = savedGamesHtml(programState.age);
+  initMotionCarousels();
 }
 
 function dayChip(age, dayNum, id, sel) {
@@ -1848,10 +1886,22 @@ function sourceFriendly(source) {
   return String(source || "").replace(/WHO motor/gi, "WHO — руховий розвиток");
 }
 
-function activityVisualGuideHtml(id) {
-  if (typeof activityVisualGuide !== "function" || typeof motionCardArt !== "function") return "";
-  const guide = activityVisualGuide(id);
-  if (!guide) return "";
+// The raster guides are single square sprites that bake every step into a 2-column grid
+// (all current art is 2×2 = 4 panels). Return the background sizing/position that crops the
+// sprite down to just panel `index`, so each step can be shown one at a time, full width.
+function spritePosition(index, total) {
+  const cols = 2;
+  const rows = Math.max(1, Math.ceil(total / cols));
+  const col = index % cols;
+  const row = Math.floor(index / cols);
+  const px = cols > 1 ? (col / (cols - 1)) * 100 : 0;
+  const py = rows > 1 ? (row / (rows - 1)) * 100 : 0;
+  return `background-size:${cols * 100}% ${rows * 100}%;background-position:${px}% ${py}%;`;
+}
+
+// Step cards for a visual guide: authored cards if present, otherwise derived from the
+// activity's own safety-checked steps (so raster-only guides still get captions).
+function motionGuideCards(id, guide) {
   let cards = Array.isArray(guide.cards) ? guide.cards : null;
   if (!cards && guide.image) {
     const age = Number(String(id).slice(4, 7));
@@ -1864,20 +1914,42 @@ function activityVisualGuideHtml(id) {
       { phase: "Зупиніться", text: activity.stop, stop: true }
     ];
   }
-  if (!Array.isArray(cards)) return "";
-  const visualCards = guide.image
-    ? `<figure class="motion-guide-figure"><img src="${esc(guide.image)}" alt="${esc(guide.imageAlt || "Покрокова ілюстрація гри")}" loading="lazy" decoding="async"></figure>
-      <div class="motion-image-steps">${cards.map((card, index) => `<div class="motion-image-step${card.stop ? " motion-image-step-stop" : ""}"><b>${index + 1}</b><span><strong>${esc(card.phase)}</strong>${esc(card.text)}</span></div>`).join("")}</div>`
-    : `<div class="motion-card-grid">${cards.map((card, index) => `<article class="motion-card${card.stop ? " motion-card-stop" : ""}">
-      <div class="motion-card-art" aria-hidden="true">${motionCardArt(card.art)}</div>
-      <div class="motion-card-copy"><span>${index + 1}. ${esc(card.phase)}</span><p>${esc(card.text)}</p></div>
-    </article>`).join("")}</div>`;
+  return Array.isArray(cards) && cards.length ? cards : null;
+}
+
+// One large panel per slide; swipe sideways (Instagram-style) to reach the next step.
+// The caption lives inside each slide, so it travels together with its illustration.
+function motionCarouselHtml(guide, cards) {
+  const total = cards.length;
+  const slides = cards.map((card, index) => {
+    const art = guide.image
+      ? `<div class="motion-slide-art" style="background-image:url('${esc(guide.image)}');${spritePosition(index, total)}" role="img" aria-label="${esc(card.phase)}: ${esc(card.text)}"></div>`
+      : `<div class="motion-slide-art motion-slide-art-svg" aria-hidden="true">${motionCardArt(card.art)}</div>`;
+    return `<article class="motion-slide${card.stop ? " motion-slide-stop" : ""}" aria-roledescription="слайд" aria-label="Крок ${index + 1} з ${total}">
+      ${art}
+      <div class="motion-slide-copy"><span>Крок ${index + 1} з ${total} · ${esc(card.phase)}</span><p>${esc(card.text)}</p></div>
+    </article>`;
+  }).join("");
+  const dots = cards.map((card, index) =>
+    `<button type="button" class="motion-dot${index === 0 ? " active" : ""}" data-motion-dot="${index}" aria-label="Перейти до кроку ${index + 1}"></button>`).join("");
+  return `<div class="motion-carousel" data-motion-carousel>
+      <div class="motion-track">${slides}</div>
+    </div>
+    <div class="motion-dots">${dots}</div>`;
+}
+
+function activityVisualGuideHtml(id) {
+  if (typeof activityVisualGuide !== "function" || typeof motionCardArt !== "function") return "";
+  const guide = activityVisualGuide(id);
+  if (!guide) return "";
+  const cards = motionGuideCards(id, guide);
+  if (!cards) return "";
   return `<section class="motion-guide" aria-labelledby="motion-guide-${esc(id)}">
     <div class="motion-guide-head">
       <strong id="motion-guide-${esc(id)}">${esc(guide.title || "Як грати")}</strong>
-      <span>4 короткі підказки</span>
+      <span>Гортайте вбік · ${cards.length} кроки</span>
     </div>
-    ${visualCards}
+    ${motionCarouselHtml(guide, cards)}
     <p class="motion-guide-note">Не треба домагатися певної реакції — достатньо спокійно запропонувати й помітити відповідь дитини.</p>
   </section>`;
 }

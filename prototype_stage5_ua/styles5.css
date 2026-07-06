@@ -322,28 +322,37 @@ main {
 .low-energy-option small { color: var(--muted); font-size: 12px; }
 .motion-guide { margin: 4px 0 12px; }
 .motion-guide-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-.motion-guide-head span { color: var(--muted); font-size: 12px; }
-.motion-guide-figure { overflow: hidden; margin: 0; border: 1px solid #d8e8e4; border-radius: 15px; background: #fffaf3; }
-.motion-guide-figure img { display: block; width: 100%; height: auto; }
-.motion-image-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; }
-.motion-image-step { min-width: 0; min-height: 52px; display: flex; align-items: flex-start; gap: 8px; padding: 9px 10px; border: 1px solid #d8e8e4; border-radius: 11px; background: #f5fbf9; }
-.motion-image-step-stop { border-color: #ecd6bf; background: #fff8f1; }
-.motion-image-step > b { width: 25px; height: 25px; display: grid; place-items: center; flex: 0 0 25px; border-radius: 50%; background: var(--teal); color: #fff; font-size: 12px; }
-.motion-image-step-stop > b { background: var(--apricot-dark); }
-.motion-image-step span { color: #40504d; font-size: 12px; line-height: 1.35; }
-.motion-image-step strong { display: block; margin-bottom: 2px; color: var(--teal-dark); }
-.motion-image-step-stop strong { color: var(--apricot-dark); }
-.motion-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.motion-card { min-width: 0; overflow: hidden; border: 1px solid #d8e8e4; border-radius: 13px; background: #f5fbf9; }
-.motion-card-stop { border-color: #ecd6bf; background: #fff8f1; }
-.motion-card-art { height: 92px; display: grid; place-items: center; color: var(--teal-dark); background: rgba(221, 241, 237, .7); }
-.motion-card-stop .motion-card-art { color: var(--apricot-dark); background: var(--apricot-soft); }
-.motion-card-art svg { width: 100%; height: 80px; }
-.motion-card-art .motion-accent { color: #d77d39; stroke: currentColor; }
-.motion-card-copy { padding: 9px 10px 10px; }
-.motion-card-copy span { display: block; color: var(--teal-dark); font-size: 12px; font-weight: 800; }
-.motion-card-stop .motion-card-copy span { color: var(--apricot-dark); }
-.motion-card-copy p { margin: 4px 0 0; color: #40504d; font-size: 13px; line-height: 1.35; }
+.motion-guide-head span { flex-shrink: 0; color: var(--muted); font-size: 12px; }
+
+/* One large step per slide; native finger-swipe via horizontal scroll-snap (Instagram-style).
+   The caption is inside each slide, so it travels together with its illustration. */
+.motion-carousel { overflow: hidden; border: 1px solid #d8e8e4; border-radius: 15px; background: #fffaf3; }
+.motion-track {
+  display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.motion-track::-webkit-scrollbar { display: none; }
+.motion-slide { flex: 0 0 100%; min-width: 0; scroll-snap-align: center; scroll-snap-stop: always; }
+.motion-slide-art {
+  aspect-ratio: 1 / 1; background-repeat: no-repeat; background-color: #fffaf3;
+}
+.motion-slide-art-svg { display: grid; place-items: center; color: var(--teal-dark); background: rgba(221, 241, 237, .7); }
+.motion-slide-art-svg svg { width: 82%; height: 82%; }
+.motion-slide-art-svg .motion-accent { color: #d77d39; stroke: currentColor; }
+.motion-slide-copy { padding: 11px 13px 13px; border-top: 1px solid #e4efeb; }
+.motion-slide-copy span { display: block; color: var(--teal-dark); font-size: 12px; font-weight: 800; }
+.motion-slide-copy p { margin: 4px 0 0; color: #40504d; font-size: 14px; line-height: 1.4; }
+.motion-slide-stop .motion-slide-copy { background: #fff8f1; }
+.motion-slide-stop .motion-slide-copy span { color: var(--apricot-dark); }
+
+.motion-dots { display: flex; justify-content: center; gap: 7px; margin-top: 10px; }
+.motion-dot {
+  width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%;
+  background: #cddbd6; cursor: pointer; transition: width .2s ease, background .2s ease;
+}
+.motion-dot.active { width: 22px; border-radius: 999px; background: var(--teal); }
+.motion-dot:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+
 .motion-guide-note { margin: 8px 2px 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .full-steps { margin: 4px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .full-steps > summary { min-height: 46px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-weight: 700; }
@@ -413,6 +422,11 @@ main {
 .pilot-figure { overflow: hidden; margin: 18px 0 12px; border: 1px solid #d8e8e4; border-radius: 18px; background: #fffaf3; box-shadow: var(--shadow); }
 .pilot-figure img { display: block; width: 100%; height: auto; }
 .pilot-figure figcaption { padding: 10px 14px 12px; color: var(--muted); font-size: 13px; }
+/* Carousel embedded inside a pilot figure/gallery card: the figure already draws the frame,
+   so the inner carousel drops its own border and the dots get breathing room. */
+.motion-guide-embed { margin: 0; }
+.motion-guide-embed .motion-carousel { border: 0; border-radius: 0; }
+.motion-guide-embed .motion-dots { margin: 10px 0; }
 .pilot-gallery-head { margin-top: 28px; padding-top: 22px; border-top: 1px solid #d8e8e4; }
 .pilot-gallery-head h2 { margin-bottom: 6px; }
 .pilot-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -524,10 +538,6 @@ main {
 .pilot-safety { margin-top: 12px; padding: 11px 12px; border: 1px solid #ecd6bf; border-radius: 11px; background: var(--apricot-soft); color: #604f43; font-size: 13px; }
 
 @media (max-width: 340px) {
-  .motion-card-grid { grid-template-columns: 1fr; }
-  .motion-card { display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: center; }
-  .motion-card-art { height: 86px; }
-  .motion-image-steps { grid-template-columns: 1fr; }
   .pilot-legend { grid-template-columns: 1fr; }
   .pilot-gallery { grid-template-columns: 1fr; }
   .motion-review-overview ul { grid-template-columns: 1fr; }

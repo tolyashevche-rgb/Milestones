@@ -194,6 +194,31 @@ successful recovery clears it, and erase/restore cannot report false persistence
 
 ## Work log (newest first)
 
+### 2026-07-06 — Motion guide: 4-panel grid → swipeable one-per-slide carousel
+- Reworked `activityVisualGuideHtml` (app5.js) + motion CSS (styles5.css): the step
+  illustration used to show the whole 2×2 sprite at once (four small panels) plus a text grid.
+  Now each step is one **full-width slide** cropped from the same square sprite via
+  `background-size:200% 200%` + `background-position` (new `spritePosition()` helper), swiped
+  sideways with CSS scroll-snap (native finger swipe, Instagram-style). The caption
+  («Крок N з 4 · Фаза» + text) lives **inside** each slide, so it travels with its image.
+  Added Instagram-style dots (`initMotionCarousels()` syncs the active dot on scroll and lets a
+  dot tap scroll to that step; called from `show()` and `renderProgramList()`; guarded for the
+  headless test's stub `document`). All sprites verified 1254×1254 (2×2); tummy PNG too.
+- Updated the one QA assertion that hard-coded the old markup (`motion-image-step` count →
+  `motion-slide` count; `src=` → image-URL match). `node tools/test_p1_qa.js` passes. Verified
+  live via headless render: slide 1 = top-left panel «Підготуйте», slide 2 = top-right «Зробіть»
+  — correct quadrant cropping + travelling captions.
+- Extended the carousel beyond the activity detail: extracted shared helpers
+  (`motionGuideCards()` + `motionCarouselHtml()`) and reused them on the `#/visual-pilot`
+  screen — the hero tummy-time figure (its 1-2-3-4 text legend folded into the per-slide
+  captions) and every non-reviewer gallery card now swipe one enlarged panel at a time.
+  **Reviewer mode intentionally keeps the whole 4-panel `<img>`** — the isolated review
+  protocol ("look at the card 5–8 s, then judge") and already-collected session data depend
+  on seeing the card entire.
+- Cache bump done: `20260704-p2-45-r1` → `20260706-p2-46-r1` + SW `CACHE_NAME`
+  `milestones-stage5-p2-46-r1`, with the QA cache-key assertions updated to match;
+  `node tools/test_p1_qa.js` passes end-to-end.
+
 ### 2026-07-05 — narrow-screen verification and real-device handoff
 - Rechecked `#/home`, `#/survey`, `#/program`, `#/library`, and `#/visual-pilot` with a mobile
   viewport. At the resulting 304–319 px content width, root/body/main had no horizontal overflow;
