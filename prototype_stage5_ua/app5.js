@@ -1534,15 +1534,46 @@ function discussCardHtml(m, state) {
   return `<article class="discuss-card"><div class="q-meta"><span>${esc(m.domain)}</span><span>${OBSERVATION_LABELS[state] || "Спостереження"}</span></div><h3>${esc(m.title)}</h3><p class="muted"><strong>Для розмови:</strong> ${esc(DISCUSS_BY_ID[m.id])}</p></article>`;
 }
 
+function resultHeroHtml(profile, followUp) {
+  let icon = "✓";
+  let label = "Наступний крок";
+  let title = "Оберіть одну гру";
+  let note = "Звичайної спільної гри достатньо.";
+  if (followUp.kind === "discuss-now") {
+    icon = "!";
+    title = "Підготуйте розмову з фахівцем";
+    note = "Ігри можуть бути частиною дня, але не замінюють обговорення відповіді «Ще не помічаю».";
+  } else if (followUp.kind === "recheck-ready") {
+    icon = "↻";
+    title = "Можна оновити спостереження";
+    note = "Минув щонайменше тиждень — відповідайте за звичайними моментами, не одразу після вправи.";
+  } else if (followUp.kind === "watch-window") {
+    icon = "○";
+    title = "Спостерігайте у звичайних моментах";
+    note = `Повернутися до короткої перевірки можна ${shortDate(followUp.earliest)}–${shortDate(followUp.latest)}.`;
+  } else if (profile.allClear) {
+    title = "Продовжуйте звичайну гру";
+  } else if (profile.partialClear) {
+    title = "Оберіть легку гру";
+  }
+  return `<article class="result-hero ${followUp.kind}">
+    <span class="result-hero-icon" aria-hidden="true">${icon}</span>
+    <div><span class="mini-label">${label}</span><h2>${title}</h2><p>${note}</p></div>
+    <small>Це не оцінка й не діагноз.</small>
+  </article>`;
+}
+
+function resultFocusHtml(profile) {
+  const labels = profile.focus?.length
+    ? profile.focus.map((item) => DOMAIN_LABELS[item.domain]).filter(Boolean)
+    : [profile.partialClear ? "Легка гра" : "Звичайна гра"];
+  return `<div class="result-focus"><span>Фокус гри</span><div>${labels.map((label) => `<strong>${esc(label)}</strong>`).join("")}</div></div>`;
+}
+
 function renderResults() {
   const age = currentAge();
   const survey = cc().surveys[age] || { states: {} };
   const profile = profileForSurvey(survey, age);
-  let focusBlock;
-  if (profile.allClear) focusBlock = `<p>Продовжуйте звичну гру та спілкування — окремий напрямок зараз не потрібен.</p>`;
-  else if (profile.partialClear) focusBlock = `<p>Продовжуйте спостерігати у власному темпі. Ми запропонуємо легку гру без додаткового навантаження.</p>`;
-  else focusBlock = `<p>Найближчими днями почніть із гри, яка підтримує:</p><ul class="focus-list">${profile.focus.map((f) => `<li><strong>${DOMAIN_LABELS[f.domain]}</strong></li>`).join("")}</ul>`;
-
   const flagged = (survey.questionIds || []).map((id) => milestoneById(age, id)).filter((m) => m && (survey.states[m.id] === "not_yet" || survey.states[m.id] === "not_sure") && DISCUSS_BY_ID[m.id]);
   const discuss = flagged.length ? `
     <details class="calm-details">
@@ -1556,18 +1587,14 @@ function renderResults() {
 
   return `
     <section class="screen-pad has-thumb-action">
-      <h1 tabindex="-1">Ваші спостереження</h1>
-      <p class="muted">Короткий підсумок для віку ${AGE_LABELS[age]}. Це не оцінка і не діагноз.</p>
-      ${observationRouteHtml(survey)}
-      <article class="card">
-        <span class="mini-label">Що ви помітили</span>
-        ${domainSummary(age)}
-      </article>
+      <h1 tabindex="-1">Готово</h1>
+      ${resultHeroHtml(profile, followUp)}
+      ${resultFocusHtml(profile)}
 
-      <article class="card">
-        <span class="mini-label">З чого почати</span>
-        ${focusBlock}
-      </article>
+      <details class="result-details">
+        <summary>Що ви позначили</summary>
+        ${domainSummary(age)}
+      </details>
 
       ${discuss}
 

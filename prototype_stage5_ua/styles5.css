@@ -253,6 +253,21 @@ main {
 
 /* vision / discuss */
 .focus-list { margin: 8px 0 0; padding-left: 18px; }
+.result-hero { display: grid; grid-template-columns: 42px 1fr; gap: 10px 12px; margin-top: 14px; padding: 15px; border: 1px solid #cfe3de; border-radius: 16px; background: linear-gradient(145deg, #fff, var(--mint)); }
+.result-hero-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; background: var(--teal); color: #fff; font-size: 22px; font-weight: 800; }
+.result-hero .mini-label { margin: 0 0 2px; }
+.result-hero h2 { margin: 0; font-size: 20px; }
+.result-hero p { margin: 5px 0 0; color: #40504d; font-size: 14px; }
+.result-hero > small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+.result-hero.discuss-now { border-color: #e7c49f; background: linear-gradient(145deg, #fff, var(--apricot-soft)); }
+.result-hero.discuss-now .result-hero-icon { background: var(--apricot-dark); }
+.result-focus { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--panel); }
+.result-focus > span { color: var(--muted); font-size: 12px; font-weight: 700; }
+.result-focus > div { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.result-focus strong { padding: 4px 8px; border-radius: 999px; background: var(--mint); color: var(--teal-dark); font-size: 12px; }
+.result-details { margin-top: 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.result-details > summary { min-height: 48px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-weight: 700; }
+.result-details .domain-summary { padding-bottom: 6px; }
 .discuss-card { border: 1px solid var(--line); border-left: 3px solid var(--teal); border-radius: 10px; background: var(--panel); padding: 12px 14px; margin-top: 10px; }
 .discuss-card h3 { margin: 0 0 6px; font-size: 16px; }
 .calm-anchor { margin-top: 8px; padding: 11px 12px; border-radius: 10px; color: var(--teal-dark); background: var(--mint); font-size: 14px; }
