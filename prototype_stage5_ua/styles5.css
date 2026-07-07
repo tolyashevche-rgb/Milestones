@@ -287,15 +287,19 @@ main {
 .local-note { margin: 14px 0 0; color: var(--muted); font-size: 13px; }
 
 /* program */
-.play-context { margin: 14px 0; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 253, 249, 0.9); box-shadow: 0 5px 16px rgba(24, 32, 31, 0.04); }
+.play-context { margin: 12px 0; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 253, 249, 0.9); box-shadow: 0 5px 16px rgba(24, 32, 31, 0.04); overflow: hidden; }
+.play-context > summary { min-height: 50px; display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 7px; padding: 10px 12px; color: var(--teal-dark); cursor: pointer; }
+.play-context > summary > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; background: var(--mint); }
+.play-context > summary small { color: var(--muted); font-size: 11px; font-weight: 650; }
+.play-context[open] > summary { border-bottom: 1px solid var(--line); }
 .play-context-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .play-context-head span { color: var(--muted); font-size: 12px; }
 .play-context-copy { margin: 4px 0 10px; color: var(--muted); font-size: 13px; }
-.play-context-options { display: flex; flex-wrap: wrap; gap: 6px; }
+.play-context-options { display: flex; flex-wrap: wrap; gap: 6px; padding: 11px 12px 0; }
 .play-context-options button { min-height: 44px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink); padding: 7px 8px; cursor: pointer; font-size: 13px; font-weight: 650; }
 .play-context-options button.active { border-color: var(--teal); background: var(--mint); color: var(--teal-dark); }
 .play-context-options button:disabled { opacity: .55; cursor: not-allowed; }
-.play-context-status { min-height: 20px; margin: 8px 0 0; color: var(--teal-dark); font-size: 13px; }
+.play-context-status { min-height: 20px; margin: 8px 12px 11px; color: var(--teal-dark); font-size: 13px; }
 .illus { display: flex; align-items: center; justify-content: center; color: var(--teal); background: var(--mint); border-radius: 12px; padding: 18px; margin-bottom: 12px; }
 .illus svg { width: 84px; height: 84px; }
 .illus.mini { padding: 10px; margin-bottom: 10px; border-radius: 10px; }
@@ -327,15 +331,15 @@ main {
 .day-acc.open { border-color: var(--teal); box-shadow: var(--shadow); }
 .today-game { margin-top: 14px; }
 .daily-play-menu { margin-top: 14px; padding: 14px; border: 1px solid #cfe2dd; border-radius: 15px; background: #f5faf8; }
-.daily-play-menu-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.daily-play-menu-head h2 { margin: 2px 0 0; font-size: 19px; }
+.daily-play-menu-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.daily-play-menu-head h2 { margin: 0; font-size: 18px; }
 .daily-play-menu-head > span { flex-shrink: 0; padding: 4px 8px; border-radius: 999px; background: #fff; color: var(--teal-dark); font-size: 11px; font-weight: 800; }
-.daily-play-menu > p { margin: 8px 0 12px; color: var(--muted); font-size: 13px; }
-.daily-play-options { display: grid; gap: 8px; }
-.daily-play-option { min-height: 70px; display: grid; gap: 2px; align-content: center; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); cursor: pointer; text-align: left; }
-.daily-play-option > span { color: var(--teal-dark); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.daily-play-menu > .daily-play-hint { margin: 9px 1px 0; color: var(--muted); font-size: 12px; }
+.daily-play-options { display: grid; gap: 7px; margin-top: 10px; }
+.daily-play-option { min-height: 58px; display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); cursor: pointer; text-align: left; }
+.daily-play-option > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; background: var(--mint); color: var(--teal-dark); font-size: 11px; font-weight: 800; }
 .daily-play-option > strong { font-size: 15px; }
-.daily-play-option > small { color: var(--muted); font-size: 12px; }
+.daily-play-option > small { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .daily-play-option.active { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(30, 122, 111, .1); }
 .daily-play-option.done { background: var(--mint); }
 .daily-play-option:disabled { opacity: .55; cursor: not-allowed; }
@@ -396,6 +400,10 @@ main {
 .full-steps { margin: 4px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .full-steps > summary { min-height: 46px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-weight: 700; }
 .full-steps .steps { padding-bottom: 10px; }
+.activity-more { margin-top: 9px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.activity-more > summary { min-height: 46px; display: flex; align-items: center; color: var(--teal-dark); cursor: pointer; font-weight: 700; }
+.activity-more > .steps { padding: 2px 0 8px; }
+.activity-more .evidence-details { margin-bottom: 10px; }
 .day-opts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .day-opt { min-height: 44px; border: 1px solid var(--line); border-radius: 999px; background: #f7faf9; padding: 8px 12px; cursor: pointer; font-size: 13px; }
 .day-opt.active { background: var(--teal); color: #fff; border-color: var(--teal); }

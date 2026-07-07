@@ -1646,14 +1646,14 @@ function playContextHtml(age) {
   const flowLocked = Boolean(cc().activePlaySession) || cc().playDiary.some((entry) => !entry.saved && String(entry.endedAt).slice(0, 10) === localDateString());
   const active = programState.context || "any";
   const status = flowLocked ? "Спершу завершіть поточну гру й збережіть коротку відмітку." : (done ? contextStatusText(active, true, true) : (programState.contextNotice || contextStatusText(active)));
-  return `<section class="play-context" aria-labelledby="playContextTitle">
-    <div class="play-context-head"><strong id="playContextTitle">Підібрати під момент</strong><span>необов'язково</span></div>
-    <p class="play-context-copy">Змінює лише сьогоднішню ідею, не відповіді спостереження.</p>
-    <div class="play-context-options" role="group" aria-label="Контекст гри">${PLAY_CONTEXTS.map((context) =>
+  return `<details class="play-context" ${active !== "any" || flowLocked ? "open" : ""}>
+    <summary><span aria-hidden="true">⚙</span><strong id="playContextTitle">Підібрати під момент</strong><small>${active === "any" ? "необов’язково" : PLAY_CONTEXTS.find((item) => item.id === active)?.label || "обрано"}</small></summary>
+    <p class="sr-only">Вибір змінює лише сьогоднішню ідею, не відповіді спостереження.</p>
+    <div class="play-context-options" role="group" aria-labelledby="playContextTitle">${PLAY_CONTEXTS.map((context) =>
       `<button type="button" data-play-context="${context.id}" aria-pressed="${active === context.id}" class="${active === context.id ? "active" : ""}" ${done || flowLocked ? "disabled" : ""}>${context.label}</button>`
     ).join("")}</div>
     <p id="playContextStatus" class="play-context-status" role="status" aria-live="polite" aria-atomic="true">${esc(status)}</p>
-  </section>`;
+  </details>`;
 }
 
 function dailyPlayChoiceIds(age, day) {
@@ -1680,13 +1680,13 @@ function dailyPlayMenuHtml(age, day) {
   const labels = ["Основна", "Інша сфера", "Ще одна"];
   const flowLocked = Boolean(cc().activePlaySession) || cc().playDiary.some((entry) => !entry.saved && String(entry.endedAt).slice(0, 10) === localDateString());
   return `<section class="daily-play-menu" aria-labelledby="dailyPlayMenuTitle">
-    <div class="daily-play-menu-head"><div><span class="mini-label">Меню дня</span><h2 id="dailyPlayMenuTitle">Оберіть із трьох ідей</h2></div><span>${completedActivityIdsToday(age).length} сьогодні</span></div>
-    <p>Однієї гри цілком достатньо. Друга або третя — лише якщо вам обом хочеться.</p>
+    <div class="daily-play-menu-head"><h2 id="dailyPlayMenuTitle">3 ідеї на сьогодні</h2><span>${completedActivityIdsToday(age).length} ✓</span></div>
     <div class="daily-play-options">${ids.map((id, index) => {
       const activity = activityById(age, id);
       const done = activityCompletedToday(age, id);
-      return `<button type="button" data-daily-play-choice="${id}" aria-pressed="${id === selected}" class="daily-play-option ${id === selected ? "active" : ""} ${done ? "done" : ""}" ${flowLocked && id !== selected ? "disabled" : ""}><span>${labels[index] || "Ідея"}${done ? " · ✓ зіграно" : ""}</span><strong>${esc(activity.title)}</strong><small>${esc(activity.time)} · ${esc(DOMAIN_LABELS_SHORT[domainOf(id)] || domainOf(id))}</small></button>`;
+      return `<button type="button" data-daily-play-choice="${id}" aria-pressed="${id === selected}" class="daily-play-option ${id === selected ? "active" : ""} ${done ? "done" : ""}" ${flowLocked && id !== selected ? "disabled" : ""}><span>${index + 1}${done ? " · ✓" : ""}</span><strong>${esc(activity.title)}</strong><small>⏱ ${esc(activity.time)}</small></button>`;
     }).join("")}</div>
+    <p class="daily-play-hint">Одна — достатньо. Решта за бажанням.</p>
   </section>`;
 }
 
@@ -2244,10 +2244,10 @@ function activityVisualGuideHtml(id) {
   return `<section class="motion-guide" aria-labelledby="motion-guide-${esc(id)}">
     <div class="motion-guide-head">
       <strong id="motion-guide-${esc(id)}">${esc(guide.title || "Як грати")}</strong>
-      <span>Гортайте вбік · ${cards.length} кроки</span>
+      <span aria-label="Гортайте вбік, ${cards.length} кроки">Гортайте →</span>
     </div>
     ${motionCarouselHtml(guide, cards)}
-    <p class="motion-guide-note">Не треба домагатися певної реакції — достатньо спокійно запропонувати й помітити відповідь дитини.</p>
+    <p class="motion-guide-note">Без «правильної» реакції.</p>
   </section>`;
 }
 
@@ -2270,12 +2270,14 @@ function activityDetailHtml(age, id, showLowEnergy = false) {
     <div class="activity-title-row"><h2 class="activity-title">${esc(a.title)}</h2>
       <button type="button" class="favorite-toggle ${favorite ? "active" : ""}" data-favorite-id="${id}" aria-pressed="${favorite}" aria-label="${favorite ? "Прибрати гру зі збережених" : "Зберегти гру"}">${favoriteIcon(favorite)}<span>${favorite ? "Збережено" : "Зберегти"}</span></button>
     </div>
-    <div class="tag-row activity-quick-meta"><span class="chip">${esc(a.time)}</span><span class="chip">${esc(a.materials)}</span></div>
+    <div class="tag-row activity-quick-meta"><span class="chip">⏱ ${esc(a.time)}</span><span class="chip">◇ ${esc(a.materials)}</span></div>
     ${lowEnergy ? `<div class="low-energy-option"><strong>Коли сил мало</strong><span>${esc(lowEnergy)}</span><small>Повні кроки й умова зупинки залишаються нижче.</small></div>` : ""}
     ${visualGuide}
-    ${visualGuide ? `<details class="full-steps"><summary>Детальні кроки</summary><div class="steps"><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div></details>` : `<div class="steps"><strong>Кроки</strong><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>`}
-    <div class="stop"><strong>Коли зупинитися:</strong> ${esc(a.stop)}</div>
-    ${basis}`;
+    <details class="activity-more"><summary>Деталі й безпека</summary>
+      ${visualGuide ? `<div class="steps"><strong>Усі кроки</strong><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>` : `<div class="steps"><strong>Кроки</strong><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>`}
+      <div class="stop"><strong>■ Зупиніться:</strong> ${esc(a.stop)}</div>
+      ${basis}
+    </details>`;
 }
 
 // ---- progress ----

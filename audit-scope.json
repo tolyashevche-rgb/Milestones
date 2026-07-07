@@ -1,7 +1,7 @@
 {
   "schema": "milestones.audit-scope.v1",
-  "release": "P2.48",
-  "assetVersion": "20260706-p2-48-r1",
+  "release": "P2.49",
+  "assetVersion": "20260707-p2-49-r1",
   "primaryEntryPoint": "prototype_stage5_ua/index.html",
   "currentUiRoots": [
     "prototype_stage5_ua"
