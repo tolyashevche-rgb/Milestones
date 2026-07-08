@@ -120,8 +120,8 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   GitHub Pages remains disabled by owner decision. If public review is approved later, the workflow
   will run the full Stage 5 QA suite and deploy only Stage 5 UA plus the two canonical Stage 4 UA
   engine/data files it imports; it cannot run on an ordinary push.
-- **P2.51 dimensional Home:** the flat four-button grid is now a vertical snap deck with one
-  focused card and the next card visibly peeking below. “Для вас сьогодні” and “Корисне” are
+- **P2.51 dimensional Home:** the flat four-button grid is now a centered two-thirds-width
+  vertical snap deck with one focused card and the next card visibly peeking below. “Для вас сьогодні” and “Корисне” are
   horizontal shelves with visible continuation, arrows, and touch-friendly cards; safety nudges
   and data controls keep their existing priority and privacy behavior.
 - **P2.50 one-glance results:** the observation result now leads with one next step and one

@@ -49,7 +49,7 @@ Before reporting findings, record:
 
 1. the output of `git rev-parse HEAD`;
 2. the entry point inspected — it must be `prototype_stage5_ua/index.html`;
-3. the visible release/cache marker — currently `P2.51` / `20260708-p2-51-r1`;
+3. the visible release/cache marker — currently `P2.51` / `20260708-p2-51-r2`;
 4. whether the regression suite passed;
 5. the exact route(s) inspected.
 

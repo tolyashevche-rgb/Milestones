@@ -118,7 +118,7 @@ Home into a four-action hub and gives every game an explicit Start → Finish �
 → continue/remind flow, with the timer hidden until Start. P2.47 exposes
 three curated play choices while saying one is enough, adds a calm timer, one-time calendar
 reminders, a low-effort post-play cue, and a sourced parent minute. The visible asset baseline is
-`20260708-p2-51-r1`; these additions do not change
+`20260708-p2-51-r2`; these additions do not change
 the product's safety rules or make draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
@@ -206,6 +206,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ## Work log (newest first)
 
 ### 2026-07-08 — P2.51 dimensional Home navigation
+- Follow-up r2 narrows every main deck card to exactly two thirds of the content width, centers it,
+  and switches the internal layout to icon-above-copy so Ukrainian labels remain readable on phones.
 - Replaced “Що хочете зараз?” and the flat 2×2 technical button grid with “З чого почнемо?” and
   a one-finger vertical snap deck. One large card is active, the next remains visible below,
   depth comes from scale/shadow/overlap, and four accessible position controls track the scroll.
