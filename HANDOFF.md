@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.50.** Read
+> **Current product baseline: Stage 5 UA / P2.51.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -103,11 +103,13 @@ authored `low_energy_option` variants mirrored in `activity_context_ua.js` (all 
 `NEEDS_REVIEW` rows stay unavailable). The chooser searches only the active child's personalized
 plan, changes today's idea, persists per child, never touches observation answers, and locks after
 completion until the parent explicitly undoes it.
-P2.17–P2.50 extend that same primary Stage 5 build with a sourced parent library, intent-aware
+P2.17–P2.51 extend that same primary Stage 5 build with a sourced parent library, intent-aware
 search and inline sources, a safe weekly observation loop, all 59 optimized Motion Card
 illustrations, private local moments, and a review-only Motion Cards workflow with reversible
 queues, blind/balanced review, fatigue checkpoints, provenance, export, and a collection
-dashboard, one-scene Motion Card carousels, and the optional “Живий день” loop. P2.50 turns the
+dashboard, one-scene Motion Card carousels, and the optional “Живий день” loop. P2.51 replaces
+Home’s flat action grid and ambiguous text disclosures with a vertical depth deck and two clearly
+scrollable horizontal shelves. P2.50 turns the
 observation result into one next-step card plus a compact play focus, with answer details collapsed
 and the specialist route preserved. P2.49 makes the
 Game surface action-first too: compact numbered choices, a collapsed moment picker, visual steps,
@@ -116,7 +118,7 @@ Home into a four-action hub and gives every game an explicit Start → Finish �
 → continue/remind flow, with the timer hidden until Start. P2.47 exposes
 three curated play choices while saying one is enough, adds a calm timer, one-time calendar
 reminders, a low-effort post-play cue, and a sourced parent minute. The visible asset baseline is
-`20260707-p2-50-r1`; these additions do not change
+`20260708-p2-51-r1`; these additions do not change
 the product's safety rules or make draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
@@ -154,7 +156,7 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ## What's next (prioritized)
 
 > **Assistant told only "continue" / "давай продовжимо"? Do this:** do not enable GitHub Pages;
-> public preview is paused. Start from [CURRENT_BUILD.md](CURRENT_BUILD.md), verify P2.50, and
+> public preview is paused. Start from [CURRENT_BUILD.md](CURRENT_BUILD.md), verify P2.51, and
 > continue the human validation gates below. Do not build another parallel UI, reopen the completed
 > author-card backlog, simulate feedback, or call draft content validated.
 
@@ -202,6 +204,17 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-08 — P2.51 dimensional Home navigation
+- Replaced “Що хочете зараз?” and the flat 2×2 technical button grid with “З чого почнемо?” and
+  a one-finger vertical snap deck. One large card is active, the next remains visible below,
+  depth comes from scale/shadow/overlap, and four accessible position controls track the scroll.
+- Replaced the ambiguous “Сьогодні ще” and “Ще корисне” disclosures with explicit “Для вас сьогодні”
+  and “Корисне” horizontal shelves. Partial next cards, arrows, and “Гортайте →” make interaction
+  visible without explanatory paragraphs. Existing safety nudges and private data controls remain.
+- Added structural regression checks for both swipe axes, accessible deck state, section labels,
+  removal of the old headings, and nested calendar-card clicks. Local HTTP responded successfully;
+  the in-app browser connection dropped before a trustworthy visual screenshot could be recorded.
 
 ### 2026-07-07 — P2.50 one-glance observation result
 - Replaced the result screen’s route banner plus two explanatory cards with one concise next-step

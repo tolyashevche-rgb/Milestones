@@ -1025,6 +1025,7 @@ function show(screen) {
   renderAppbar(screen);
   renderStorageStatus();
   if (screen === "program") afterProgramRender();
+  if (screen === "home") initHomeDeck();
   initMotionCarousels();
   window.scrollTo(0, 0);
   const focusTarget = screen === "survey" ? root.querySelector("#questionTitle") : root.querySelector("h1");
@@ -1056,6 +1057,40 @@ function initMotionCarousels() {
       track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
     }));
   });
+}
+
+function initHomeDeck() {
+  if (typeof document === "undefined" || typeof document.querySelector !== "function") return;
+  const deck = document.querySelector("[data-home-deck]");
+  if (!deck || deck.dataset.deckReady) return;
+  deck.dataset.deckReady = "1";
+  const cards = Array.from(deck.querySelectorAll("[data-home-card]"));
+  const dots = Array.from(document.querySelectorAll("[data-home-deck-dot]"));
+  if (!cards.length) return;
+  const sync = () => {
+    const center = deck.scrollTop + deck.clientHeight / 2;
+    let activeIndex = 0;
+    let nearest = Infinity;
+    cards.forEach((card, index) => {
+      const distance = Math.abs(card.offsetTop + card.offsetHeight / 2 - center);
+      if (distance < nearest) { nearest = distance; activeIndex = index; }
+    });
+    cards.forEach((card, index) => {
+      card.classList.toggle("active", index === activeIndex);
+      card.setAttribute("aria-current", index === activeIndex ? "true" : "false");
+    });
+    dots.forEach((dot, index) => dot.classList.toggle("active", index === activeIndex));
+  };
+  let ticking = false;
+  deck.addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { sync(); ticking = false; });
+  }, { passive: true });
+  dots.forEach((dot, index) => dot.addEventListener("click", () => {
+    if (cards[index]) deck.scrollTo({ top: Math.max(0, cards[index].offsetTop - 2), behavior: "smooth" });
+  }));
+  sync();
 }
 
 function renderNav(active) {
@@ -1257,16 +1292,35 @@ function homeNextStepHtml(step) {
 }
 function homeActionHubHtml(age, tested) {
   const actions = [
-    { icon: "play", title: "Грати", note: tested ? "3 ідеї на сьогодні" : "спершу коротке спостереження", route: tested ? "program" : "survey" },
-    { icon: "observe", title: "Спостерігати", note: tested ? "підсумок і оновлення" : "почати", route: tested ? "results" : "survey" },
-    { icon: "book", title: "Дізнатися", note: "короткі відповіді", route: "library" },
-    { icon: "history", title: "Мої записи", note: "історія і щоденник", route: "progress" }
+    { icon: "play", eyebrow: "Разом зараз", title: "Пограти разом", note: tested ? "Три легкі ідеї на сьогодні" : "Спершу коротке спостереження", route: tested ? "program" : "survey", tone: "play" },
+    { icon: "observe", eyebrow: "Коротка перевірка", title: "Поспостерігати", note: tested ? "Підсумок і наступний крок" : "Почати спостереження", route: tested ? "results" : "survey", tone: "observe" },
+    { icon: "book", eyebrow: "Є запитання?", title: "Знайти відповідь", note: "Коротко, спокійно, з джерелами", route: "library", tone: "learn" },
+    { icon: "history", eyebrow: "Ваші моменти", title: "Переглянути записи", note: "Історія спостережень і щоденник", route: "progress", tone: "history" }
   ];
-  return `<div class="home-action-grid" aria-label="Головні розділи">${actions.map((action) => `<button type="button" class="home-action" data-go="${action.route}"><span aria-hidden="true">${navIcon(action.icon)}</span><strong>${action.title}</strong><small>${action.note}</small></button>`).join("")}</div>`;
+  return `<section class="home-deck-shell" aria-label="Головні розділи">
+    <div class="home-deck-guide"><span>Гортайте вниз</span><div aria-label="Позиція в списку">${actions.map((_, index) => `<button type="button" data-home-deck-dot="${index}" class="home-deck-dot${index === 0 ? " active" : ""}" aria-label="Показати варіант ${index + 1}"></button>`).join("")}</div></div>
+    <div class="home-action-deck" data-home-deck>${actions.map((action, index) => `<button type="button" class="home-deck-card tone-${action.tone}${index === 0 ? " active" : ""}" data-home-card="${index}" data-go="${action.route}" aria-current="${index === 0 ? "true" : "false"}"><span class="home-deck-icon" aria-hidden="true">${navIcon(action.icon)}</span><span class="home-deck-copy"><small>${action.eyebrow}</small><strong>${action.title}</strong><span>${action.note}</span></span><span class="home-deck-arrow" aria-hidden="true">→</span></button>`).join("")}</div>
+  </section>`;
 }
 function homeNudgeHtml(step) {
   if (!step || !["continue-observation", "discuss-now", "recheck-ready"].includes(step.kind)) return "";
   return `<aside class="home-nudge ${step.kind}"><div><span>${esc(step.label)}</span><strong>${esc(step.title)}</strong></div><button type="button" class="btn ghost" data-go="${step.route}" ${step.restart ? 'data-restart="1"' : ""}>${esc(step.cta)}</button></aside>`;
+}
+
+function homeTodayShelfHtml(age, weekly, moments) {
+  const cards = [parentMinuteHtml(age), weeklyRecapHtml(weekly), privateMomentsHtml(moments)].filter(Boolean);
+  if (!cards.length) return "";
+  return `<section class="home-shelf" aria-labelledby="todayShelfTitle"><div class="home-section-title"><h2 id="todayShelfTitle">Для вас сьогодні</h2><span>Гортайте →</span></div><div class="home-shelf-track">${cards.map((card) => `<div class="home-shelf-panel">${card}</div>`).join("")}</div></section>`;
+}
+
+function homeUsefulShelfHtml(tested, task) {
+  if (!tested) return "";
+  return `<section class="home-shelf home-useful" aria-labelledby="usefulShelfTitle"><div class="home-section-title"><h2 id="usefulShelfTitle">Корисне</h2><span>Гортайте →</span></div><div class="home-useful-track">
+    <button type="button" class="home-useful-card" data-go="program"><span>Усі ігри</span><small>План на сім днів</small><b aria-hidden="true">→</b></button>
+    <button type="button" class="home-useful-card" data-go="ask"><span>Для фахівця</span><small>Підсумок і нотатки</small><b aria-hidden="true">→</b></button>
+    <button type="button" class="home-useful-card" data-go="survey" data-restart="1"><span>Оновити</span><small>Нове спостереження</small><b aria-hidden="true">→</b></button>
+    ${task ? `<button type="button" class="home-useful-card" id="addIcs"><span>У календар</span><small>Одне нагадування</small><b aria-hidden="true">→</b></button>` : ""}
+  </div></section>`;
 }
 
 function renderHome() {
@@ -1280,28 +1334,11 @@ function renderHome() {
   const tested = survey && survey.date;
   return `
     <section class="screen-pad">
-      <h1 tabindex="-1">Що хочете зараз?</h1>
+      <h1 tabindex="-1">З чого почнемо?</h1>
       ${homeActionHubHtml(age, tested)}
       ${homeNudgeHtml(nextStep)}
-
-      <details class="home-day-details">
-        <summary>Сьогодні ще</summary>
-        ${weeklyRecapHtml(weekly)}
-        ${privateMomentsHtml(moments)}
-        ${parentMinuteHtml(age)}
-      </details>
-
-      <details class="home-more">
-        <summary>Ще корисне</summary>
-        <div class="tiles">
-          ${tested ? `
-          <button type="button" class="tile" data-go="program"><strong>Усі ігри</strong><span class="muted">найближчі сім днів</span></button>
-          <button type="button" class="tile" data-go="ask"><strong>Для фахівця</strong><span class="muted">підсумок і нотатки</span></button>
-          <button type="button" class="tile" data-go="survey" data-restart="1"><strong>Оновити</strong><span class="muted">пройти ще раз</span></button>
-          ${task ? `<button type="button" class="tile" id="addIcs"><strong>Разово в календар</strong><span class="muted">одне нагадування без серії</span></button>` : ""}
-          ` : ""}
-        </div>
-      </details>
+      ${homeTodayShelfHtml(age, weekly, moments)}
+      ${homeUsefulShelfHtml(tested, task)}
 
       ${next ? `<p class="note">Наступний віковий чекліст — приблизно у ${next} місяців. Спостереження й звернення при занепокоєнні не потрібно відкладати до цієї дати.</p>` : ""}
       <details class="data-controls">
@@ -3064,7 +3101,7 @@ document.addEventListener("click", async (e) => {
     document.getElementById("importBackup")?.click();
     return;
   }
-  if (e.target.id === "addIcs") { const t = todaysTask(currentAge()); downloadIcs(t ? t.act.title : "Гра з дитиною"); return; }
+  if (e.target.closest("#addIcs")) { const t = todaysTask(currentAge()); downloadIcs(t ? t.act.title : "Гра з дитиною"); return; }
   if (e.target.id === "copySummary") {
     const st = document.getElementById("copyStatus");
     try {
