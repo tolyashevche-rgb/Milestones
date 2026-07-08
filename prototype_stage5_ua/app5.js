@@ -80,6 +80,7 @@ let storageProblem = "";
 let playTimer = { activityId: "", duration: 180, remaining: 180, running: false };
 let playTimerInterval = null;
 let reminderDraft = { day: "today", time: "18:00" };
+let homeTabUi = "today";
 
 function freshMotionReview() { return { storeVersion: MOTION_REVIEW_STORE_VERSION, active: "parent_1", view: { status: "pending", age: "all" }, sessions: {} }; }
 function loadMotionReview() {
@@ -1093,6 +1094,23 @@ function initHomeDeck() {
   sync();
 }
 
+function activateHomeTab(tabId, focus = false) {
+  if (!HOME_TAB_IDS.includes(tabId)) return;
+  homeTabUi = tabId;
+  document.querySelectorAll("[data-home-tab]").forEach((tab) => {
+    const active = tab.dataset.homeTab === tabId;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+    if (active && focus) tab.focus({ preventScroll: true });
+  });
+  document.querySelectorAll("[data-home-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.homePanel !== tabId;
+  });
+  const viewport = document.querySelector(".home-tab-viewport");
+  if (viewport) viewport.scrollTop = 0;
+}
+
 function renderNav(active) {
   const nav = document.getElementById("bottomNav");
   const onboarding = ["welcome", "consent", "profile"].includes(active) || Boolean(motionReviewReviewerSession());
@@ -1306,21 +1324,26 @@ function homeNudgeHtml(step) {
   if (!step || !["continue-observation", "discuss-now", "recheck-ready"].includes(step.kind)) return "";
   return `<aside class="home-nudge ${step.kind}"><div><span>${esc(step.label)}</span><strong>${esc(step.title)}</strong></div><button type="button" class="btn ghost" data-go="${step.route}" ${step.restart ? 'data-restart="1"' : ""}>${esc(step.cta)}</button></aside>`;
 }
-
-function homeTodayShelfHtml(age, weekly, moments) {
-  const cards = [parentMinuteHtml(age), weeklyRecapHtml(weekly), privateMomentsHtml(moments)].filter(Boolean);
-  if (!cards.length) return "";
-  return `<section class="home-shelf" aria-labelledby="todayShelfTitle"><div class="home-section-title"><h2 id="todayShelfTitle">Для вас сьогодні</h2><span>Гортайте →</span></div><div class="home-shelf-track">${cards.map((card) => `<div class="home-shelf-panel">${card}</div>`).join("")}</div></section>`;
-}
-
-function homeUsefulShelfHtml(tested, task) {
-  if (!tested) return "";
-  return `<section class="home-shelf home-useful" aria-labelledby="usefulShelfTitle"><div class="home-section-title"><h2 id="usefulShelfTitle">Корисне</h2><span>Гортайте →</span></div><div class="home-useful-track">
+const HOME_TAB_IDS = ["today", "useful"];
+function homeTabsHtml(age, weekly, moments, tested, task) {
+  const active = HOME_TAB_IDS.includes(homeTabUi) ? homeTabUi : "today";
+  const todayCards = [parentMinuteHtml(age), weeklyRecapHtml(weekly), privateMomentsHtml(moments)].filter(Boolean);
+  const usefulCards = tested ? `
     <button type="button" class="home-useful-card" data-go="program"><span>Усі ігри</span><small>План на сім днів</small><b aria-hidden="true">→</b></button>
     <button type="button" class="home-useful-card" data-go="ask"><span>Для фахівця</span><small>Підсумок і нотатки</small><b aria-hidden="true">→</b></button>
     <button type="button" class="home-useful-card" data-go="survey" data-restart="1"><span>Оновити</span><small>Нове спостереження</small><b aria-hidden="true">→</b></button>
-    ${task ? `<button type="button" class="home-useful-card" id="addIcs"><span>У календар</span><small>Одне нагадування</small><b aria-hidden="true">→</b></button>` : ""}
-  </div></section>`;
+    ${task ? `<button type="button" class="home-useful-card" id="addIcs"><span>У календар</span><small>Одне нагадування</small><b aria-hidden="true">→</b></button>` : ""}`
+    : `<button type="button" class="home-useful-card" data-go="survey"><span>Почати спостереження</span><small>Після нього з’явиться план і підсумок</small><b aria-hidden="true">→</b></button>`;
+  return `<section class="home-tabs" aria-label="Додаткові матеріали">
+    <div class="home-tabbar" role="tablist" aria-label="Матеріали головної сторінки">
+      <button type="button" role="tab" id="homeTabToday" data-home-tab="today" aria-controls="homePanelToday" aria-selected="${active === "today"}" tabindex="${active === "today" ? "0" : "-1"}" class="${active === "today" ? "active" : ""}">Для вас сьогодні</button>
+      <button type="button" role="tab" id="homeTabUseful" data-home-tab="useful" aria-controls="homePanelUseful" aria-selected="${active === "useful"}" tabindex="${active === "useful" ? "0" : "-1"}" class="${active === "useful" ? "active" : ""}">Корисне</button>
+    </div>
+    <div class="home-tab-viewport">
+      <div role="tabpanel" id="homePanelToday" data-home-panel="today" aria-labelledby="homeTabToday" ${active === "today" ? "" : "hidden"}><div class="home-tab-stack">${todayCards.map((card) => `<div class="home-tab-card">${card}</div>`).join("")}</div></div>
+      <div role="tabpanel" id="homePanelUseful" data-home-panel="useful" aria-labelledby="homeTabUseful" ${active === "useful" ? "" : "hidden"}><div class="home-tab-stack home-useful-stack">${usefulCards}</div></div>
+    </div>
+  </section>`;
 }
 
 function renderHome() {
@@ -1337,8 +1360,7 @@ function renderHome() {
       <h1 tabindex="-1">З чого почнемо?</h1>
       ${homeActionHubHtml(age, tested)}
       ${homeNudgeHtml(nextStep)}
-      ${homeTodayShelfHtml(age, weekly, moments)}
-      ${homeUsefulShelfHtml(tested, task)}
+      ${homeTabsHtml(age, weekly, moments, tested, task)}
 
       ${next ? `<p class="note">Наступний віковий чекліст — приблизно у ${next} місяців. Спостереження й звернення при занепокоєнні не потрібно відкладати до цієї дати.</p>` : ""}
       <details class="data-controls">
@@ -2624,6 +2646,11 @@ document.addEventListener("click", async (e) => {
     setHash(go.dataset.go);
     return;
   }
+  const homeTab = e.target.closest("[data-home-tab]");
+  if (homeTab) {
+    activateHomeTab(homeTab.dataset.homeTab, true);
+    return;
+  }
 
   const deleteMoment = e.target.closest("[data-delete-moment]");
   if (deleteMoment) {
@@ -3183,6 +3210,15 @@ document.addEventListener("click", async (e) => {
     const btn = document.getElementById("consentContinue"); if (btn) btn.disabled = !all;
     return;
   }
+});
+
+document.addEventListener("keydown", (e) => {
+  const tab = e.target.closest?.("[data-home-tab]");
+  if (!tab || !["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+  e.preventDefault();
+  const current = HOME_TAB_IDS.indexOf(tab.dataset.homeTab);
+  const offset = e.key === "ArrowRight" ? 1 : -1;
+  activateHomeTab(HOME_TAB_IDS[(current + offset + HOME_TAB_IDS.length) % HOME_TAB_IDS.length], true);
 });
 
 document.addEventListener("input", (e) => {

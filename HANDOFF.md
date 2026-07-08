@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.51.** Read
+> **Current product baseline: Stage 5 UA / P2.52.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -103,11 +103,13 @@ authored `low_energy_option` variants mirrored in `activity_context_ua.js` (all 
 `NEEDS_REVIEW` rows stay unavailable). The chooser searches only the active child's personalized
 plan, changes today's idea, persists per child, never touches observation answers, and locks after
 completion until the parent explicitly undoes it.
-P2.17–P2.51 extend that same primary Stage 5 build with a sourced parent library, intent-aware
+P2.17–P2.52 extend that same primary Stage 5 build with a sourced parent library, intent-aware
 search and inline sources, a safe weekly observation loop, all 59 optimized Motion Card
 illustrations, private local moments, and a review-only Motion Cards workflow with reversible
 queues, blind/balanced review, fatigue checkpoints, provenance, export, and a collection
-dashboard, one-scene Motion Card carousels, and the optional “Живий день” loop. P2.51 replaces
+dashboard, one-scene Motion Card carousels, and the optional “Живий день” loop. P2.52 combines
+Home’s secondary content into persistent “Для вас сьогодні / Корисне” tabs with vertical panels
+and keyboard switching. P2.51 replaces
 Home’s flat action grid and ambiguous text disclosures with a vertical depth deck and two clearly
 scrollable horizontal shelves. P2.50 turns the
 observation result into one next-step card plus a compact play focus, with answer details collapsed
@@ -118,7 +120,7 @@ Home into a four-action hub and gives every game an explicit Start → Finish �
 → continue/remind flow, with the timer hidden until Start. P2.47 exposes
 three curated play choices while saying one is enough, adds a calm timer, one-time calendar
 reminders, a low-effort post-play cue, and a sourced parent minute. The visible asset baseline is
-`20260708-p2-51-r2`; these additions do not change
+`20260708-p2-52-r1`; these additions do not change
 the product's safety rules or make draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
@@ -156,7 +158,7 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ## What's next (prioritized)
 
 > **Assistant told only "continue" / "давай продовжимо"? Do this:** do not enable GitHub Pages;
-> public preview is paused. Start from [CURRENT_BUILD.md](CURRENT_BUILD.md), verify P2.51, and
+> public preview is paused. Start from [CURRENT_BUILD.md](CURRENT_BUILD.md), verify P2.52, and
 > continue the human validation gates below. Do not build another parallel UI, reopen the completed
 > author-card backlog, simulate feedback, or call draft content validated.
 
@@ -204,6 +206,15 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-08 — P2.52 persistent Home tabs
+- Replaced the two independent horizontal shelves with one semantic two-tab component. “Для вас
+  сьогодні” and “Корисне” stay side by side above the content; tap/click or Left/Right switches the
+  selected panel without navigating away.
+- The active panel uses a bounded vertical viewport and full-width stacked cards, so the parent
+  scrolls content downward while the two choices remain visible. Added `tablist`, `tab`, `tabpanel`,
+  `aria-selected`, roving tabindex, and regression coverage. An untested profile receives a useful
+  “Почати спостереження” card instead of an empty tab.
 
 ### 2026-07-08 — P2.51 dimensional Home navigation
 - Follow-up r2 narrows every main deck card to exactly two thirds of the content width, centers it,
