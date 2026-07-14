@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.57.** Read
+> **Current product baseline: Stage 5 UA / P2.58.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -124,8 +124,9 @@ reminders, a low-effort post-play cue, and a sourced parent minute. P2.56 replac
 and nested tabs with one contextual next action plus stable secondary routes, and aligns the
 bottom navigation with Today → Observation → Game → Records. P2.57 then makes one complete
 activity the Game focus, moves alternatives behind an optional disclosure, locks route-changing
-controls during active/unsaved play and makes stopping the primary post-play choice. The visible
-asset baseline is `20260714-p2-57-r1`; these additions do not change
+controls during active/unsaved play and makes stopping the primary post-play choice. P2.58
+consolidates semantic colors, solid controls, restraint in elevation and one shared outline-SVG
+family across parent-facing actions. The visible asset baseline is `20260714-p2-58-r1`; these additions do not change
 the product's safety rules or make draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
@@ -175,8 +176,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 > completed author-card backlog, simulate feedback, or call draft content validated.
 
 1. **Automated quality rebuild** — currently active. Follow
-   `docs/product_quality_rebuild_tracker_ua.md`; the next implementation step is the visual
-   design-system pass: semantic colors, restrained surfaces, consistent button/icon states and gradients.
+   `docs/product_quality_rebuild_tracker_ua.md`; the next implementation step is accessibility,
+   responsive behavior, recovery states and PWA hardening.
 2. **Motion Cards review** — use the isolated reviewer flow and collection dashboard already in
    Stage 5; collect real reviewer decisions for the 59 cards and retain their provenance. The
    production inventory is `docs/motion_cards_production_manifest_ua.md`.
@@ -213,6 +214,18 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — P2.58 restrained visual system and objective UI guards
+- Consolidated parent-facing colors into semantic action, surface, advisory, danger and focus
+  tokens. Functional surfaces are flat, primary actions are solid teal, secondary actions use a
+  consistent outline, and only the small brand mark retains a decorative gradient.
+- Replaced platform-dependent control glyphs with one shared outline-SVG family while keeping
+  visible text labels. Normalized control/card radii and reduced elevation to one weak shadow.
+- Raised key control borders to 3:1 non-text contrast and small controls to 44–48 px touch areas.
+  Added automated token, gradient, control-style, icon-family, contrast and target-size guards.
+- Bumped the current build/cache marker to P2.58 / `20260714-p2-58-r1`; automated regression,
+  syntax and diff checks pass. Live browser/device verification remains open because no browser
+  is available in the current runtime.
 
 ### 2026-07-14 — P2.57 one focused Game and protected session flow
 - Moved the complete selected activity, visible pre-start safety and session controls ahead of

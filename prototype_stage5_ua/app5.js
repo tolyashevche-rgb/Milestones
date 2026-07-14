@@ -1023,17 +1023,32 @@ const NAV = [
   { route: "progress", label: "Записи", icon: "history" }
 ];
 
-function navIcon(name) {
-  const paths = {
-    home: `<path d="M3.5 9.2 10 3.4l6.5 5.8v7.1a1.3 1.3 0 0 1-1.3 1.3H4.8a1.3 1.3 0 0 1-1.3-1.3Z"/><path d="M7.6 17.6v-5.2h4.8v5.2"/>`,
-    observe: `<path d="M2.4 10s2.8-4.4 7.6-4.4 7.6 4.4 7.6 4.4-2.8 4.4-7.6 4.4S2.4 10 2.4 10Z"/><circle cx="10" cy="10" r="2.2"/>`,
-    play: `<path d="m10 2.6 6.1 6.1-6.1 6.1-6.1-6.1Z"/><path d="M10 14.8c0 1.6 2 1.4 2 3"/><path d="m10.9 16.4 2 .2-.8 1.7"/>`,
-    pencil: `<path d="m4 16 1-3.8 8.4-8.4a1.4 1.4 0 0 1 2 0l.8.8a1.4 1.4 0 0 1 0 2L7.8 15Z"/><path d="m12.2 5 2.8 2.8M5 12.2 7.8 15"/>`,
-    book: `<path d="M3.2 4.2h4.2A2.6 2.6 0 0 1 10 6.8v9a2.6 2.6 0 0 0-2.6-2.6H3.2Z"/><path d="M16.8 4.2h-4.2A2.6 2.6 0 0 0 10 6.8v9a2.6 2.6 0 0 1 2.6-2.6h4.2Z"/>`,
-    history: `<circle cx="10" cy="10" r="6.6"/><path d="M10 6.2v4.2l2.8 1.7"/>`
-  };
-  return `<svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[name] || paths.home}</svg>`;
+const OUTLINE_ICON_PATHS = {
+  home: `<path d="M3.5 9.2 10 3.4l6.5 5.8v7.1a1.3 1.3 0 0 1-1.3 1.3H4.8a1.3 1.3 0 0 1-1.3-1.3Z"/><path d="M7.6 17.6v-5.2h4.8v5.2"/>`,
+  observe: `<path d="M2.4 10s2.8-4.4 7.6-4.4 7.6 4.4 7.6 4.4-2.8 4.4-7.6 4.4S2.4 10 2.4 10Z"/><circle cx="10" cy="10" r="2.2"/>`,
+  play: `<path d="m10 2.6 6.1 6.1-6.1 6.1-6.1-6.1Z"/><path d="M10 14.8c0 1.6 2 1.4 2 3"/><path d="m10.9 16.4 2 .2-.8 1.7"/>`,
+  pencil: `<path d="m4 16 1-3.8 8.4-8.4a1.4 1.4 0 0 1 2 0l.8.8a1.4 1.4 0 0 1 0 2L7.8 15Z"/><path d="m12.2 5 2.8 2.8M5 12.2 7.8 15"/>`,
+  book: `<path d="M3.2 4.2h4.2A2.6 2.6 0 0 1 10 6.8v9a2.6 2.6 0 0 0-2.6-2.6H3.2Z"/><path d="M16.8 4.2h-4.2A2.6 2.6 0 0 0 10 6.8v9a2.6 2.6 0 0 1 2.6-2.6h4.2Z"/>`,
+  history: `<circle cx="10" cy="10" r="6.6"/><path d="M10 6.2v4.2l2.8 1.7"/>`,
+  settings: `<circle cx="10" cy="10" r="2.4"/><path d="M10 2.8v1.5M10 15.7v1.5M17.2 10h-1.5M4.3 10H2.8M15.1 4.9 14 6M6 14l-1.1 1.1M15.1 15.1 14 14M6 6 4.9 4.9"/>`,
+  clock: `<circle cx="10" cy="10" r="6.8"/><path d="M10 6.1v4.2l2.7 1.6"/>`,
+  materials: `<path d="M3.4 7.2h13.2v9.1H3.4Z"/><path d="M6.7 7.2V5.8A2.2 2.2 0 0 1 8.9 3.6h2.2a2.2 2.2 0 0 1 2.2 2.2v1.4M3.4 11h13.2"/>`,
+  start: `<path d="m7 5 7 5-7 5Z"/>`,
+  stop: `<rect x="5.2" y="5.2" width="9.6" height="9.6" rx="1.5"/>`,
+  plus: `<path d="M10 4.2v11.6M4.2 10h11.6"/>`,
+  check: `<path d="m4.2 10.2 3.5 3.5 8.1-8.1"/>`,
+  alert: `<path d="M10 3.1 17 16H3Z"/><path d="M10 7.2v4.1M10 13.7h.01"/>`,
+  refresh: `<path d="M15.4 7.2A6 6 0 1 0 16 12"/><path d="M15.4 3.9v3.3h-3.3"/>`,
+  chevron: `<path d="m7.5 4.5 5.5 5.5-5.5 5.5"/>`,
+  back: `<path d="m12.5 4.5-5.5 5.5 5.5 5.5"/>`
+};
+function outlineIcon(name, className) {
+  const paths = OUTLINE_ICON_PATHS[name];
+  if (!paths) return "";
+  return `<svg class="${className}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths}</svg>`;
 }
+function navIcon(name) { return outlineIcon(name, "nav-icon"); }
+function uiIcon(name) { return outlineIcon(name, "ui-icon"); }
 
 function setHash(route) { location.hash = "#/" + route; }
 function currentRoute() { return (location.hash.replace(/^#\//, "") || "home").split("?")[0]; }
@@ -1133,7 +1148,7 @@ function renderAppbar(screen) {
     ? `До 2 міс${usesCorrectedAge(active) ? " · скориг." : ""}`
     : (usesCorrectedAge(active) ? `${age} міс · скориг.` : AGE_LABELS[age]);
   slot.innerHTML =
-    `<select id="childSwitch" class="appbar-select" aria-label="Активна дитина">${opts}<option value="__add">+ Додати дитину</option></select>` +
+    `<select id="childSwitch" class="appbar-select" aria-label="Активна дитина">${opts}<option value="__add">Додати дитину</option></select>` +
     `<span class="appbar-tag"${usesCorrectedAge(active) ? ' title="Віковий блок за скоригованим віком"' : ""}>${ageTag}</span>`;
 }
 
@@ -1254,7 +1269,7 @@ function homeNextStep(age) {
   if (task && task.done) {
     return {
       kind: "done-today",
-      label: "✓ На сьогодні все",
+      label: "На сьогодні все",
       title: "Гру виконано",
       body: `«${task.act.title}» позначено виконаною. Завтра тут з’явиться наступна коротка гра.`,
       task
@@ -1304,7 +1319,7 @@ function homeSecondaryLinksHtml(tested) {
   if (tested) links.push({ route: "ask", icon: "pencil", title: "Для фахівця", note: "Підсумок і ваші нотатки" });
   return `<section class="home-secondary" aria-labelledby="homeSecondaryTitle">
     <h2 id="homeSecondaryTitle">Ще може знадобитися</h2>
-    <div class="home-secondary-links" aria-label="Додаткові розділи">${links.map((link) => `<button type="button" class="home-secondary-link" data-go="${link.route}"><span aria-hidden="true">${navIcon(link.icon)}</span><span><strong>${esc(link.title)}</strong><small>${esc(link.note)}</small></span><b aria-hidden="true">→</b></button>`).join("")}</div>
+    <div class="home-secondary-links" aria-label="Додаткові розділи">${links.map((link) => `<button type="button" class="home-secondary-link" data-go="${link.route}"><span aria-hidden="true">${navIcon(link.icon)}</span><span><strong>${esc(link.title)}</strong><small>${esc(link.note)}</small></span><span class="home-secondary-arrow" aria-hidden="true">${uiIcon("chevron")}</span></button>`).join("")}</div>
   </section>`;
 }
 
@@ -1452,7 +1467,7 @@ function libraryResultsHtml() {
 function renderLibrary() {
   const topics = typeof LIBRARY_TOPICS !== "undefined" && Array.isArray(LIBRARY_TOPICS) ? LIBRARY_TOPICS : [];
   return `<section class="screen-pad library-screen">
-    <button type="button" class="pilot-back" data-go="home">← На головну</button>
+    <button type="button" class="pilot-back" data-go="home">${uiIcon("back")}<span>На головну</span></button>
     <span class="pilot-kicker">Пілот · ${libraryItems().length} матеріалів</span>
     <h1 tabindex="-1">Короткі відповіді</h1>
     <p class="muted">Одне питання — одна практична відповідь на 2–3 хвилини. Матеріали освітні й поки мають статус чернетки.</p>
@@ -1561,20 +1576,20 @@ function discussCardHtml(m, state) {
 }
 
 function resultHeroHtml(profile, followUp) {
-  let icon = "✓";
+  let icon = "check";
   let label = "Наступний крок";
   let title = "Оберіть одну гру";
   let note = "Звичайної спільної гри достатньо.";
   if (followUp.kind === "discuss-now") {
-    icon = "!";
+    icon = "alert";
     title = "Підготуйте розмову з фахівцем";
     note = "Ігри можуть бути частиною дня, але не замінюють обговорення відповіді «Ще не помічаю».";
   } else if (followUp.kind === "recheck-ready") {
-    icon = "↻";
+    icon = "refresh";
     title = "Можна оновити спостереження";
     note = "Минув щонайменше тиждень — відповідайте за звичайними моментами, не одразу після вправи.";
   } else if (followUp.kind === "watch-window") {
-    icon = "○";
+    icon = "observe";
     title = "Спостерігайте у звичайних моментах";
     note = `Повернутися до короткої перевірки можна ${shortDate(followUp.earliest)}–${shortDate(followUp.latest)}.`;
   } else if (profile.allClear) {
@@ -1583,7 +1598,7 @@ function resultHeroHtml(profile, followUp) {
     title = "Оберіть легку гру";
   }
   return `<article class="result-hero ${followUp.kind}">
-    <span class="result-hero-icon" aria-hidden="true">${icon}</span>
+    <span class="result-hero-icon" aria-hidden="true">${uiIcon(icon)}</span>
     <div><span class="mini-label">${label}</span><h2>${title}</h2><p>${note}</p></div>
     <small>Це не оцінка й не діагноз.</small>
   </article>`;
@@ -1706,7 +1721,7 @@ function playContextHtml(age) {
   const active = programState.context || "any";
   const status = flowLocked ? "Спершу завершіть поточну гру й збережіть коротку відмітку." : (done ? contextStatusText(active, true, true) : (programState.contextNotice || contextStatusText(active)));
   return `<details class="play-context" ${active !== "any" || flowLocked ? "open" : ""}>
-    <summary><span aria-hidden="true">⚙</span><strong id="playContextTitle">Підібрати під момент</strong><small>${active === "any" ? "необов’язково" : PLAY_CONTEXTS.find((item) => item.id === active)?.label || "обрано"}</small></summary>
+    <summary><span aria-hidden="true">${uiIcon("settings")}</span><strong id="playContextTitle">Підібрати під момент</strong><small>${active === "any" ? "необов’язково" : PLAY_CONTEXTS.find((item) => item.id === active)?.label || "обрано"}</small></summary>
     <p class="sr-only">Вибір змінює лише сьогоднішню ідею, не відповіді спостереження.</p>
     <div class="play-context-options" role="group" aria-labelledby="playContextTitle">${PLAY_CONTEXTS.map((context) =>
       `<button type="button" data-play-context="${context.id}" aria-pressed="${active === context.id}" class="${active === context.id ? "active" : ""}" ${done || flowLocked ? "disabled" : ""}>${context.label}</button>`
@@ -1803,13 +1818,13 @@ function playDurationText(entry) {
 }
 function playReflectionHtml(entry) {
   if (!entry || entry.saved) return "";
-  const reactions = [["liked", "🙂 Приємно"], ["not_today", "○ Не сьогодні"], ["hard", "△ Було складно"]];
+  const reactions = [["liked", "Приємно"], ["not_today", "Не сьогодні"], ["hard", "Було складно"]];
   const signals = [["voice", "Голос"], ["face", "Обличчя"], ["movement", "Рух"], ["object", "Предмет"], ["not_today", "Не зацікавило"]];
   return `<section class="play-reflection" aria-labelledby="playReflectionTitle" data-play-entry="${entry.id}">
     <div class="play-step-label"><span>2</span><strong id="playReflectionTitle">Коротко після гри</strong></div>
     <div class="play-reflection-row"><span>Як було?</span><div>${reactions.map(([id, label]) => `<button type="button" data-diary-reaction="${id}" data-entry-id="${entry.id}" aria-pressed="${entry.reaction === id}" class="${entry.reaction === id ? "active" : ""}">${label}</button>`).join("")}</div></div>
     <div class="play-reflection-row"><span>Що помітили?</span><div>${signals.map(([id, label]) => `<button type="button" data-diary-signal="${id}" data-entry-id="${entry.id}" aria-pressed="${entry.signal === id}" class="${entry.signal === id ? "active" : ""}">${label}</button>`).join("")}</div></div>
-    <details class="play-note"><summary>＋ Додати коротку нотатку</summary><textarea data-diary-note="${entry.id}" maxlength="1000" rows="2" placeholder="Наприклад: усміхнулася на голос…">${esc(entry.note || "")}</textarea></details>
+    <details class="play-note"><summary>${uiIcon("plus")}<span>Додати коротку нотатку</span></summary><textarea data-diary-note="${entry.id}" maxlength="1000" rows="2" placeholder="Наприклад: усміхнулася на голос…">${esc(entry.note || "")}</textarea></details>
     <button type="button" class="btn primary block" data-save-play-entry="${entry.id}">Зберегти в щоденник</button>
     <p class="muted small">Можна зберегти без відповіді. Це пам’ять про момент, не оцінка дитини.</p>
   </section>`;
@@ -1835,14 +1850,14 @@ function playContinueHtml(entry) {
 function playSessionControlsHtml(age, activityId) {
   const session = activePlaySession(age, activityId);
   const entry = latestPlayDiaryEntry(age, activityId);
-  if (session) return `<section class="play-session-active"><div class="play-step-label"><span>1</span><strong>Гра триває</strong></div><p>Дивіться на підказки вище. Завершіть у будь-який момент.</p><details class="optional-timer"><summary>⏱ Додати таймер</summary>${playTimerHtml(activityId)}</details><button type="button" id="finishPlaySession" class="btn primary block" data-activity-id="${activityId}">■ Завершити гру</button></section>`;
+  if (session) return `<section class="play-session-active"><div class="play-step-label"><span>1</span><strong>Гра триває</strong></div><p>Дивіться на підказки вище. Завершіть у будь-який момент.</p><details class="optional-timer"><summary>${uiIcon("clock")}<span>Додати таймер</span></summary>${playTimerHtml(activityId)}</details><button type="button" id="finishPlaySession" class="btn primary block" data-activity-id="${activityId}">${uiIcon("stop")}<span>Завершити гру</span></button></section>`;
   if (entry && !entry.saved) return playReflectionHtml(entry);
   if (entry && entry.saved && !entry.nextChoice) return playContinueHtml(entry);
   if (entry && entry.saved && entry.nextChoice === "later") return playContinueHtml(entry);
   if (!activityHasMinimumSafety(activityById(age, activityId))) {
     return `<section class="play-session-start play-session-blocked"><strong>Початок гри заблоковано</strong><p class="muted small">Спершу команда має додати й перевірити повну умову безпеки.</p></section>`;
   }
-  return `<section class="play-session-start"><div class="play-step-label"><span>1</span><strong>Готові?</strong></div><button type="button" id="startPlaySession" class="btn primary block" data-activity-id="${activityId}">▶ Почати гру</button><small>Після початку можна додати таймер — за бажанням.</small></section>`;
+  return `<section class="play-session-start"><div class="play-step-label"><span>1</span><strong>Готові?</strong></div><button type="button" id="startPlaySession" class="btn primary block" data-activity-id="${activityId}">${uiIcon("start")}<span>Почати гру</span></button><small>Після початку можна додати таймер — за бажанням.</small></section>`;
 }
 
 function stopPlayTimerInterval() {
@@ -2237,7 +2252,7 @@ function dayAccordionHtml(age, d) {
       <button type="button" class="day-acc-head" data-day-toggle="${d.day}" aria-expanded="${open}" ${open ? `aria-controls="${bodyId}"` : ""}>
         <span class="day-acc-meta"><span class="day-num">День ${d.day}</span><span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span></span>
         <span class="day-acc-title">${esc(selAct ? selAct.title : "")}</span>
-        <span class="day-acc-caret" aria-hidden="true">${open ? "▾" : "▸"}</span>
+        <span class="day-acc-caret${open ? " open" : ""}" aria-hidden="true">${uiIcon("chevron")}</span>
       </button>
       ${open ? `<div class="day-acc-body" id="${bodyId}">${dayBodyHtml(age, d)}</div>` : ""}
     </article>`;
@@ -2315,7 +2330,7 @@ function activityVisualGuideHtml(id) {
   return `<section class="motion-guide" aria-labelledby="motion-guide-${esc(id)}">
     <div class="motion-guide-head">
       <strong id="motion-guide-${esc(id)}">${esc(guide.title || "Як грати")}</strong>
-      <span aria-label="Гортайте вбік, ${cards.length} кроки">Гортайте →</span>
+      <span aria-label="Гортайте вбік, ${cards.length} кроки">Гортайте вбік ${uiIcon("chevron")}</span>
     </div>
     ${motionCarouselHtml(guide, cards)}
     <p class="motion-guide-note">Без «правильної» реакції.</p>
@@ -2357,13 +2372,13 @@ function activityDetailHtml(age, id, showLowEnergy = false) {
     <div class="activity-title-row"><h2 class="activity-title">${esc(a.title)}</h2>
       <button type="button" class="favorite-toggle ${favorite ? "active" : ""}" data-favorite-id="${id}" aria-pressed="${favorite}" aria-label="${favorite ? "Прибрати гру зі збережених" : "Зберегти гру"}">${favoriteIcon(favorite)}<span>${favorite ? "Збережено" : "Зберегти"}</span></button>
     </div>
-    <div class="tag-row activity-quick-meta"><span class="chip">⏱ ${esc(a.time)}</span><span class="chip">◇ ${esc(a.materials)}</span></div>
+    <div class="tag-row activity-quick-meta"><span class="chip">${uiIcon("clock")}<span>${esc(a.time)}</span></span><span class="chip">${uiIcon("materials")}<span>${esc(a.materials)}</span></span></div>
     ${safety}
     ${lowEnergy ? `<div class="low-energy-option"><strong>Коли сил мало</strong><span>${esc(lowEnergy)}</span><small>Повні кроки й умова зупинки залишаються нижче.</small></div>` : ""}
     ${visualGuide}
     <details class="activity-more"><summary>Деталі й безпека</summary>
       ${visualGuide ? `<div class="steps"><strong>Усі кроки</strong><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>` : `<div class="steps"><strong>Кроки</strong><ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>`}
-      <div class="stop"><strong>■ Зупиніться:</strong> ${esc(a.stop)}</div>
+      <div class="stop"><strong>${uiIcon("stop")}<span>Зупиніться:</span></strong> ${esc(a.stop)}</div>
       ${basis}
     </details>`;
 }

@@ -1,6 +1,6 @@
 # Milestones — personalized child-development assistant
 
-> **CURRENT BUILD: Stage 5 UA / P2.57.** Before running or auditing the product, read
+> **CURRENT BUILD: Stage 5 UA / P2.58.** Before running or auditing the product, read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md). The only current UI entry point is
 > `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references, not valid
 > evidence for a current UI/UX audit.
@@ -18,8 +18,8 @@ scoring, or replacing a professional.
 
 > **Active quality rebuild (2026-07-14):** feature expansion is frozen. Implementation proceeds
 > one verified commit at a time through
-> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.57 is the
-> current completed focused-Game step in that sequence.
+> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.58 is the
+> current completed visual-system step in that sequence.
 
 ---
 
@@ -36,7 +36,7 @@ Milestones/
 │   └── app.js                 ← UI wiring
 ├── prototype_stage4_ua/       ← runtime data/engine; UI is a LEGACY reference
 │   └── data_ua.js  engine.js  app.js  legacy-reference.html
-├── prototype_stage5_ua/       ← CURRENT guided UA app (P2.57)
+├── prototype_stage5_ua/       ← CURRENT guided UA app (P2.58)
 │   └── index.html app5.js styles5.css questions_ua.js illustrations.js authors_ua.js (reuses stage4 data+engine)
 ├── docs/                      ← project documentation
 │   ├── safety_rules.md        ← SINGLE SOURCE OF TRUTH for claims/guardrails
@@ -117,7 +117,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
-> Release **P2.57** is the current product baseline. The P2.16 material below is retained
+> Release **P2.58** is the current product baseline. The P2.16 material below is retained
 > as historical implementation context, not as the current audit target. See
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) for the exact entry point and audit preflight.
 
@@ -125,6 +125,10 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   GitHub Pages remains disabled by owner decision. If public review is approved later, the workflow
   will run the full Stage 5 QA suite and deploy only Stage 5 UA plus the two canonical Stage 4 UA
   engine/data files it imports; it cannot run on an ordinary push.
+- **P2.58 restrained visual system:** parent-facing screens now use semantic teal, mint, warm,
+  danger and focus tokens; solid primary/outline secondary controls; consistent radii and weak
+  elevation. Only the small brand mark retains a gradient. Platform-dependent control glyphs are
+  replaced by one outline-SVG family, and QA guards contrast plus 44–48 px touch targets.
 - **P2.57 one focused Game:** today shows one complete safe activity first. Up to two other
   ideas stay inside a closed, explicitly optional disclosure and cannot replace an active or
   unsaved session. After the diary note, “На сьогодні все” is the sole primary action; another

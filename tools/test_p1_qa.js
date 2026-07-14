@@ -7,6 +7,22 @@ const root = path.resolve(__dirname, "..");
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "utf8");
 const run = (context, relativePath) => vm.runInContext(read(relativePath), context, { filename: relativePath });
 
+function cssHexVariable(css, name) {
+  const match = css.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`));
+  assert.ok(match, `missing six-digit CSS color token ${name}`);
+  return match[1];
+}
+function relativeLuminance(hex) {
+  const channels = hex.slice(1).match(/.{2}/g).map((part) => parseInt(part, 16) / 255)
+    .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+function contrastRatio(first, second) {
+  const a = relativeLuminance(first);
+  const b = relativeLuminance(second);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
 function contentContext() {
   const context = vm.createContext({ console });
   run(context, "prototype_stage4_ua/data_ua.js");
@@ -27,14 +43,15 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.57", "audit scope must identify the current release");
+  assert.equal(auditScope.release, "P2.58", "audit scope must identify the current release");
+  assert.equal(auditScope.assetVersion, "20260714-p2-58-r1", "audit scope must identify the current asset version");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.57"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.57"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.58"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.58"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -67,8 +84,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260714-p2-57-r1"), "Stage5 assets must use the P2.57 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-57-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-58-r1"), "Stage5 assets must use the P2.58 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-58-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation"') && !stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation-review"'), "the ordinary app must not enable internal reviewer routing");
   assert.ok(motionReviewHtml.includes('MILESTONES_BUILD_CHANNEL = "validation-review"') && motionReviewHtml.includes('name="robots" content="noindex,nofollow"'), "Motion review needs a separate noindex internal entry point");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
@@ -81,6 +98,25 @@ function testContentAndEngine() {
   assert.ok(!stage5App.includes("function initHomeDeck()") && !stage5App.includes("function activateHomeTab("), "retired home deck and tab controllers must not ship");
   assert.ok(stage5App.includes("function playFlowLocked(") && stage5App.includes('<details class="daily-play-menu">') && !stage5App.includes("3 ідеї на сьогодні"), "Game must protect the active flow and keep alternative activities optional");
   assert.ok(stage5App.includes('class="btn primary" data-play-next="done"') && stage5App.includes("Ще одна за бажанням"), "post-play completion must make stopping the primary choice");
+  assert.ok(["--control-line:", "--surface-subtle:", "--surface-warm:", "--info-line:", "--success-line:", "--danger:", "--danger-soft:", "--danger-line:", "--focus:", "--radius-control:", "--radius-card:"].every((token) => stage5Styles.includes(token)), "the visual system needs semantic control, surface, state, focus, and radius tokens");
+  const parentStyles = stage5Styles.split("/* stakeholder review screen")[0];
+  const primaryRule = parentStyles.match(/\.btn\.primary\s*\{([^}]*)\}/)?.[1] || "";
+  assert.equal((parentStyles.match(/gradient\(/g) || []).length, 1, "only the restrained brand mark may retain a decorative gradient");
+  assert.ok(primaryRule.includes("background: var(--teal)") && !primaryRule.includes("gradient") && !primaryRule.includes("box-shadow"), "primary actions must use a solid semantic color without decorative elevation");
+  assert.match(stage5Styles, /\.btn\s*\{[^}]*min-height:\s*48px/s, "buttons need a 48px touch target");
+  assert.match(stage5Styles, /\.linklike\s*\{[^}]*min-height:\s*44px/s, "tertiary actions need a 44px touch target");
+  assert.match(stage5Styles, /\.private-moments li button\s*\{[^}]*min-height:\s*44px/s, "private-moment delete needs a 44px touch target");
+  assert.match(stage5Styles, /\.library-topics button\s*\{[^}]*min-height:\s*44px/s, "library topic controls need a 44px touch target");
+  assert.match(stage5Styles, /\.library-fallback button\s*\{[^}]*min-height:\s*44px/s, "library fallback actions need a 44px touch target");
+  assert.match(stage5Styles, /\.motion-dot\s*\{[^}]*width:\s*44px;[^}]*height:\s*44px/s, "carousel dots need a 44px hit area around the visible mark");
+  assert.ok(stage5Styles.includes(".motion-dot::before"), "carousel dots need a distinct visible mark inside the touch target");
+  assert.ok(stage5App.includes("const OUTLINE_ICON_PATHS") && stage5App.includes('function uiIcon(name)') && stage5Styles.includes(".ui-icon"), "parent controls must share one outline SVG icon family");
+  assert.ok(!["⚙", "⏱", "◇", "▶", "■", "○", "△", "＋", "🙂", "↻", "▾", "▸"].some((glyph) => stage5App.includes(glyph)) && !stage5App.includes("+ Додати дитину"), "platform-dependent control glyphs must not remain in the app UI");
+  assert.ok(contrastRatio(cssHexVariable(stage5Styles, "--teal"), cssHexVariable(stage5Styles, "--panel")) >= 4.5, "primary button text needs WCAG AA contrast");
+  assert.ok(contrastRatio(cssHexVariable(stage5Styles, "--muted"), cssHexVariable(stage5Styles, "--paper")) >= 4.5, "muted text needs WCAG AA contrast on the page");
+  assert.ok(contrastRatio(cssHexVariable(stage5Styles, "--control-line"), cssHexVariable(stage5Styles, "--panel")) >= 3, "control boundaries need 3:1 non-text contrast");
+  assert.ok(contrastRatio(cssHexVariable(stage5Styles, "--warm-ink"), cssHexVariable(stage5Styles, "--surface-warm")) >= 4.5, "warm advisory text needs WCAG AA contrast");
+  assert.ok(contrastRatio(cssHexVariable(stage5Styles, "--danger"), cssHexVariable(stage5Styles, "--danger-soft")) >= 4.5, "danger text needs WCAG AA contrast");
   assert.ok(stage5App.includes('document.getElementById("toggleTodayDone")?.focus'), "program updates must restore focus to the thumb action");
   assert.ok(stage5App.includes('class="private-moments"') && stage5App.includes('data-delete-moment='), "E6 needs a bounded local moments view with individual deletion");
   assert.ok(stage5App.includes('"DTEND:"') && !stage5App.includes("RRULE:FREQ=DAILY"), "calendar reminders must be single events without a hidden recurring series");
@@ -88,13 +124,15 @@ function testContentAndEngine() {
   assert.ok(stage5App.includes('id="updateControls"') && stage5App.includes('id="applyUpdate"'), "PWA updates need an explicit action in collapsed settings");
   assert.equal(manifest.display, "standalone", "PWA manifest must request standalone display");
   assert.equal(manifest.start_url, "./", "PWA must start inside its own scope");
+  assert.equal(manifest.background_color, cssHexVariable(stage5Styles, "--paper"), "PWA launch surface must match the visual-system paper color");
+  assert.equal(manifest.theme_color, cssHexVariable(stage5Styles, "--teal"), "PWA chrome must use the primary semantic action color");
   assert.ok(manifest.icons.some((icon) => icon.sizes === "192x192"), "PWA needs a 192px icon");
   assert.ok(manifest.icons.some((icon) => icon.sizes === "512x512"), "PWA needs a 512px icon");
   assert.equal(icon192.readUInt32BE(16), 192, "192px icon width");
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-57-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-58-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -495,9 +533,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-57-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-57-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-57-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-58-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-58-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-58-r1"), "the sourced library must be cached offline");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -686,6 +724,7 @@ function testAppState() {
       && progressNavMarkup.includes('data-icon="history"') && progressNavMarkup.includes('aria-current="page"')
       && !askNavMarkup.includes('aria-current="page"')
       && !libraryNavMarkup.includes('aria-current="page"')
+      && uiIcon("__unknown__") === ""
       && !navMarkup.includes("⌂") && !navMarkup.includes("◎") && !navMarkup.includes("◇") && !navMarkup.includes("✎");
 
     const ids = questionIdsFor(4);
@@ -1112,6 +1151,8 @@ function testAppState() {
       && libraryMarkup.includes("Джерело")
       && libraryMarkup.includes("Статус і застереження")
       && libraryMarkup.includes("Експертне рев’ю ще не завершено")
+      && libraryMarkup.includes('class="ui-icon"')
+      && !libraryMarkup.includes("←")
       && !NAV.some((item) => item.route === "library");
     first.activityCompletions[completionKey(4)] = { activityId: playStep.task.act.id };
     first.favoriteActivities.push(playStep.task.act.id);
@@ -1240,10 +1281,17 @@ function testAppState() {
       && reflectionMarkup.includes('data-diary-note="play_probe"')
       && reflectionMarkup.includes("пам’ять про момент, не оцінка дитини")
       && savedMarkup.includes('data-saved-game="' + playStep.task.act.id + '"');
+    const parentIconMarkup = [startMarkup, continueMarkup, playMarkup, doneMarkup, allClearResultsMarkup, discussResultsMarkup, libraryMarkup, todayMarkup, upcomingMarkup, activeSessionMarkup, reflectionMarkup, continueMarkupAfterPlay].join("\\n");
+    const parentIconSystemOkay = !["←", "↻", "○", "△", "🙂", "＋", "⏱", "■", "▶", "◇", "⚙", "▾", "▸"].some((glyph) => parentIconMarkup.includes(glyph))
+      && parentIconMarkup.includes('class="ui-icon"')
+      && todayMarkup.includes("<span>Почати гру</span>")
+      && activeSessionMarkup.includes("<span>Завершити гру</span>")
+      && libraryMarkup.includes("<span>На головну</span>");
     const livelyDayOkay = focusedPlayOkay
       && flowLockOkay
       && calmFinishOkay
       && diaryFinishOkay
+      && parentIconSystemOkay
       && todayMarkup.includes('<details class="activity-more">')
       && playContextHtml(4).includes('<details class="play-context"')
       && playContextHtml(4).includes("Підібрати під момент")
@@ -1286,6 +1334,9 @@ function testAppState() {
       && !todayMarkup.includes('class="illus"')
       && !todayMarkup.includes('data-day-toggle=')
       && upcomingMarkup.includes('data-day-toggle=')
+      && upcomingMarkup.includes('class="day-acc-caret')
+      && upcomingMarkup.includes('class="ui-icon"')
+      && !upcomingMarkup.includes("▾") && !upcomingMarkup.includes("▸")
       && !upcomingMarkup.includes('id="toggleTodayDone"');
     const homeNextStepOkay = startStep.kind === "start-observation"
       && continueStep.kind === "continue-observation"
