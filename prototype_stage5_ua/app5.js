@@ -769,14 +769,6 @@ function restartSurvey(age) {
   s.variants = {};
   s.date = null;
   cc().surveys[age] = s;
-  delete cc().programSelections[String(age)];
-  delete cc().activityCompletions[completionKey(age)];
-  delete cc().activityReactions[completionKey(age)];
-  delete cc().activityNotes[completionKey(age)];
-  delete cc().dailyPlayCompletions[completionKey(age)];
-  Object.keys(cc().activitySignals).filter((key) => key.startsWith(completionKey(age) + ":")).forEach((key) => delete cc().activitySignals[key]);
-  if (Number(cc().activePlaySession?.age) === Number(age)) cc().activePlaySession = null;
-  cc().playDiary = cc().playDiary.filter((entry) => entry.saved || Number(entry.age) !== Number(age));
   surveyUi = { age, index: 0 };
   surveyAdvancePending = false;
   surveyAdvanceToken += 1;
@@ -2671,7 +2663,7 @@ document.addEventListener("click", async (e) => {
   const go = e.target.closest("[data-go]");
   if (go) {
     if (go.dataset.restart) {
-      const ok = confirm("Почати нове спостереження? Попередній підсумок залишиться в історії.");
+      const ok = confirm("Почати нове спостереження? Попередній підсумок, ігри та нотатки залишаться у ваших записах.");
       if (!ok) return;
       restartSurvey(currentAge());
     }

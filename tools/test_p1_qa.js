@@ -27,14 +27,14 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.53", "audit scope must identify the current release");
+  assert.equal(auditScope.release, "P2.54", "audit scope must identify the current release");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.53"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.53"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.54"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.54"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -66,8 +66,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260714-p2-53-r1"), "Stage5 assets must use the P2.53 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-53-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-54-r1"), "Stage5 assets must use the P2.54 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-54-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -92,7 +92,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-53-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-54-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -472,9 +472,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-53-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-53-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-53-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-54-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-54-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-54-r1"), "the sourced library must be cached offline");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -1194,23 +1194,42 @@ function testAppState() {
     first.snapshots.push({ id: "snap_existing" });
     first.programSelections["4"] = { "1": "act_004_language_001" };
     first.activityCompletions[completionKey(4)] = { activityId: "act_004_language_001" };
+    first.activityReactions[completionKey(4)] = "liked";
+    first.activityNotes[completionKey(4)] = "Усміхнулася на голос";
     first.dailyPlayCompletions[completionKey(4)] = ["act_004_language_001", "act_004_movement_001"];
     first.activitySignals[activitySignalKey(4, "act_004_language_001")] = "voice";
     first.activePlaySession = { activityId: "act_004_language_001", age: 4, startedAt: new Date().toISOString() };
     first.playDiary = [{ id: "pending", activityId: "act_004_language_001", age: 4, startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), reaction: "", signal: "", note: "", saved: false }];
+    const questionIdsBeforeRestart = [...first.surveys[4].questionIds];
+    const playStateBeforeRestart = JSON.stringify({
+      programSelections: first.programSelections["4"],
+      completion: first.activityCompletions[completionKey(4)],
+      reaction: first.activityReactions[completionKey(4)],
+      note: first.activityNotes[completionKey(4)],
+      daily: first.dailyPlayCompletions[completionKey(4)],
+      signal: first.activitySignals[activitySignalKey(4, "act_004_language_001")],
+      activeSession: first.activePlaySession,
+      diary: first.playDiary
+    });
 
     restartSurvey(4);
+    restartSurvey(4);
+    const playStateAfterRestart = JSON.stringify({
+      programSelections: first.programSelections["4"],
+      completion: first.activityCompletions[completionKey(4)],
+      reaction: first.activityReactions[completionKey(4)],
+      note: first.activityNotes[completionKey(4)],
+      daily: first.dailyPlayCompletions[completionKey(4)],
+      signal: first.activitySignals[activitySignalKey(4, "act_004_language_001")],
+      activeSession: first.activePlaySession,
+      diary: first.playDiary
+    });
     const restartOkay = first.surveys[4].date === null
       && Object.keys(first.surveys[4].states).length === 0
+      && Object.keys(first.surveys[4].variants).length === 0
+      && JSON.stringify(first.surveys[4].questionIds) === JSON.stringify(questionIdsBeforeRestart)
       && first.snapshots.length === 1
-      && !first.programSelections["4"]
-      && !first.activityCompletions[completionKey(4)]
-      && !first.activityReactions[completionKey(4)]
-      && !first.activityNotes[completionKey(4)]
-      && !first.dailyPlayCompletions[completionKey(4)]
-      && !first.activitySignals[activitySignalKey(4, "act_004_language_001")]
-      && first.activePlaySession === null
-      && first.playDiary.length === 0
+      && playStateAfterRestart === playStateBeforeRestart
       && first.favoriteActivities.includes(playStep.task.act.id);
 
     first.surveys[4].states = Object.fromEntries(ids.map((id) => [id, "yes"]));
@@ -1275,14 +1294,14 @@ function testAppState() {
     return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, livelyDayOkay: livelyDayOkay && multiDailyOkay && sessionLifecycleOkay, compactResultsOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, gentleEngagementOkay, weeklyRecapOkay, privateMomentsOkay, contextFilterOkay, visualGuideOkay, collectionDashboardOkay, motionReviewOkay, libraryOkay, followUpRoutingOkay };
   })()`, context);
 
-  assert.equal(result.restartOkay, true, "re-test must clear only the active plan and today's completion");
+  assert.equal(result.restartOkay, true, "re-test must reset only the survey draft and preserve all play records");
   assert.equal(result.finishIsIdempotent, true, "finishing the same survey twice must not create duplicate snapshots");
   assert.equal(result.childrenIsolated, true, "children must not share surveys, notes, or completions");
   assert.equal(result.migrationOkay, true, "legacy single-child data must migrate losslessly");
   assert.equal(result.historyOkay, true, "history comparison must support old snapshots and describe answer changes");
   assert.equal(result.homeNextStepOkay, true, "home must expose a swipeable action deck, persistent two-tab content area, and calm safety nudges");
   assert.equal(result.programUiOkay, true, "program must keep today's game open and future days secondary");
-  assert.equal(result.livelyDayOkay, true, "P2.53 must preserve the compact play lifecycle");
+  assert.equal(result.livelyDayOkay, true, "P2.54 must preserve the compact play lifecycle");
   assert.equal(result.compactResultsOkay, true, "results must lead with one next step and keep detailed answers collapsed");
   assert.equal(result.specialistPrepOkay, true, "specialist prep must keep one overview, three structured notes, and a copyable summary");
   assert.equal(result.oneThumbSurveyOkay, true, "survey answers must save and advance without a separate next button");

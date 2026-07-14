@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.53.** Read
+> **Current product baseline: Stage 5 UA / P2.54.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -121,7 +121,7 @@ Home into a four-action hub and gives every game an explicit Start → Finish �
 → continue/remind flow, with the timer hidden until Start. P2.47 exposes
 three curated play choices while saying one is enough, adds a calm timer, one-time calendar
 reminders, a low-effort post-play cue, and a sourced parent minute. The visible asset baseline is
-`20260714-p2-53-r1`; these additions do not change
+`20260714-p2-54-r1`; these additions do not change
 the product's safety rules or make draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
@@ -209,6 +209,14 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — P2.54 lossless re-observation
+- Reduced `restartSurvey()` to resetting only the working answers, prompt variants and completion
+  date. It now preserves program choices, completions, reactions, private notes, daily play,
+  attention signals, active play sessions and both saved/unsaved diary entries.
+- Updated the confirmation to state that the previous summary, games and notes remain. Regression
+  runs the reset twice and compares the complete play state byte-for-byte while preserving
+  question IDs, history and favorites. Bumped cache/build to `20260714-p2-54-r1`.
 
 ### 2026-07-14 — P2.53 younger completed checklist routing
 - Replaced nearest-age snapping with the youngest completed CDC window: 2–3→2, 4–5→4,
