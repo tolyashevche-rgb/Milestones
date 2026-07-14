@@ -34,7 +34,7 @@ free + subscription.
 | 8 | ✅ | Закрити import/startup schema й XSS | Один strict validator; canonical IDs/timestamps; malformed local data → recovery | P2.61 · `fix: validate stored data before use` |
 | 9 | ✅ | Виправити multi-play attribution | Кожна нотатка/реакція належить конкретній грі; undo іншої гри її не стирає | P2.62 · `fix: keep play memories activity-specific` |
 | 10 | ✅ | Захистити кілька вкладок/PWA від silent overwrite | Store revision, conflict detection і зовнішнє оновлення без втрати | P2.63 · `fix: prevent stale tab overwrites` |
-| 11 | 🔄 | Item-level content gate і age-safe Library | 27 `NEEDS_REVIEW` не потрапляють у parent Game; Library age-first | Наступний крок |
+| 11 | ✅ | Item-level content gate і age-safe Library | 27 `NEEDS_REVIEW` не потрапляють у parent Game; Library age-first | P2.64 · `fix: enforce content release boundaries` |
 | 12 | 🔄 | Повна регресія, незалежний аудит і live UI-перевірка | QA/syntax/diff; фінальний реєстр; mobile/tablet/desktop та assistive tech | Автоматизована частина в роботі; live browser недоступний |
 | 13 | ⛔ | Expert review і 5 parent sessions | Реальні рішення експертів і реальні moderated sessions; нічого не симулюється | Після кроку 12 |
 | 14 | ⛔ | Підготовка subscription | Перевірено recurring value/WTP; визначено free safety floor; backend/entitlements/privacy спроєктовані | Після validation |
@@ -76,6 +76,8 @@ free + subscription.
   regression: ✅.
 - P2.63 monotonic store revisions, pre-write conflict detection, safe external tab/PWA refresh
   and malformed external-payload rejection: ✅.
+- P2.64 CSV-verified 33/27 activity gate, fail-closed future release, safe stale-data handling and
+  age-scoped Library defaults/search/suggestions with an explicit all-ages action: ✅.
 - Live browser/device pass: ⛔ 2026-07-14 runtime не надав жодного доступного браузера;
   автоматизований code/DOM QA пройдено, але pixel-perfect pass не заявляється.
 

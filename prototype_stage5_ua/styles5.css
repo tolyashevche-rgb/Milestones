@@ -520,6 +520,7 @@ main {
 .library-topics { display: flex; gap: 7px; margin: 12px -16px 0; padding: 2px 16px 8px; overflow-x: auto; scrollbar-width: thin; }
 .library-topics button { min-height: 44px; flex: 0 0 auto; padding: 7px 12px; border: 1px solid var(--control-line); border-radius: 999px; background: #fff; color: var(--ink); cursor: pointer; font-size: 13px; font-weight: 650; }
 .library-topics button.active { border-color: var(--teal); background: var(--mint); color: var(--teal-dark); }
+.library-age-toggle { min-height: 44px; margin-top: 2px; padding: 7px 0; border: 0; background: transparent; color: var(--teal-dark); cursor: pointer; font: inherit; font-size: 13px; font-weight: 750; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
 .library-count { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
 .library-fallback { display: grid; gap: 4px; margin-top: 10px; padding: 12px; border: 1px solid var(--warm-line); border-radius: 12px; background: var(--surface-warm); }
 .library-fallback strong { color: var(--apricot-dark); font-size: 13px; }

@@ -31,6 +31,7 @@ function contentContext() {
   run(context, "prototype_stage5_ua/authors_ua.js");
   run(context, "prototype_stage5_ua/who_windows.js");
   run(context, "prototype_stage5_ua/activity_context_ua.js");
+  run(context, "prototype_stage5_ua/activity_release_ua.js");
   run(context, "prototype_stage5_ua/library_ua.js");
   return context;
 }
@@ -43,15 +44,15 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.63", "audit scope must identify the current release");
-  assert.equal(auditScope.assetVersion, "20260714-p2-63-r1", "audit scope must identify the current asset version");
+  assert.equal(auditScope.release, "P2.64", "audit scope must identify the current release");
+  assert.equal(auditScope.assetVersion, "20260714-p2-64-r1", "audit scope must identify the current asset version");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.63"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.63"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.64"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.64"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -84,10 +85,14 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260714-p2-63-r1"), "Stage5 assets must use the P2.63 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-63-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-64-r1"), "Stage5 assets must use the P2.64 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-64-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes('src="activity_release_ua.js?v=20260714-p2-64-r1"')
+    && stage5Index.indexOf("activity_release_ua.js") < stage5Index.indexOf("app5.js"),
+  "the parent app must load the fail-closed activity release boundary before its controller");
   assert.ok(stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation"') && !stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation-review"'), "the ordinary app must not enable internal reviewer routing");
   assert.ok(motionReviewHtml.includes('MILESTONES_BUILD_CHANNEL = "validation-review"') && motionReviewHtml.includes('name="robots" content="noindex,nofollow"'), "Motion review needs a separate noindex internal entry point");
+  assert.ok(motionReviewHtml.includes("activity_release_ua.js"), "the isolated review build must use the same explicit channel boundary");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -111,6 +116,7 @@ function testContentAndEngine() {
   assert.match(stage5Styles, /\.linklike\s*\{[^}]*min-height:\s*44px/s, "tertiary actions need a 44px touch target");
   assert.match(stage5Styles, /\.private-moments li button\s*\{[^}]*min-height:\s*44px/s, "private-moment delete needs a 44px touch target");
   assert.match(stage5Styles, /\.library-topics button\s*\{[^}]*min-height:\s*44px/s, "library topic controls need a 44px touch target");
+  assert.match(stage5Styles, /\.library-age-toggle\s*\{[^}]*min-height:\s*44px/s, "the explicit other-ages library toggle needs a 44px touch target");
   assert.match(stage5Styles, /\.library-fallback button\s*\{[^}]*min-height:\s*44px/s, "library fallback actions need a 44px touch target");
   assert.match(stage5Styles, /\.motion-dot\s*\{[^}]*width:\s*44px;[^}]*height:\s*44px/s, "carousel dots need a 44px hit area around the visible mark");
   assert.ok(stage5Styles.includes(".motion-dot::before"), "carousel dots need a distinct visible mark inside the touch target");
@@ -139,7 +145,8 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-63-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-64-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes("./activity_release_ua.js?v=20260714-p2-64-r1"), "the activity release boundary must work offline");
   assert.ok(serviceWorker.includes("const CORE_SHELL = ["), "PWA install must separate the functional core from optional visuals");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
@@ -319,7 +326,7 @@ function testContentAndEngine() {
   const context = contentContext();
   const api = vm.runInContext(`({
     AGES, DOMAIN_KEYS, ENGINE_CONFIG, MILESTONES_BY_AGE, ACTIVITIES_BY_AGE, DISCUSS_BY_ID,
-    QUESTION_VARIANTS_UA, ACTIVITY_AUTHOR_NOTES, WHO_WINDOW_BY_ID, ACTIVITY_LOW_ENERGY_UA, LIBRARY_MATERIALS, LIBRARY_TOPICS,
+    QUESTION_VARIANTS_UA, ACTIVITY_AUTHOR_NOTES, WHO_WINDOW_BY_ID, ACTIVITY_LOW_ENERGY_UA, ACTIVITY_RELEASE_UA, LIBRARY_MATERIALS, LIBRARY_TOPICS,
     buildProfile, buildProgram, domainOf
   })`, context);
 
@@ -348,6 +355,27 @@ function testContentAndEngine() {
   assert.ok(privateMomentsPrivacy.includes("локальна текстова добірка без фото, хмари, акаунта й аналітики")
     && privateMomentsPrivacy.includes("максимум три")
     && privateMomentsPrivacy.includes("одну подію"), "E6 needs a documented data-minimizing privacy decision and non-recurring reminder boundary");
+
+  const activityCsvLines = read("data/activity_library_0_12_months_ua.csv").trim().split(/\r?\n/);
+  const activityCsvHeader = activityCsvLines[0].split(";");
+  const activityCsvRows = activityCsvLines.slice(1).map((line) => {
+    const cells = line.split(";");
+    assert.equal(cells.length, activityCsvHeader.length, `activity CSV row has a malformed field count: ${cells[0]}`);
+    return Object.fromEntries(activityCsvHeader.map((field, index) => [field, cells[index]]));
+  });
+  const requiredActivityFields = Array.from(api.ACTIVITY_RELEASE_UA.requiredFields);
+  const structurallyAuthoredIds = activityCsvRows
+    .filter((row) => requiredActivityFields.every((field) => row[field] && row[field] !== "NEEDS_REVIEW"))
+    .map((row) => row.id).sort();
+  const needsReviewRows = activityCsvRows.filter((row) => Object.values(row).includes("NEEDS_REVIEW"));
+  assert.equal(activityCsvRows.length, 60, "the canonical activity CSV must contain exactly sixty unique activities");
+  assert.equal(new Set(activityCsvRows.map((row) => row.id)).size, 60, "canonical activity IDs must be unique");
+  assert.equal(needsReviewRows.length, 27, "twenty-seven activity rows must stay blocked by NEEDS_REVIEW");
+  assert.equal(structurallyAuthoredIds.length, 33, "only thirty-three activities currently have every required authored field");
+  assert.deepEqual([...api.ACTIVITY_RELEASE_UA.authoredDraftIds].sort(), structurallyAuthoredIds,
+    "the runtime authored-draft allowlist must exactly match the canonical CSV gate");
+  assert.equal(api.ACTIVITY_RELEASE_UA.expertApprovedIds.length, 0,
+    "no activity may be represented as expert-approved before attributable review");
 
   const milestoneIds = new Set();
   const activityIds = new Set();
@@ -460,7 +488,7 @@ function appContext(options = {}) {
       querySelector: (selector) => selector === ".appbar-back" ? nodes.appbarBack : null
     },
     window: {
-      MILESTONES_BUILD_CHANNEL: options.buildChannel || "validation",
+      MILESTONES_BUILD_CHANNEL: options.omitBuildChannel ? undefined : (options.buildChannel || "validation"),
       addEventListener: (type, handler) => { windowListeners[type] = handler; },
       scrollTo: () => {},
       setTimeout: (callback) => callback()
@@ -483,9 +511,220 @@ function appContext(options = {}) {
   run(context, "prototype_stage5_ua/illustrations.js");
   run(context, "prototype_stage5_ua/authors_ua.js");
   run(context, "prototype_stage5_ua/activity_context_ua.js");
+  if (!options.skipActivityRelease) run(context, "prototype_stage5_ua/activity_release_ua.js");
   run(context, "prototype_stage5_ua/library_ua.js");
   run(context, "prototype_stage5_ua/app5.js");
   return context;
+}
+
+function testActivityReleaseBoundary() {
+  const channelSummary = (channel) => {
+    const context = appContext({ buildChannel: channel });
+    return vm.runInContext(`(() => {
+      const allIds = AGES.flatMap((age) => ACTIVITIES_BY_AGE[age].map((activity) => activity.id));
+      const allowedIds = allIds.filter((id) => activityAllowedForChannel(id));
+      const programSafe = AGES.every((age) => {
+        return ["yes", "not_yet"].every((state) => {
+          const states = Object.fromEntries(MILESTONES_BY_AGE[age].map((milestone) => [milestone.id, state]));
+          const program = programForProfile(buildProfile(states, age, ENGINE_CONFIG), age);
+          if (BUILD_CHANNEL === "validation") {
+            return program.length === 7 && program.every((day) => day.options.length > 0
+              && day.options.every((id) => allowedIds.includes(id))
+              && day.bonus.every((item) => allowedIds.includes(item.id)));
+          }
+          return BUILD_CHANNEL === "validation-review" ? program.length === 7 : program.length === 0;
+        });
+      });
+      return { allowed: allowedIds.length, programSafe, unknownIdBlocked: !activityAllowedForChannel("act_future_unknown") };
+    })()`, context);
+  };
+
+  const validation = channelSummary("validation");
+  const review = channelSummary("validation-review");
+  const release = channelSummary("release");
+  const unknown = channelSummary("unexpected-channel");
+  const missingReleaseContext = appContext({ buildChannel: "validation", skipActivityRelease: true });
+  const missingReleaseAllowed = vm.runInContext(`AGES.flatMap((age) => ACTIVITIES_BY_AGE[age])
+    .filter((activity) => activityAllowedForChannel(activity.id)).length`, missingReleaseContext);
+  const missingChannelContext = appContext({ omitBuildChannel: true });
+  const missingChannelAllowed = vm.runInContext(`AGES.flatMap((age) => ACTIVITIES_BY_AGE[age])
+    .filter((activity) => activityAllowedForChannel(activity.id)).length`, missingChannelContext);
+  assert.equal(validation.allowed, 33, "ordinary validation may expose only the thirty-three structurally authored drafts");
+  assert.equal(review.allowed, 60, "the isolated validation-review channel must retain all sixty canonical activities for review");
+  assert.equal(release.allowed, 0, "the future release channel must stay empty until real expert approvals exist");
+  assert.equal(unknown.allowed, 0, "unknown build channels must fail closed");
+  assert.equal(missingReleaseAllowed, 0, "ordinary validation must fail closed if its release metadata asset is missing");
+  assert.equal(missingChannelAllowed, 0, "an entry point without an explicit build channel must fail closed");
+  assert.ok([validation, review, release, unknown].every((result) => result.programSafe && result.unknownIdBlocked),
+    "every channel must produce only its allowed program set and reject unknown future IDs");
+
+  const context = appContext({ buildChannel: "validation" });
+  const directGate = vm.runInContext(`(() => {
+    const born = new Date();
+    born.setDate(1);
+    born.setMonth(born.getMonth() - 4);
+    const child = freshChild("Контентний gate", localDateString(born));
+    store = { ...freshStore(), consent: { accepted: true, date: new Date().toISOString() }, children: [child], activeChildId: child.id };
+    const age = currentAge();
+    const blockedActivities = ACTIVITIES_BY_AGE[age].filter((activity) => !activityAllowedForChannel(activity.id));
+    const blocked = blockedActivities[0];
+    const allowed = ACTIVITIES_BY_AGE[age].find((activity) => activityAllowedForChannel(activity.id));
+    const ids = MILESTONES_BY_AGE[age].map((milestone) => milestone.id);
+    const now = new Date().toISOString();
+    child.surveys[age] = { questionIds: ids, states: Object.fromEntries(ids.map((id) => [id, "yes"])), variants: {}, date: now };
+    child.favoriteActivities = [blocked.id, allowed.id];
+    child.programSelections[String(age)] = { "1": blocked.id };
+    child.dailyPlayCompletions[completionKey(age)] = blockedActivities.slice(0, 3).map((activity) => activity.id);
+    child.activityCompletions[completionKey(age)] = { activityId: blockedActivities[2].id, completedAt: now };
+    child.playDiary = [{ id: "play_3000_abcd", age, activityId: blocked.id, startedAt: now, endedAt: now,
+      durationSeconds: 1, reaction: "", signal: "", note: "Історичний запис", saved: true, nextChoice: "done" },
+    { id: "play_3001_bcde", age, activityId: blocked.id, startedAt: now, endedAt: now,
+      durationSeconds: 1, reaction: "", signal: "", note: "Незавершена стара відмітка", saved: false, nextChoice: "" }];
+    child.activePlaySession = { age, activityId: blocked.id, startedAt: now };
+    const rawHistoryAccepted = validateStoredData(JSON.parse(JSON.stringify(store))).ok;
+    const markup = renderProgram();
+    const selected = programState.selected[programState.currentDay];
+    const blockedActionsRejected = !startPlaySession(age, blocked.id)
+      && !toggleActivityCompletion(age, blocked.id, child)
+      && activityDetailHtml(age, blocked.id) === "";
+    const allowedStart = startPlaySession(age, allowed.id);
+    const allowedFinish = finishPlaySession(age, allowed.id);
+    return {
+      rawHistoryAccepted,
+      blockedActionsRejected,
+      allowedStart: allowedStart && Boolean(allowedFinish),
+      activeDraftCleared: child.activePlaySession == null,
+      diaryPreserved: child.playDiary.filter((entry) => entry.activityId === blocked.id).length === 2
+        && child.playDiary.some((entry) => entry.note === "Історичний запис")
+        && child.playDiary.some((entry) => entry.note === "Незавершена стара відмітка"),
+      blockedCompletionsPreserved: blockedActivities.slice(0, 3).every((activity) => completedActivityIdsToday(age, child).includes(activity.id))
+        && completedActivityIdsToday(age, child).includes(allowed.id)
+        && playableCompletedActivityIdsToday(age, child).length === 1
+        && validateStoredData(JSON.parse(JSON.stringify(store))).ok,
+      favoriteFiltered: favoriteActivityIds(age).length === 1 && favoriteActivityIds(age)[0] === allowed.id,
+      selectionSanitized: Boolean(playableActivityById(age, selected)) && selected !== blocked.id,
+      blockedTitleHidden: !markup.includes(blocked.title)
+    };
+  })()`, context);
+  assert.ok(Object.values(directGate).every(Boolean),
+    "blocked drafts must stay in backup/history but never resume, render, complete, favorite-select, or start in the parent Game");
+
+  const staleAgeContext = appContext({ buildChannel: "validation" });
+  const staleAgeFlow = vm.runInContext(`(() => {
+    const born = new Date(); born.setDate(1); born.setMonth(born.getMonth() - 4);
+    const child = freshChild("Нове вікове вікно", localDateString(born));
+    store = { ...freshStore(), consent: { accepted: true }, children: [child], activeChildId: child.id };
+    const age = currentAge();
+    const currentAllowed = ACTIVITIES_BY_AGE[age].find((activity) => activityAllowedForChannel(activity.id));
+    const olderAllowed = ACTIVITIES_BY_AGE[2].find((activity) => activityAllowedForChannel(activity.id));
+    const ids = MILESTONES_BY_AGE[age].map((milestone) => milestone.id);
+    const now = new Date().toISOString();
+    child.surveys[age] = { questionIds: ids, states: Object.fromEntries(ids.map((id) => [id, "yes"])), variants: {}, date: now };
+    child.activePlaySession = { age: 2, activityId: olderAllowed.id, startedAt: now };
+    child.playDiary = [{ id: "play_4000_cdef", age: 2, activityId: olderAllowed.id, startedAt: now, endedAt: now,
+      durationSeconds: 1, reaction: "", signal: "", note: "Старе вікно", saved: false, nextChoice: "" }];
+    const notLockedBeforeRender = !playFlowLocked();
+    renderProgram();
+    const staleSessionCleared = child.activePlaySession == null;
+    const currentStartWorks = startPlaySession(age, currentAllowed.id);
+    return {
+      notLockedBeforeRender,
+      staleSessionCleared,
+      currentStartWorks,
+      olderDiaryPreserved: child.playDiary.some((entry) => entry.age === 2 && entry.note === "Старе вікно")
+    };
+  })()`, staleAgeContext);
+  assert.ok(Object.values(staleAgeFlow).every(Boolean),
+    "an unfinished allowed activity from an older age window must not lock the current Game or erase its raw diary entry");
+
+  const releaseContext = appContext({ buildChannel: "release" });
+  const releaseMarkup = vm.runInContext(`(() => {
+    const born = new Date(); born.setDate(1); born.setMonth(born.getMonth() - 4);
+    const child = freshChild("Release", localDateString(born));
+    store = { ...freshStore(), consent: { accepted: true }, children: [child], activeChildId: child.id };
+    const age = currentAge();
+    const welcome = renderWelcome();
+    const beforeSurveyHome = renderHome();
+    const ids = MILESTONES_BY_AGE[age].map((milestone) => milestone.id);
+    child.surveys[age] = { questionIds: ids, states: Object.fromEntries(ids.map((id) => [id, "yes"])), variants: {}, date: new Date().toISOString() };
+    return { welcome, beforeSurveyHome, program: renderProgram(), home: renderHome(), results: renderResults() };
+  })()`, releaseContext);
+  assert.ok(!releaseMarkup.welcome.includes("прості ігри")
+    && !releaseMarkup.beforeSurveyHome.includes("отримаєте одну просту гру"),
+  "Welcome and pre-observation Home must not promise activity content when the approved release set is empty");
+  assert.ok(releaseMarkup.program.includes("Ігри ще проходять перевірку") && !releaseMarkup.program.includes('id="startPlaySession"'),
+    "an empty approved release set must render a safe honest state instead of crashing or exposing a draft game");
+  assert.ok(releaseMarkup.home.includes("Ігри ще проходять перевірку")
+    && !releaseMarkup.home.includes("наступна ідея для гри")
+    && !releaseMarkup.home.includes("Почати гру"),
+  "Home must not promise a game when the approved release set is empty");
+  assert.ok(releaseMarkup.results.includes("Ігри ще проходять перевірку")
+    && releaseMarkup.results.includes('data-go="ask"')
+    && !releaseMarkup.results.includes("Оберіть одну гру")
+    && !releaseMarkup.results.includes("Фокус гри")
+    && !releaseMarkup.results.includes("Почати гру на сьогодні"),
+  "Results must route to honest specialist preparation instead of an empty Game when no approved activity exists");
+}
+
+function testLibraryAgeBoundary() {
+  const context = appContext({ buildChannel: "validation" });
+  const result = vm.runInContext(`(() => {
+    const monthsAgo = (months, name) => {
+      const born = new Date();
+      born.setDate(1);
+      born.setMonth(born.getMonth() - months);
+      return freshChild(name, localDateString(born));
+    };
+    const ageTwo = monthsAgo(2, "Два місяці");
+    store = { ...freshStore(), consent: { accepted: true }, children: [ageTwo], activeChildId: ageTwo.id };
+    libraryUi = { query: "", topic: "all", allAges: false };
+    const defaultIds = filteredLibraryItems().map((item) => item.id);
+    libraryUi = { query: "", topic: "safety", allAges: false };
+    const defaultSafetyIds = filteredLibraryItems().map((item) => item.id);
+    libraryUi = { query: "чашка", topic: "all", allAges: false };
+    const ageScopedCupState = libraryResultState();
+    libraryUi.allAges = true;
+    const allAgeCupIds = filteredLibraryItems().map((item) => item.id);
+    libraryUi.query = "";
+    const allAgeIds = filteredLibraryItems().map((item) => item.id);
+    libraryUi = { query: "", topic: "all", allAges: false };
+    const toggleMarkup = renderLibrary();
+
+    const beforeTwo = monthsAgo(1, "До двох");
+    store.children.push(beforeTwo);
+    store.activeChildId = beforeTwo.id;
+    const beforeTwoKey = libraryAgeKey();
+    const beforeTwoIds = filteredLibraryItems().map((item) => item.id);
+
+    const afterTwelve = monthsAgo(13, "Після дванадцяти");
+    store.children.push(afterTwelve);
+    store.activeChildId = afterTwelve.id;
+    const afterTwelveKey = libraryAgeKey();
+    const afterTwelveIds = filteredLibraryItems().map((item) => item.id);
+    return {
+      defaultCount: defaultIds.length,
+      restrictedHidden: !defaultIds.includes("cup-practice") && !defaultIds.includes("choking-shape"),
+      defaultSafetyCount: defaultSafetyIds.length,
+      ageScopedSearchSafe: !ageScopedCupState.html.includes("Коли знайомити з чашкою?")
+        && ageScopedCupState.html.includes("Показати всі для цього віку"),
+      explicitAllAgesShowsCup: allAgeCupIds.includes("cup-practice"),
+      explicitAllAgesCount: allAgeIds.length,
+      toggleSemantics: toggleMarkup.includes("data-library-all-ages") && toggleMarkup.includes('aria-pressed="false"'),
+      beforeTwoKey,
+      beforeTwoSafe: !beforeTwoIds.includes("cup-practice") && !beforeTwoIds.includes("choking-shape"),
+      afterTwelveKey,
+      afterTwelveCount: afterTwelveIds.length
+    };
+  })()`, context);
+  assert.equal(result.defaultCount, 11, "a two-month profile must default to the eleven materials relevant to its age key");
+  assert.equal(result.defaultSafetyCount, 2, "age filtering must keep all-age safety cards without leaking the 6+ feeding-safety card");
+  assert.equal(result.explicitAllAgesCount, 13, "only the explicit other-ages action may reveal the complete thirteen-card library");
+  assert.equal(result.beforeTwoKey, 2, "profiles before the first checklist must use the two-month library range");
+  assert.equal(result.afterTwelveKey, 12, "profiles after product scope must use the final twelve-month library range");
+  assert.equal(result.afterTwelveCount, 13, "the final age range may include every current library card");
+  assert.ok(result.restrictedHidden && result.ageScopedSearchSafe && result.explicitAllAgesShowsCup
+    && result.toggleSemantics && result.beforeTwoSafe,
+  "search, suggestions and defaults must remain age-safe until the parent explicitly requests other ages");
 }
 
 function testMultiContextStorageProtection() {
@@ -691,7 +930,8 @@ function testMultiPlayAttribution() {
     const child = freshChild("Дві гри", localDateString(born));
     store = { storeSchemaVersion: STORE_SCHEMA_VERSION, consent: { accepted: true }, children: [child], activeChildId: child.id };
     const age = currentAge();
-    const [firstActivity, secondActivity] = ACTIVITIES_BY_AGE[age];
+    const [firstActivity, secondActivity] = ACTIVITIES_BY_AGE[age]
+      .filter((activity) => playableActivityById(age, activity.id));
     const dayKey = completionKey(age);
     const firstKey = activityMemoryKey(age, firstActivity.id);
     const secondKey = activityMemoryKey(age, secondActivity.id);
@@ -956,9 +1196,10 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-63-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-63-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-63-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-64-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-64-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./activity_release_ua.js?v=20260714-p2-64-r1"), "the activity release boundary must be cached offline");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-64-r1"), "the sourced library must be cached offline");
   assert.ok(!cachedShell.some((entry) => entry.includes("motion_cards") || entry.includes("activity-tummy-time")), "optional illustrations must not block core installation");
 
   const failingInstallListeners = {};
@@ -1661,28 +1902,29 @@ function testAppState() {
       && releaseGateExport.includes('"стан_gate","завершено_сесій"')
       && releaseGateExport.includes('"готова до рішення"')
       && releaseGateExport.includes('"потрібне виправлення"');
-    libraryUi = { query: "сон", topic: "all" };
+    libraryUi = { query: "сон", topic: "all", allAges: false };
     const librarySearchResults = filteredLibraryItems();
-    libraryUi = { query: "", topic: "safety" };
+    libraryUi = { query: "", topic: "safety", allAges: false };
     const librarySafetyResults = filteredLibraryItems();
     const outdoorSearchesWork = ["прогулянка", "гуляти", "коляска"].every((query) => {
-      libraryUi = { query, topic: "all" };
+      libraryUi = { query, topic: "all", allAges: false };
       return filteredLibraryItems().some((item) => item.id === "walk-hot-weather");
     });
-    libraryUi = { query: "підгузки", topic: "all" };
+    libraryUi = { query: "підгузки", topic: "all", allAges: false };
     const libraryFallback = libraryResultState();
     const libraryFallbackMarkup = libraryFallback.html;
-    libraryUi = { query: "", topic: "safety" };
+    libraryUi = { query: "", topic: "safety", allAges: false };
     const libraryMarkup = renderLibrary();
     const libraryOkay = librarySearchResults.some((item) => item.id === "sleep-routine")
-      && librarySafetyResults.length === 3
+      && librarySafetyResults.length === 2
       && librarySafetyResults.every((item) => item.topic === "safety")
       && outdoorSearchesWork
       && libraryFallback.status.includes("Точного збігу поки немає")
-      && libraryFallbackMarkup.includes("Показати всі матеріали")
+      && libraryFallbackMarkup.includes("Показати всі для цього віку")
       && !libraryFallbackMarkup.includes("Нічого не знайшлося")
       && libraryMarkup.includes('id="librarySearch"')
       && libraryMarkup.includes('data-library-topic="safety"')
+      && libraryMarkup.includes("data-library-all-ages")
       && libraryMarkup.includes('class="library-source-link"')
       && libraryMarkup.includes("Джерело")
       && libraryMarkup.includes("Статус і застереження")
@@ -1835,7 +2077,7 @@ function testAppState() {
       && [2, 3, 5].every((minutes) => activeSessionMarkup.includes('data-play-timer-minutes="' + minutes + '"'))
       && reflectionMarkup.includes('data-diary-signal="voice"')
       && startMarkup.includes("Хвилина для батьків")
-      && startMarkup.includes("Перевірити себе")
+      && startMarkup.includes("Показати коротку відповідь")
       && startMarkup.includes("Освітня чернетка до експертного рев’ю")
       && todayMarkup.includes('id="startPlaySession"')
       && activeSessionMarkup.includes('id="finishPlaySession"')
@@ -2025,6 +2267,8 @@ function testAppState() {
   testCurrentBuildBoundary();
   testContentAndEngine();
   testAppState();
+  testActivityReleaseBoundary();
+  testLibraryAgeBoundary();
   testMultiContextStorageProtection();
   testStorageFailureRecovery();
   testStoredDataSchemaRecovery();

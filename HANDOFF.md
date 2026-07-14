@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.63.** Read
+> **Current product baseline: Stage 5 UA / P2.64.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -132,7 +132,9 @@ keeps data controls reachable before the first checklist and prevents incomplete
 P2.61 makes startup and backup restore share a strict canonical schema and closes imported
 snapshot XSS. P2.62 makes play notes/reactions per-activity so multiple games cannot relabel or
 erase one another. P2.63 adds monotonic store revisions, stale-write refusal and safe external
-tab/PWA refresh. The visible asset baseline is `20260714-p2-63-r1`; none of these releases
+tab/PWA refresh. P2.64 fail-closes parent Game content to 33 structurally authored drafts, keeps
+27 `NEEDS_REVIEW` rows review-only and makes Library defaults/search age-safe. The visible asset
+baseline is `20260714-p2-64-r1`; none of these releases
 changes the product's safety rules or makes draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
@@ -220,6 +222,20 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — P2.64 fail-closed activity boundary and age-safe Library
+- Added a CSV-verified runtime allowlist: ordinary validation can use only 33 structurally
+  complete authored drafts; the 27 activities with `NEEDS_REVIEW` remain available only in the
+  isolated review channel. The future release allowlist is intentionally empty.
+- Filtered generated programs, saved games, stale selections, direct Start/completion actions and
+  context choices through the same gate. Raw blocked records remain valid for migration, backup,
+  diary and historical display; stale unfinished draft flows no longer lock the current Game.
+- Library now defaults to the active age key, including honest 2-month and 12-month fallbacks
+  outside the checklist windows. Search and zero-result suggestions obey that scope until the
+  parent explicitly asks to see other ages.
+- Replaced test-like and over-automated wording, softened the activity-evidence claim and fixed the
+  hidden-text class mismatch. Added channel, CSV, direct-action, stale-data and age/search tests.
+- Bumped marker to P2.64 / `20260714-p2-64-r1`. This is a structural safety gate, not expert sign-off.
 
 ### 2026-07-14 — P2.63 multi-tab and installed-PWA overwrite protection
 - Added a monotonic store revision and update timestamp, including strict startup/import

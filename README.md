@@ -1,6 +1,6 @@
 # Milestones — personalized child-development assistant
 
-> **CURRENT BUILD: Stage 5 UA / P2.63.** Before running or auditing the product, read
+> **CURRENT BUILD: Stage 5 UA / P2.64.** Before running or auditing the product, read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md). The only current UI entry point is
 > `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references, not valid
 > evidence for a current UI/UX audit.
@@ -18,8 +18,8 @@ scoring, or replacing a professional.
 
 > **Active quality rebuild (2026-07-14):** feature expansion is frozen. Implementation proceeds
 > one verified commit at a time through
-> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.63 is the
-> current completed multi-context storage-protection step in that sequence.
+> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.64 is the
+> current completed content-boundary and age-safe Library step in that sequence.
 
 ---
 
@@ -36,8 +36,8 @@ Milestones/
 │   └── app.js                 ← UI wiring
 ├── prototype_stage4_ua/       ← runtime data/engine; UI is a LEGACY reference
 │   └── data_ua.js  engine.js  app.js  legacy-reference.html
-├── prototype_stage5_ua/       ← CURRENT guided UA app (P2.63)
-│   └── index.html app5.js styles5.css questions_ua.js illustrations.js authors_ua.js (reuses stage4 data+engine)
+├── prototype_stage5_ua/       ← CURRENT guided UA app (P2.64)
+│   └── index.html app5.js styles5.css questions_ua.js activity_release_ua.js … (reuses stage4 data+engine)
 ├── docs/                      ← project documentation
 │   ├── safety_rules.md        ← SINGLE SOURCE OF TRUTH for claims/guardrails
 │   ├── router_logic.md        ← how the engine turns answers into a plan
@@ -117,7 +117,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
-> Release **P2.63** is the current product baseline. The P2.16 material below is retained
+> Release **P2.64** is the current product baseline. The P2.16 material below is retained
 > as historical implementation context, not as the current audit target. See
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) for the exact entry point and audit preflight.
 
@@ -125,6 +125,11 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   GitHub Pages remains disabled by owner decision. If public review is approved later, the workflow
   will run the full Stage 5 QA suite and deploy only Stage 5 UA plus the two canonical Stage 4 UA
   engine/data files it imports; it cannot run on an ordinary push.
+- **P2.64 fail-closed content boundary:** the ordinary validation app can recommend only the 33
+  structurally complete authored drafts; the 27 CSV rows containing `NEEDS_REVIEW` remain
+  available only in isolated review. A future release channel exposes zero activities until real,
+  attributable expert approvals exist. Library search and suggestions now default to the active
+  age range, with an explicit control for viewing other ages. All 33 remain drafts, not approvals.
 - **P2.63 multi-context storage protection:** every persisted store now carries a monotonic
   revision and update timestamp. Before writing, a tab checks the persisted revision and refuses
   to overwrite newer or corrupt data; valid `storage` events refresh the active state. Explicit
@@ -147,7 +152,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   canonical Back behavior; nested Start/Finish targets, same-route re-observation, reduced motion,
   grouped controls, unique ARIA references and live-status updates are regression-tested. Narrow
   screens reflow instead of relying on nested horizontal scrolling. Corrupt local data exposes
-  restore before overwrite. The mandatory PWA install is 17 core files / about 442 KiB; large
+  restore before overwrite. The mandatory PWA install is 18 core entries / about 471 KiB; large
   illustrations cache only after use and quota failures cannot swallow successful online responses.
 - **P2.58 restrained visual system:** parent-facing screens now use semantic teal, mint, warm,
   danger and focus tokens; solid primary/outline secondary controls; consistent radii and weak

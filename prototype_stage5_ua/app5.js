@@ -24,7 +24,7 @@ const OBSERVATION_LABELS = {
   not_yet: "Ще не помічаю"
 };
 
-const BUILD_CHANNEL = window.MILESTONES_BUILD_CHANNEL || "validation";
+const BUILD_CHANNEL = window.MILESTONES_BUILD_CHANNEL || "unconfigured";
 const IS_MOTION_REVIEW_BUILD = BUILD_CHANNEL === "validation-review";
 // No expert approvals are fabricated in code. Draft prompt variants and author notes stay
 // unavailable in the ordinary validation app until an attributable release tracker exists.
@@ -790,7 +790,8 @@ function validateStoredData(source) {
     if (child.dailyPlayCompletions != null && (!isRecord(child.dailyPlayCompletions)
       || Object.entries(child.dailyPlayCompletions).some(([key, ids]) => {
         const parsed = parseDayAgeKey(key);
-        return !parsed || !Array.isArray(ids) || ids.length > 3 || new Set(ids).size !== ids.length
+        return !parsed || !Array.isArray(ids) || ids.length > (ACTIVITIES_BY_AGE[parsed.age] || []).length
+          || new Set(ids).size !== ids.length
           || ids.some((id) => typeof id !== "string" || !activityById(parsed.age, id));
       }))) {
       return fail("У даних є пошкоджений щоденник ігор.");
@@ -965,6 +966,40 @@ function ageWindowFor(months) {
 }
 function nextCheckAge(age) { return AGES.find((a) => a > age) || null; }
 function activityById(age, id) { return (ACTIVITIES_BY_AGE[age] || []).find((a) => a.id === id); }
+function activityAllowedForChannel(id, channel = BUILD_CHANNEL) {
+  const canonical = AGES.some((age) => Boolean(activityById(age, id)));
+  if (!canonical) return false;
+  if (channel === "validation-review") return true;
+  const release = typeof ACTIVITY_RELEASE_UA !== "undefined" ? ACTIVITY_RELEASE_UA : null;
+  if (channel === "validation") return Array.isArray(release?.authoredDraftIds) && release.authoredDraftIds.includes(id);
+  if (channel === "release") return Array.isArray(release?.expertApprovedIds) && release.expertApprovedIds.includes(id);
+  return false;
+}
+function playableActivityById(age, id, channel = BUILD_CHANNEL) {
+  const activity = activityById(age, id);
+  return activity && activityAllowedForChannel(id, channel) ? activity : null;
+}
+function hasPlayableActivityForAge(age, channel = BUILD_CHANNEL) {
+  return (ACTIVITIES_BY_AGE[age] || []).some((activity) => activityAllowedForChannel(activity.id, channel));
+}
+function programForProfile(profile, age, channel = BUILD_CHANNEL) {
+  const used = new Set();
+  return buildProgram(profile, age).map((day) => {
+    const options = [...new Set(day.options || [])]
+      .filter((id) => playableActivityById(age, id, channel));
+    if (!options.length) {
+      const fallbackPool = (ACTIVITIES_BY_AGE[age] || [])
+        .filter((activity) => domainOf(activity.id) === day.domain && activityAllowedForChannel(activity.id, channel));
+      const fallback = fallbackPool.find((activity) => !used.has(activity.id))
+        || fallbackPool[(Math.max(1, Number(day.day) || 1) - 1) % Math.max(1, fallbackPool.length)];
+      if (fallback) options.push(fallback.id);
+    }
+    options.forEach((id) => used.add(id));
+    const bonus = (day.bonus || []).filter((item) => item?.id
+      && playableActivityById(age, item.id, channel) && !options.includes(item.id));
+    return { ...day, options, bonus };
+  }).filter((day) => day.options.length);
+}
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
 // Pick the survey questions for an age. Persist the selection so a re-test reuses the SAME
@@ -1180,7 +1215,7 @@ function parentMinuteHtml(age) {
   return `<section class="parent-minute" aria-labelledby="parentMinuteTitle">
     <div class="parent-minute-head"><span aria-hidden="true">?</span><div><span class="mini-label">Хвилина для батьків</span><h2 id="parentMinuteTitle">${esc(item.title)}</h2></div></div>
     <p>Спершу подумайте, як відповіли б ви. Тут немає балів або правильної «оцінки батьків».</p>
-    <details><summary>Перевірити себе</summary><div class="parent-minute-answer"><p>${esc(item.answer)}</p><strong>Спробувати сьогодні</strong><p>${esc(item.doNow)}</p><a href="${esc(item.source.url)}" target="_blank" rel="noopener noreferrer">Джерело: ${esc(item.source.publisher)}</a><small>Освітня чернетка до експертного рев’ю.</small></div></details>
+    <details><summary>Показати коротку відповідь</summary><div class="parent-minute-answer"><p>${esc(item.answer)}</p><strong>Спробувати сьогодні</strong><p>${esc(item.doNow)}</p><a href="${esc(item.source.url)}" target="_blank" rel="noopener noreferrer">Джерело: ${esc(item.source.publisher)}</a><small>Освітня чернетка до експертного рев’ю.</small></div></details>
   </section>`;
 }
 function currentProgramDayIndex(survey, programLength) {
@@ -1201,12 +1236,15 @@ function completedActivityIdsToday(age, child = cc()) {
   if (legacy && !ids.includes(legacy)) ids.push(legacy);
   return ids;
 }
+function playableCompletedActivityIdsToday(age, child = cc()) {
+  return completedActivityIdsToday(age, child).filter((id) => playableActivityById(age, id));
+}
 function activityCompletedToday(age, activityId, child = cc()) {
   return completedActivityIdsToday(age, child).includes(activityId);
 }
 function activitySignalKey(age, activityId) { return `${completionKey(age)}:${activityId}`; }
 function toggleActivityCompletion(age, activityId, child = cc(), now = new Date()) {
-  if (!child || !activityById(age, activityId)) return false;
+  if (!child || !playableActivityById(age, activityId)) return false;
   const key = completionKey(age, now);
   const ids = completedActivityIdsToday(age, child);
   const existingIndex = ids.indexOf(activityId);
@@ -1221,7 +1259,7 @@ function toggleActivityCompletion(age, activityId, child = cc(), now = new Date(
     }
     return true;
   }
-  if (ids.length >= 3) return false;
+  if (playableCompletedActivityIdsToday(age, child).length >= 3) return false;
   ids.push(activityId);
   child.dailyPlayCompletions[key] = ids;
   child.activityCompletions[key] = { activityId, completedAt: now.toISOString() };
@@ -1474,6 +1512,7 @@ function renderAppbar(screen) {
 
 // ---- onboarding screens ----
 function renderWelcome() {
+  const hasPlayableContent = AGES.some((age) => hasPlayableActivityForAge(age));
   const recovery = storageProblem ? `
     <section class="card recovery-card" aria-labelledby="recoveryTitle">
       <span class="mini-label">Відновлення даних</span>
@@ -1488,7 +1527,9 @@ function renderWelcome() {
     <section class="screen-pad center">
       <div class="logo-dot" aria-hidden="true">${navIcon("play")}</div>
       <h1 tabindex="-1">Перший рік — спокійніше</h1>
-      <p class="lead">Короткі спостереження, прості ігри та зрозумілі підказки для розмови з фахівцем.</p>
+      <p class="lead">${hasPlayableContent
+        ? "Короткі спостереження, прості ігри та зрозумілі підказки для розмови з фахівцем."
+        : "Короткі спостереження, спокійні підсумки та зрозумілі підказки для розмови з фахівцем."}</p>
       ${recovery}
       <button type="button" class="btn primary block" data-go="consent" data-replace-route="1" ${storageProblem ? 'data-start-fresh="1"' : ""}>${storageProblem ? "Продовжити без відновлення" : "Почати"}</button>
       <p class="fineprint">Матеріали спираються на рекомендації CDC, AAP, WHO та Harvard. Це не діагностика і не скринінг.</p>
@@ -1537,13 +1578,19 @@ function todaysTask(age) {
   if (!survey || !survey.date) return null;
   const profile = profileForSurvey(survey, age);
   if (profile.notStarted) return null;
-  const program = buildProgram(profile, age);
+  const program = programForProfile(profile, age);
   if (!program.length) return null;
   const dayIdx = currentProgramDayIndex(survey, program.length);
   const day = program[dayIdx];
   const selected = cc().programSelections[String(age)] && cc().programSelections[String(age)][String(day.day)];
-  const act = activityById(age, selected) || activityById(age, day.options[0]);
+  const act = playableActivityById(age, selected) || playableActivityById(age, day.options[0]);
   return act ? { day: day.day, domain: domainOf(act.id) || day.domain, act, done: completedActivityToday(age)?.activityId === act.id } : null;
+}
+
+function hasPlayableProgram(survey, age) {
+  if (!survey || !survey.date) return false;
+  const profile = profileForSurvey(survey, age);
+  return !profile.notStarted && programForProfile(profile, age).length > 0;
 }
 
 function homeNextStep(age) {
@@ -1569,7 +1616,9 @@ function homeNextStep(age) {
       kind: "start-observation",
       label: "Перший крок",
       title: "Коротке спостереження",
-      body: "Відповідайте по одному питанню. Наприкінці отримаєте одну просту гру на сьогодні.",
+      body: hasPlayableActivityForAge(age)
+        ? "Відповідайте по одному питанню. Наприкінці отримаєте одну просту гру на сьогодні."
+        : "Відповідайте по одному питанню. Наприкінці отримаєте спокійний підсумок без оцінок.",
       cta: "Почати спостереження",
       route: "survey"
     };
@@ -1603,8 +1652,8 @@ function homeNextStep(age) {
     return {
       kind: "done-today",
       label: "На сьогодні все",
-      title: "Гру виконано",
-      body: `«${task.act.title}» позначено виконаною. Завтра тут з’явиться наступна коротка гра.`,
+      title: "На сьогодні достатньо",
+      body: `Момент гри «${task.act.title}» збережено. Завтра тут з’явиться наступна коротка ідея.`,
       task
     };
   }
@@ -1617,6 +1666,16 @@ function homeNextStep(age) {
       cta: "Почати гру",
       route: "program",
       task
+    };
+  }
+  if (!hasPlayableProgram(survey, age)) {
+    return {
+      kind: "content-review",
+      label: "Спостереження збережено",
+      title: "Ігри ще проходять перевірку",
+      body: "Підсумок і ваші записи доступні. Неперевірену гру ця версія не показує.",
+      cta: "Переглянути підсумок",
+      route: "results"
     };
   }
   return {
@@ -1714,11 +1773,18 @@ function renderHome() {
 }
 
 // ---- concise sourced library (E4 pilot) ----
-let libraryUi = { query: "", topic: "all" };
+let libraryUi = { query: "", topic: "all", allAges: false };
 let librarySearchTimer = null;
 
 function libraryItems() {
   return typeof LIBRARY_MATERIALS !== "undefined" && Array.isArray(LIBRARY_MATERIALS) ? LIBRARY_MATERIALS : [];
+}
+
+function libraryAgeKey() {
+  const age = currentAge();
+  if (age != null) return age;
+  const months = developmentalMonths(cc());
+  return Number.isFinite(months) && months > AGES[AGES.length - 1] ? AGES[AGES.length - 1] : AGES[0];
 }
 
 function normalizeLibrarySearch(value) {
@@ -1754,23 +1820,25 @@ function libraryItemMatchesQuery(item, query) {
 
 function filteredLibraryItems() {
   const query = normalizeLibrarySearch(libraryUi.query);
-  const age = currentAge();
+  const age = libraryAgeKey();
   return libraryItems().filter((item) => {
+    if (!libraryUi.allAges && !item.ages.includes(age)) return false;
     if (libraryUi.topic !== "all" && item.topic !== libraryUi.topic) return false;
     return libraryItemMatchesQuery(item, query);
   }).sort((a, b) => Number(b.ages.includes(age)) - Number(a.ages.includes(age)));
 }
 
 function suggestedLibraryItems() {
-  const age = currentAge();
+  const age = libraryAgeKey();
   return libraryItems()
-    .filter((item) => libraryUi.topic === "all" || item.topic === libraryUi.topic)
+    .filter((item) => (libraryUi.allAges || item.ages.includes(age))
+      && (libraryUi.topic === "all" || item.topic === libraryUi.topic))
     .sort((a, b) => Number(b.ages.includes(age)) - Number(a.ages.includes(age)))
     .slice(0, 3);
 }
 
 function libraryCardHtml(item) {
-  const age = currentAge();
+  const age = libraryAgeKey();
   const ageLabel = item.ages.includes(age) ? `Для ${AGE_LABELS[age]}` : `Вік: ${item.ages.join(", ")} міс.`;
   return `<article class="library-card">
     <div class="library-card-head"><span class="chip">${esc(item.topicLabel)}</span><span class="library-age">${esc(ageLabel)}</span></div>
@@ -1799,7 +1867,8 @@ function libraryResultState() {
   const status = items.length || !hasQuery
     ? `Знайдено: ${items.length}`
     : `Точного збігу поки немає · показуємо ${suggestions.length} корисні матеріали`;
-  const fallback = suggestions.length ? `<div class="library-fallback"><strong>Спробуйте інакше</strong><span>Напишіть коротко: «сон», «плач», «прогулянка» або «годування».</span><button type="button" data-clear-library-search>Показати всі матеріали</button></div>` : "";
+  const fallbackLabel = libraryUi.allAges ? "Показати всі матеріали" : "Показати всі для цього віку";
+  const fallback = suggestions.length ? `<div class="library-fallback"><strong>Спробуйте інакше</strong><span>Напишіть коротко: «сон», «плач», «прогулянка» або «годування».</span><button type="button" data-clear-library-search>${fallbackLabel}</button></div>` : "";
   return { status, html: `${fallback}<div class="library-list">${visibleItems.map(libraryCardHtml).join("")}</div>` };
 }
 function libraryResultsHtml() { return libraryResultState().html; }
@@ -1821,6 +1890,7 @@ function renderLibrary() {
     <p class="muted">Одне питання — одна практична відповідь на 2–3 хвилини. Матеріали освітні й поки мають статус чернетки.</p>
     <label class="library-search"><span>Пошук</span><input id="librarySearch" type="search" value="${esc(libraryUi.query)}" placeholder="Наприклад: прогулянка, сон або плач" autocomplete="off"></label>
     <div class="library-topics" role="group" aria-label="Фільтр за темою">${topics.map((topic) => `<button type="button" data-library-topic="${topic.id}" class="${libraryUi.topic === topic.id ? "active" : ""}" aria-pressed="${libraryUi.topic === topic.id}">${esc(topic.label)}</button>`).join("")}</div>
+    <button type="button" class="library-age-toggle" data-library-all-ages aria-pressed="${libraryUi.allAges}">${libraryUi.allAges ? "Показувати лише для цього віку" : "Показати матеріали для інших віків"}</button>
     <p id="libraryCount" class="library-count" role="status" aria-live="polite" aria-atomic="true">${initialResults.status}</p>
     <div id="libraryResults">${initialResults.html}</div>
   </section>`;
@@ -1924,7 +1994,7 @@ function discussCardHtml(m, state) {
   return `<article class="discuss-card"><div class="q-meta"><span>${esc(m.domain)}</span><span>${OBSERVATION_LABELS[state] || "Спостереження"}</span></div><h3>${esc(m.title)}</h3><p class="muted"><strong>Для розмови:</strong> ${esc(DISCUSS_BY_ID[m.id])}</p></article>`;
 }
 
-function resultHeroHtml(profile, followUp) {
+function resultHeroHtml(profile, followUp, hasPlayable = true) {
   let icon = "check";
   let label = "Наступний крок";
   let title = "Оберіть одну гру";
@@ -1932,7 +2002,9 @@ function resultHeroHtml(profile, followUp) {
   if (followUp.kind === "discuss-now") {
     icon = "alert";
     title = "Підготуйте розмову з фахівцем";
-    note = "Ігри можуть бути частиною дня, але не замінюють обговорення відповіді «Ще не помічаю».";
+    note = hasPlayable
+      ? "Ігри можуть бути частиною дня, але не замінюють обговорення відповіді «Ще не помічаю»."
+      : "Підготовка до розмови доступна незалежно від ігор. Неперевірену гру ця версія не показує.";
   } else if (followUp.kind === "recheck-ready") {
     icon = "refresh";
     title = "Можна оновити спостереження";
@@ -1941,6 +2013,11 @@ function resultHeroHtml(profile, followUp) {
     icon = "observe";
     title = "Спостерігайте у звичайних моментах";
     note = `Повернутися до короткої перевірки можна ${shortDate(followUp.earliest)}–${shortDate(followUp.latest)}.`;
+  } else if (!hasPlayable) {
+    icon = "observe";
+    label = "Спостереження збережено";
+    title = "Ігри ще проходять перевірку";
+    note = "Підсумок і записи доступні; неперевірену гру не показуємо.";
   } else if (profile.allClear) {
     title = "Продовжуйте звичайну гру";
   } else if (profile.partialClear) {
@@ -1974,14 +2051,17 @@ function renderResults() {
       ${flagged.map((m) => discussCardHtml(m, survey.states[m.id])).join("")}
     </details>` : "";
   const followUp = observationRouteFor(survey);
-  const primaryRoute = followUp.kind === "discuss-now" ? "ask" : "program";
-  const primaryLabel = followUp.kind === "discuss-now" ? "Підготувати розмову" : "Почати гру на сьогодні";
+  const hasPlayable = hasPlayableProgram(survey, age);
+  const primaryRoute = followUp.kind === "discuss-now" || !hasPlayable ? "ask" : "program";
+  const primaryLabel = followUp.kind === "discuss-now" || !hasPlayable ? "Підготувати розмову" : "Почати гру на сьогодні";
+  const contentReviewNotice = hasPlayable ? "" : `<div class="calm-anchor"><strong>Ігри ще проходять перевірку.</strong> Підсумок, записи й підготовка до розмови залишаються доступними.</div>`;
 
   return `
     <section class="screen-pad has-thumb-action">
       <h1 tabindex="-1">Готово</h1>
-      ${resultHeroHtml(profile, followUp)}
-      ${resultFocusHtml(profile)}
+      ${resultHeroHtml(profile, followUp, hasPlayable)}
+      ${hasPlayable ? resultFocusHtml(profile) : ""}
+      ${contentReviewNotice}
 
       <details class="result-details">
         <summary>Що ви позначили</summary>
@@ -2048,7 +2128,7 @@ function personalizedActivityIds(program, currentIndex = 0) {
 }
 function contextActivityId(age, context) {
   return personalizedActivityIds(programState.program, programState.currentIndex)
-    .find((id) => activityFitsContext(activityById(age, id), context)) || null;
+    .find((id) => activityFitsContext(playableActivityById(age, id), context)) || null;
 }
 function contextStatusText(context, found = true, done = false) {
   if (done) return "Три моменти гри вже збережено. На сьогодні цього більш ніж достатньо.";
@@ -2062,19 +2142,23 @@ function contextStatusText(context, found = true, done = false) {
   if (context === "low_energy") return "Показуємо полегшений варіант. Одного маленького кроку достатньо.";
   return "Показуємо основну рекомендацію для сьогодні.";
 }
-function playFlowLocked(child = cc()) {
-  return Boolean(child?.activePlaySession)
+function playFlowLocked(child = cc(), age = currentAge()) {
+  return Boolean(child?.activePlaySession
+      && Number(child.activePlaySession.age) === Number(age)
+      && playableActivityById(Number(child.activePlaySession.age), child.activePlaySession.activityId))
     || Boolean(child?.playDiary?.some((entry) => !entry.saved
+      && Number(entry.age) === Number(age)
+      && playableActivityById(Number(entry.age), entry.activityId)
       && String(entry.endedAt || "").slice(0, 10) === localDateString()));
 }
 function playContextHtml(age) {
-  const done = completedActivityIdsToday(age).length >= 3;
+  const done = playableCompletedActivityIdsToday(age).length >= 3;
   const flowLocked = playFlowLocked();
   const active = programState.context || "any";
   const status = flowLocked ? "Спершу завершіть поточну гру й збережіть коротку відмітку." : (done ? contextStatusText(active, true, true) : (programState.contextNotice || contextStatusText(active)));
   return `<details class="play-context" ${active !== "any" || flowLocked ? "open" : ""}>
     <summary><span aria-hidden="true">${uiIcon("settings")}</span><strong id="playContextTitle">Підібрати під момент</strong><small>${active === "any" ? "необов’язково" : PLAY_CONTEXTS.find((item) => item.id === active)?.label || "обрано"}</small></summary>
-    <p class="sr-only">Вибір змінює лише сьогоднішню ідею, не відповіді спостереження.</p>
+    <p class="visually-hidden">Вибір змінює лише сьогоднішню ідею, не відповіді спостереження.</p>
     <div class="play-context-options" role="group" aria-labelledby="playContextTitle">${PLAY_CONTEXTS.map((context) =>
       `<button type="button" data-play-context="${context.id}" aria-pressed="${active === context.id}" class="${active === context.id ? "active" : ""}" ${done || flowLocked ? "disabled" : ""}>${context.label}</button>`
     ).join("")}</div>
@@ -2086,7 +2170,7 @@ function dailyPlayChoiceIds(age, day) {
   if (!day) return [];
   const selected = programState.selected[day.day] || day.options[0];
   const pool = [selected, ...(day.options || []), ...(day.bonus || []).map((item) => item.id), ...personalizedActivityIds(programState.program, programState.currentIndex)]
-    .filter((id, index, all) => activityById(age, id) && all.indexOf(id) === index);
+    .filter((id, index, all) => playableActivityById(age, id) && all.indexOf(id) === index);
   const chosen = selected ? [selected] : [];
   const domains = new Set(chosen.map((id) => domainOf(id)));
   for (const id of pool) {
@@ -2108,7 +2192,7 @@ function dailyPlayMenuHtml(age, day) {
   return `<details class="daily-play-menu">
     <summary id="dailyPlayAlternatives"><span>Хочете іншу гру?</span><small>Необов’язково</small></summary>
     <div class="daily-play-options" role="group" aria-labelledby="dailyPlayAlternatives">${ids.map((id) => {
-      const activity = activityById(age, id);
+      const activity = playableActivityById(age, id);
       const done = activityCompletedToday(age, id);
       return `<button type="button" data-daily-play-choice="${id}" class="daily-play-option${done ? " done" : ""}" ${flowLocked ? "disabled" : ""}><strong>${esc(activity.title)}</strong><small>${done ? "Збережено · " : ""}${esc(activity.time)}</small></button>`;
     }).join("")}</div>
@@ -2131,10 +2215,10 @@ function activityHasMinimumSafety(activity) {
     && String(activity.stop || "").trim());
 }
 function startPlaySession(age, activityId) {
-  const activity = activityById(age, activityId);
+  const activity = playableActivityById(age, activityId);
   if (!activityHasMinimumSafety(activity)) return false;
   if (playFlowLocked()) return false;
-  if (!activityCompletedToday(age, activityId) && completedActivityIdsToday(age).length >= 3) return false;
+  if (!activityCompletedToday(age, activityId) && playableCompletedActivityIdsToday(age).length >= 3) return false;
   cc().activePlaySession = { activityId, age, startedAt: new Date().toISOString() };
   ensurePlayTimer(activityId);
   playTimer.remaining = playTimer.duration;
@@ -2143,6 +2227,7 @@ function startPlaySession(age, activityId) {
   return true;
 }
 function finishPlaySession(age, activityId) {
+  if (!playableActivityById(age, activityId)) return null;
   const session = activePlaySession(age, activityId);
   if (!session) return null;
   const endedAt = new Date();
@@ -2205,13 +2290,15 @@ function playContinueHtml(entry) {
   </section>`;
 }
 function playSessionControlsHtml(age, activityId) {
+  const activity = playableActivityById(age, activityId);
+  if (!activity) return "";
   const session = activePlaySession(age, activityId);
   const entry = latestPlayDiaryEntry(age, activityId);
   if (session) return `<section class="play-session-active"><div class="play-step-label"><span>1</span><strong>Гра триває</strong></div><p>Дивіться на підказки вище. Завершіть у будь-який момент.</p><details class="optional-timer"><summary>${uiIcon("clock")}<span>Додати таймер</span></summary>${playTimerHtml(activityId)}</details><button type="button" id="finishPlaySession" class="btn primary block" data-activity-id="${activityId}">${uiIcon("stop")}<span>Завершити гру</span></button></section>`;
   if (entry && !entry.saved) return playReflectionHtml(entry);
   if (entry && entry.saved && !entry.nextChoice) return playContinueHtml(entry);
   if (entry && entry.saved && entry.nextChoice === "later") return playContinueHtml(entry);
-  if (!activityHasMinimumSafety(activityById(age, activityId))) {
+  if (!activityHasMinimumSafety(activity)) {
     return `<section class="play-session-start play-session-blocked"><strong>Початок гри заблоковано</strong><p class="muted small">Спершу команда має додати й перевірити повну умову безпеки.</p></section>`;
   }
   return `<section class="play-session-start"><div class="play-step-label"><span>1</span><strong>Готові?</strong></div><button type="button" id="startPlaySession" class="btn primary block" data-activity-id="${activityId}">${uiIcon("start")}<span>Почати гру</span></button><small>Після початку можна додати таймер — за бажанням.</small></section>`;
@@ -2302,17 +2389,34 @@ function renderProgram() {
     return `<section class="screen-pad"><h1 tabindex="-1">Гра на сьогодні</h1><p class="muted">Спершу дайте відповіді на кілька коротких питань.</p><button type="button" class="btn primary block" data-go="survey">Почати спостереження</button></section>`;
   }
   const profile = profileForSurvey(survey, age);
-  const program = buildProgram(profile, age);
+  const program = programForProfile(profile, age);
+  if (!program.length) {
+    return `<section class="screen-pad"><h1 tabindex="-1">Гра на сьогодні</h1>
+      <div class="empty-state"><h2>Ігри ще проходять перевірку</h2><p class="muted">Для цієї версії ще немає гри, яка пройшла перевірку змісту й безпеки. Спостереження, записи й підготовка до розмови з фахівцем залишаються доступними.</p><button type="button" class="btn primary" data-go="ask">Підготовка до розмови</button></div>
+    </section>`;
+  }
   const currentIndex = currentProgramDayIndex(survey, program.length);
   const currentDay = program[currentIndex];
   const context = PLAY_CONTEXT_IDS.includes(cc().playContext) ? cc().playContext : "any";
-  programState = { age, program, openDay: null, currentDay: currentDay ? currentDay.day : null, currentIndex, selected: { ...(cc().programSelections[String(age)] || {}) }, context, contextNotice: "" };
+  const persistedSelections = cc().programSelections[String(age)] || {};
+  const selected = Object.fromEntries(program.map((day) => {
+    const persisted = persistedSelections[String(day.day)];
+    return [day.day, playableActivityById(age, persisted) ? persisted : day.options[0]];
+  }));
+  let contextNotice = "";
+  if (cc().activePlaySession && (Number(cc().activePlaySession.age) !== Number(age)
+    || !playableActivityById(Number(cc().activePlaySession.age), cc().activePlaySession.activityId))) {
+    cc().activePlaySession = null;
+    save();
+    contextNotice = "Незавершену гру з іншого вікового вікна або попередньої версії закрито. Ваші збережені записи не змінено.";
+  }
+  programState = { age, program, openDay: null, currentDay: currentDay ? currentDay.day : null, currentIndex, selected, context, contextNotice };
   const resumedSession = cc().activePlaySession;
-  if (currentDay && Number(resumedSession?.age) === Number(age) && activityById(age, resumedSession.activityId)) {
+  if (currentDay && Number(resumedSession?.age) === Number(age) && playableActivityById(age, resumedSession.activityId)) {
     programState.selected[currentDay.day] = resumedSession.activityId;
   } else if (currentDay && context !== "any") {
     const selectedId = programState.selected[currentDay.day] || currentDay.options[0];
-    if (!activityFitsContext(activityById(age, selectedId), context)) {
+    if (!activityFitsContext(playableActivityById(age, selectedId), context)) {
       const replacement = contextActivityId(age, context);
       if (replacement) {
         programState.selected[currentDay.day] = replacement;
@@ -2515,7 +2619,7 @@ function renderProgramList() {
 }
 
 function dayChip(age, dayNum, id, sel) {
-  const a = activityById(age, id);
+  const a = playableActivityById(age, id);
   return a ? `<button type="button" class="day-opt ${id === sel ? "active" : ""}" data-day-opt="${dayNum}" data-opt="${id}" aria-pressed="${id === sel}">${esc(a.title)}</button>` : "";
 }
 
@@ -2523,7 +2627,7 @@ function dayChoiceHtml(age, d, sel) {
   const opts = d.options.length > 1
     ? `<p class="bonus-label">Основні ідеї:</p><div class="day-opts">${d.options.map((id) => dayChip(age, d.day, id, sel)).join("")}</div>`
     : "";
-  const bonus = (d.bonus || []).filter((b) => activityById(age, b.id));
+  const bonus = (d.bonus || []).filter((b) => playableActivityById(age, b.id));
   const bonusHtml = bonus.length
     ? `<p class="bonus-label">Інші легкі ідеї:</p><div class="day-opts bonus">${bonus.map((b) => dayChip(age, d.day, b.id, sel)).join("")}</div>`
     : "";
@@ -2555,7 +2659,7 @@ function favoriteIcon(filled = false) {
   return `<svg class="favorite-icon" viewBox="0 0 20 20" ${filled ? 'fill="currentColor"' : 'fill="none"'} stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16.4 3.8 10.6C.7 7.7 2.3 3 6.3 3c1.7 0 2.9.9 3.7 2 0.8-1.1 2-2 3.7-2 4 0 5.6 4.7 2.5 7.6Z"/></svg>`;
 }
 function favoriteActivityIds(age) {
-  return cc().favoriteActivities.filter((id) => activityById(age, id));
+  return cc().favoriteActivities.filter((id) => playableActivityById(age, id));
 }
 function savedGamesHtml(age) {
   const ids = favoriteActivityIds(age);
@@ -2563,7 +2667,7 @@ function savedGamesHtml(age) {
   const flowLocked = playFlowLocked();
   return `<details class="saved-games"><summary><span>Збережені ігри</span><span class="saved-count">${ids.length}</span></summary>
     <div class="saved-game-list">${ids.map((id) => {
-      const activity = activityById(age, id);
+      const activity = playableActivityById(age, id);
       return `<button type="button" class="saved-game" data-saved-game="${id}" ${flowLocked ? "disabled" : ""}><strong>${esc(activity.title)}</strong><span>${esc(activity.time)} · ${esc(activity.materials)}</span></button>`;
     }).join("")}</div></details>`;
 }
@@ -2602,7 +2706,7 @@ function activityObservationHtml(age, activityId) {
 function dayAccordionHtml(age, d) {
   const open = programState.openDay === d.day;
   const sel = programState.selected[d.day] || d.options[0];
-  const selAct = activityById(age, sel);
+  const selAct = playableActivityById(age, sel);
   const selectedDomain = selAct ? domainOf(selAct.id) : d.domain;
   const bodyId = `day-body-${d.day}`;
   return `
@@ -2619,7 +2723,7 @@ function dayAccordionHtml(age, d) {
 // Plain-language version of the internal evidence tier (parents don't read "механізм").
 function evidenceFriendly(ev) {
   const e = String(ev || "").toLowerCase();
-  if (e.includes("механізм")) return "відома закономірність розвитку дитини";
+  if (e.includes("механізм")) return "ідея узгоджується із загальними рекомендаціями; ефект саме цієї гри окремо не оцінювався";
   if (e.includes("nurturing") || e.includes("догляд")) return "рекомендації догляду (WHO)";
   return ev || "";
 }
@@ -2713,7 +2817,7 @@ function activitySafetyStripHtml(activity, instanceKey = "detail") {
 }
 
 function activityDetailHtml(age, id, showLowEnergy = false, instanceKey = "detail") {
-  const a = activityById(age, id);
+  const a = playableActivityById(age, id);
   if (!a) return "";
   if (!cc().triedActivities.includes(id)) { cc().triedActivities.push(id); save(); }
   const note = CONTENT_RELEASE.authorNotes && typeof authorNoteFor === "function" ? authorNoteFor(a.id) : null;
@@ -2902,7 +3006,7 @@ function renderAsk() {
           <div><span class="mini-label">Останнє спостереження</span><h2>${esc(cc().name || "Дитина")} · ${esc(AGE_LABELS[age])}</h2></div>
           <time datetime="${esc(survey.date || "")}">${esc(visitDateLabel(survey.date))}</time>
         </div>
-        ${ids.length ? `<p class="visit-ready-line">Автоматичний підсумок уже готовий.</p>` : `<p class="muted small">Спершу завершіть коротке спостереження — тоді тут з’явиться автоматичний підсумок.</p><button type="button" class="btn ghost block" data-go="survey">Почати спостереження</button>`}
+        ${ids.length ? `<p class="visit-ready-line">Зведення ваших відповідей уже готове.</p>` : `<p class="muted small">Спершу завершіть коротке спостереження — тоді тут з’явиться зведення ваших відповідей.</p><button type="button" class="btn ghost block" data-go="survey">Почати спостереження</button>`}
         ${ids.length ? `<details class="visit-discuss"><summary>Що можна спокійно обговорити</summary><div class="visit-discuss-body">${flaggedList}</div></details>` : ""}
       </article>
 
@@ -3066,6 +3170,12 @@ document.addEventListener("click", async (e) => {
     libraryUi.topic = requested;
     route();
     document.querySelector(`[data-library-topic="${requested}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  if (e.target.closest("[data-library-all-ages]")) {
+    libraryUi.allAges = !libraryUi.allAges;
+    route();
+    document.querySelector("[data-library-all-ages]")?.focus({ preventScroll: true });
     return;
   }
   if (e.target.closest("[data-clear-library-search]")) {
@@ -3388,7 +3498,7 @@ document.addEventListener("click", async (e) => {
   const savePlayReminder = e.target.closest("[data-save-play-reminder]");
   if (savePlayReminder) {
     const entry = playDiaryEntry(savePlayReminder.dataset.savePlayReminder);
-    const activity = entry && activityById(Number(entry.age), entry.activityId);
+    const activity = entry && playableActivityById(Number(entry.age), entry.activityId);
     if (!entry || !activity || !/^\d{2}:\d{2}$/.test(reminderDraft.time)) return;
     downloadIcs(activity.title, reminderDraft.day, reminderDraft.time);
     entry.nextChoice = "scheduled";
@@ -3423,6 +3533,7 @@ document.addEventListener("click", async (e) => {
   const favoriteButton = e.target.closest("[data-favorite-id]");
   if (favoriteButton) {
     const id = favoriteButton.dataset.favoriteId;
+    if (!playableActivityById(programState.age, id)) return;
     const index = cc().favoriteActivities.indexOf(id);
     if (index >= 0) cc().favoriteActivities.splice(index, 1);
     else cc().favoriteActivities.push(id);
@@ -3435,7 +3546,7 @@ document.addEventListener("click", async (e) => {
   if (dailyChoice) {
     const id = dailyChoice.dataset.dailyPlayChoice;
     const day = programState.currentDay;
-    if (dailyChoice.disabled || playFlowLocked() || !activityById(programState.age, id) || day == null) return;
+    if (dailyChoice.disabled || playFlowLocked() || !playableActivityById(programState.age, id) || day == null) return;
     programState.context = "any";
     programState.contextNotice = "";
     cc().playContext = "any";
@@ -3454,7 +3565,7 @@ document.addEventListener("click", async (e) => {
   if (savedGameButton) {
     const id = savedGameButton.dataset.savedGame;
     const day = programState.currentDay;
-    if (savedGameButton.disabled || playFlowLocked() || !activityById(programState.age, id) || day == null) return;
+    if (savedGameButton.disabled || playFlowLocked() || !playableActivityById(programState.age, id) || day == null) return;
     programState.context = "any";
     programState.contextNotice = "";
     cc().playContext = "any";
@@ -3514,7 +3625,7 @@ document.addEventListener("click", async (e) => {
   const reminderButton = e.target.closest("[data-play-reminder]");
   if (reminderButton) {
     const when = reminderButton.dataset.playReminder;
-    const activity = activityById(programState.age, reminderButton.dataset.activityId);
+    const activity = playableActivityById(programState.age, reminderButton.dataset.activityId);
     if (!activity || !["two-hours", "evening", "tomorrow"].includes(when)) return;
     downloadIcs(activity.title, when);
     const status = document.getElementById("playReminderStatus");
@@ -3601,6 +3712,7 @@ document.addEventListener("click", async (e) => {
   const dayOpt = e.target.closest("[data-day-opt]");
   if (dayOpt) {
     const day = Number(dayOpt.dataset.dayOpt);
+    if (!playableActivityById(programState.age, dayOpt.dataset.opt)) return;
     if (day === programState.currentDay) {
       programState.context = "any";
       programState.contextNotice = "";
