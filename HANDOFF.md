@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.62.** Read
+> **Current product baseline: Stage 5 UA / P2.63.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -131,7 +131,8 @@ recovery and a 442 KiB functional offline core. P2.60 adds an honest post-12-mon
 keeps data controls reachable before the first checklist and prevents incomplete Results.
 P2.61 makes startup and backup restore share a strict canonical schema and closes imported
 snapshot XSS. P2.62 makes play notes/reactions per-activity so multiple games cannot relabel or
-erase one another. The visible asset baseline is `20260714-p2-62-r1`; none of these releases
+erase one another. P2.63 adds monotonic store revisions, stale-write refusal and safe external
+tab/PWA refresh. The visible asset baseline is `20260714-p2-63-r1`; none of these releases
 changes the product's safety rules or makes draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
@@ -219,6 +220,17 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — P2.63 multi-tab and installed-PWA overwrite protection
+- Added a monotonic store revision and update timestamp, including strict startup/import
+  validation and lossless defaults for legacy data.
+- Every write now compares its loaded revision with the current persisted revision. A stale tab
+  cannot silently replace newer or corrupt data and instead exposes a calm recovery warning.
+- Valid `storage` events refresh in-memory state; external erase returns to Welcome; malformed
+  external data is rejected without replacing the active store. Confirmed backup restore and
+  explicit recovery are the only force-overwrite paths.
+- Added regression coverage for stale write refusal, external refresh, monotonic continuation and
+  malformed external payloads. Bumped marker to P2.63 / `20260714-p2-63-r1`.
 
 ### 2026-07-14 — P2.62 lossless per-activity play memory
 - Changed notes and reactions from a day+age key to day+age+activity. Completing or undoing a

@@ -480,7 +480,16 @@ function freshChild(name, dob, expectedDueDate = "") {
            favoriteActivities: [], activityReactions: {}, activityNotes: {}, dailyPlayCompletions: {}, activitySignals: {}, playDiary: [], activePlaySession: null, playContext: "any",
            specialistPrep: emptySpecialistPrep() };
 }
-function freshStore() { return { storeSchemaVersion: STORE_SCHEMA_VERSION, consent: null, children: [], activeChildId: null }; }
+function freshStore() {
+  return {
+    storeSchemaVersion: STORE_SCHEMA_VERSION,
+    revision: 0,
+    updatedAt: "",
+    consent: null,
+    children: [],
+    activeChildId: null
+  };
+}
 // Migrate the old single-child shape ({consent, child, surveys, ...}) into children[]. Idempotent.
 function migrate(s) {
   if (!s || typeof s !== "object") return freshStore();
@@ -527,13 +536,51 @@ function load() {
     return freshStore();
   }
 }
-function save() {
+function storedStoreMeta(raw) {
+  if (!raw) return { revision: 0, updatedAt: "" };
   try {
+    const parsed = JSON.parse(raw);
+    const checked = validateStoredData(parsed);
+    return checked.ok ? { revision: checked.store.revision, updatedAt: checked.store.updatedAt } : null;
+  } catch {
+    return null;
+  }
+}
+function save(options = {}) {
+  const previousRevision = store.revision;
+  const previousUpdatedAt = store.updatedAt;
+  try {
+    const overwriteConfirmed = options.allowOverwrite === true || allowStorageOverwrite;
+    let persistedMeta = null;
+    try {
+      persistedMeta = storedStoreMeta(localStorage.getItem(STORAGE_KEY));
+    } catch {
+      if (!overwriteConfirmed) throw new Error("storage read blocked");
+    }
+    if (!overwriteConfirmed && (!persistedMeta || persistedMeta.revision !== loadedStoreRevision
+      || persistedMeta.updatedAt !== loadedStoreUpdatedAt)) {
+      storageProblem = "Дані змінилися в іншій вкладці або встановленому застосунку. Цю зміну не перезаписано. Перезавантажте застосунок, щоб продовжити з актуальними даними.";
+      renderStorageStatus();
+      return false;
+    }
+    const nextRevision = Math.max(
+      loadedStoreRevision,
+      persistedMeta?.revision || 0,
+      Number.isSafeInteger(store.revision) ? store.revision : 0
+    );
+    if (nextRevision >= Number.MAX_SAFE_INTEGER) throw new Error("store revision exhausted");
+    store.revision = nextRevision + 1;
+    store.updatedAt = new Date().toISOString();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    loadedStoreRevision = store.revision;
+    loadedStoreUpdatedAt = store.updatedAt;
+    allowStorageOverwrite = false;
     storageProblem = "";
     renderStorageStatus();
     return true;
   } catch {
+    store.revision = previousRevision;
+    store.updatedAt = previousUpdatedAt;
     storageProblem = "Браузер не зберіг останні зміни. Не закривайте вкладку; збережіть резервну копію в керуванні даними.";
     renderStorageStatus();
     return false;
@@ -630,6 +677,13 @@ function validateStoredData(source) {
   if (serialized.length > MAX_BACKUP_BYTES) return fail("Дані перевищують дозволений розмір.");
   if (source.storeSchemaVersion != null && source.storeSchemaVersion !== STORE_SCHEMA_VERSION) {
     return fail("Дані створено для непідтримуваної версії застосунку.");
+  }
+  if (source.revision != null && (!Number.isSafeInteger(source.revision) || source.revision < 0
+    || source.revision >= Number.MAX_SAFE_INTEGER)) {
+    return fail("У даних є пошкоджена версія локального сховища.");
+  }
+  if (source.updatedAt != null && source.updatedAt !== "" && !isIsoTimestamp(source.updatedAt)) {
+    return fail("У даних є пошкоджена дата локального сховища.");
   }
   const imported = migrate(JSON.parse(serialized));
   if (!Array.isArray(imported.children) || imported.children.length > 20) return fail("Дані мають непідтримувану структуру.");
@@ -791,6 +845,8 @@ function validateStoredData(source) {
     specialistPrepFor(child);
   }
   imported.storeSchemaVersion = STORE_SCHEMA_VERSION;
+  imported.revision = Number.isSafeInteger(source.revision) ? source.revision : 0;
+  imported.updatedAt = typeof source.updatedAt === "string" ? source.updatedAt : "";
   imported.activeChildId = childIds.has(imported.activeChildId) ? imported.activeChildId : (imported.children[0]?.id || null);
   return { ok: true, store: imported };
 }
@@ -810,6 +866,9 @@ function validateBackupPayload(payload) {
 // Active child — per-child data lives here. Null only before the first child exists.
 function cc() { return store.children.find((c) => c.id === store.activeChildId) || store.children[0] || null; }
 let store = load();
+let loadedStoreRevision = Number.isSafeInteger(store.revision) ? store.revision : 0;
+let loadedStoreUpdatedAt = typeof store.updatedAt === "string" ? store.updatedAt : "";
+let allowStorageOverwrite = false;
 let motionReview = loadMotionReview();
 store.children.forEach((c) => {
   normalizeChild(c);
@@ -2958,8 +3017,10 @@ document.addEventListener("click", async (e) => {
   const go = e.target.closest("[data-go]");
   if (go) {
     if (go.dataset.startFresh && storageProblem) {
-      const ok = confirm("Продовжити без відновлення? Після збереження нового профілю попередні локальні дані можуть бути замінені.");
+      allowStorageOverwrite = false;
+      const ok = confirm("Продовжити без відновлення? Після наступного збереження попередні локальні дані можуть бути замінені.");
       if (!ok) return;
+      allowStorageOverwrite = true;
     }
     if (go.dataset.restart) {
       const ok = confirm("Почати нове спостереження? Попередній підсумок, ігри та нотатки залишаться у ваших записах.");
@@ -3228,6 +3289,9 @@ document.addEventListener("click", async (e) => {
         localStorage.removeItem(STORAGE_KEY);
         storageProblem = "";
         store = freshStore();
+        loadedStoreRevision = 0;
+        loadedStoreUpdatedAt = "";
+        allowStorageOverwrite = false;
         setHash("welcome");
         route();
       } catch {
@@ -3706,11 +3770,13 @@ document.addEventListener("change", async (e) => {
       return;
     }
     if (!confirm("Відновлення замінить поточні локальні дані. Продовжити?")) return;
+    const previousStore = store;
     store = checked.store;
-    const restoredPersistently = save();
+    const restoredPersistently = save({ allowOverwrite: true });
+    if (!restoredPersistently) store = previousStore;
     dataNotice = restoredPersistently
       ? "Резервну копію відновлено локально."
-      : "Копію відкрито, але браузер не зберіг її надовго. Не закривайте вкладку.";
+      : "Резервну копію не відновлено: браузер не зміг безпечно зберегти її. Поточні дані не замінено.";
     setHash("home");
     route();
   } catch {
@@ -3721,5 +3787,45 @@ document.addEventListener("change", async (e) => {
   }
 });
 
+window.addEventListener("storage", (event) => {
+  if (event.key !== STORAGE_KEY) return;
+  allowStorageOverwrite = false;
+  if (event.newValue == null) {
+    store = freshStore();
+    loadedStoreRevision = 0;
+    loadedStoreUpdatedAt = "";
+    storageProblem = "";
+    dataNotice = "Локальні дані стерто в іншій вкладці або встановленому застосунку.";
+    replaceHash("welcome");
+    route();
+    return;
+  }
+  let checked;
+  try {
+    checked = validateStoredData(JSON.parse(event.newValue));
+  } catch {
+    checked = { ok: false };
+  }
+  if (!checked.ok) {
+    storageProblem = "Інша вкладка змінила локальні дані, але їх не вдалося безпечно прочитати. Ці дані не перезаписано; перезавантажте застосунок або скористайтеся резервною копією.";
+    renderStorageStatus();
+    return;
+  }
+  const externalRevision = Number.isSafeInteger(checked.store.revision) ? checked.store.revision : 0;
+  if (externalRevision < loadedStoreRevision) return;
+  if (externalRevision === loadedStoreRevision) {
+    if (checked.store.updatedAt !== loadedStoreUpdatedAt) {
+      storageProblem = "Дані з однаковою версією відрізняються між вкладками. Автоматичну заміну зупинено; перезавантажте застосунок або збережіть резервну копію.";
+      renderStorageStatus();
+    }
+    return;
+  }
+  store = checked.store;
+  loadedStoreRevision = externalRevision;
+  loadedStoreUpdatedAt = checked.store.updatedAt;
+  storageProblem = "";
+  dataNotice = "Дані оновлено з іншої відкритої вкладки або встановленого застосунку.";
+  route();
+});
 window.addEventListener("hashchange", route);
 route();

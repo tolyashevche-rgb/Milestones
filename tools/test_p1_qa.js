@@ -43,15 +43,15 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.62", "audit scope must identify the current release");
-  assert.equal(auditScope.assetVersion, "20260714-p2-62-r1", "audit scope must identify the current asset version");
+  assert.equal(auditScope.release, "P2.63", "audit scope must identify the current release");
+  assert.equal(auditScope.assetVersion, "20260714-p2-63-r1", "audit scope must identify the current asset version");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.62"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.62"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.63"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.63"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -84,8 +84,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260714-p2-62-r1"), "Stage5 assets must use the P2.62 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-62-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-63-r1"), "Stage5 assets must use the P2.63 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-63-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation"') && !stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation-review"'), "the ordinary app must not enable internal reviewer routing");
   assert.ok(motionReviewHtml.includes('MILESTONES_BUILD_CHANNEL = "validation-review"') && motionReviewHtml.includes('name="robots" content="noindex,nofollow"'), "Motion review needs a separate noindex internal entry point");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
@@ -139,7 +139,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-62-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-63-r1"'), "service worker cache must be versioned");
   assert.ok(serviceWorker.includes("const CORE_SHELL = ["), "PWA install must separate the functional core from optional visuals");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
@@ -429,6 +429,7 @@ function appContext(options = {}) {
   let storageWriteFails = Boolean(options.storageWriteFails);
   let storageReadFails = Boolean(options.storageReadFails);
   const listeners = {};
+  const windowListeners = {};
   const fakeLocation = { hash: "#/welcome", search: "", origin: "http://localhost:4175", pathname: options.buildChannel === "validation-review" ? "/internal_tools/motion_review.html" : "/prototype_stage5_ua/index.html" };
   const nodes = {
     screen: { innerHTML: "", querySelector: () => null },
@@ -458,7 +459,12 @@ function appContext(options = {}) {
       getElementById: (id) => nodes[id] || null,
       querySelector: (selector) => selector === ".appbar-back" ? nodes.appbarBack : null
     },
-    window: { MILESTONES_BUILD_CHANNEL: options.buildChannel || "validation", addEventListener: () => {}, scrollTo: () => {}, setTimeout: (callback) => callback() },
+    window: {
+      MILESTONES_BUILD_CHANNEL: options.buildChannel || "validation",
+      addEventListener: (type, handler) => { windowListeners[type] = handler; },
+      scrollTo: () => {},
+      setTimeout: (callback) => callback()
+    },
     location: fakeLocation,
     history: { replaceState: (_state, _title, url) => { fakeLocation.hash = String(url); } },
     navigator: {},
@@ -466,6 +472,8 @@ function appContext(options = {}) {
     URL: { createObjectURL: () => "blob:test", revokeObjectURL: () => {} },
     Blob: function Blob() {},
     __listeners: listeners,
+    __windowListeners: windowListeners,
+    __storage: storage,
     __setStorageWriteFails: (value) => { storageWriteFails = Boolean(value); },
     __setStorageReadFails: (value) => { storageReadFails = Boolean(value); }
   });
@@ -480,6 +488,83 @@ function appContext(options = {}) {
   return context;
 }
 
+function testMultiContextStorageProtection() {
+  const context = appContext({ buildChannel: "validation" });
+  const baseline = vm.runInContext(`(() => {
+    const born = new Date();
+    born.setDate(1);
+    born.setMonth(born.getMonth() - 4);
+    const child = freshChild("Початкове ім'я", localDateString(born));
+    store = { ...freshStore(), consent: { accepted: true, date: new Date().toISOString() }, children: [child], activeChildId: child.id };
+    return { saved: save(), revision: store.revision, updatedAt: store.updatedAt };
+  })()`, context);
+  assert.equal(baseline.saved, true, "the first writer must persist normally");
+  assert.equal(baseline.revision, 1, "the first persisted store must receive revision 1");
+  assert.ok(!isNaN(new Date(baseline.updatedAt)), "persisted stores need a comparable update timestamp");
+
+  const key = "milestonesMap.stage5.ua";
+  const external = JSON.parse(context.__storage.get(key));
+  external.revision = 2;
+  external.updatedAt = new Date().toISOString();
+  external.children[0].name = "Зовнішня зміна";
+  const externalRaw = JSON.stringify(external);
+  context.__storage.set(key, externalRaw);
+
+  const conflict = vm.runInContext(`(() => {
+    store.children[0].name = "Застаріла локальна зміна";
+    const saved = save();
+    return { saved, problem: storageProblem, revision: store.revision };
+  })()`, context);
+  assert.equal(conflict.saved, false, "a stale tab must never silently overwrite a newer revision");
+  assert.ok(conflict.problem.includes("іншій вкладці"), "a stale writer needs an actionable conflict warning");
+  assert.equal(JSON.parse(context.__storage.get(key)).children[0].name, "Зовнішня зміна",
+    "the newer persisted value must survive a stale save attempt");
+
+  context.__windowListeners.storage({ key, newValue: externalRaw });
+  const refreshed = vm.runInContext(`({ name: store.children[0].name, revision: loadedStoreRevision, problem: storageProblem })`, context);
+  assert.equal(refreshed.name, "Зовнішня зміна", "a valid newer storage event must refresh the active in-memory store");
+  assert.equal(refreshed.revision, 2, "the accepted external revision must become the local baseline");
+  assert.equal(refreshed.problem, "", "accepting valid external data must clear a stale conflict warning");
+
+  const nextSave = vm.runInContext(`(() => {
+    store.children[0].name = "Узгоджена зміна";
+    return { saved: save(), revision: store.revision };
+  })()`, context);
+  assert.equal(nextSave.saved, true, "after accepting an external revision, the next local save must succeed");
+  assert.equal(nextSave.revision, 3, "after accepting an external revision, the next local save must continue monotonically");
+
+  const collision = JSON.parse(context.__storage.get(key));
+  collision.updatedAt = new Date(Date.now() + 1000).toISOString();
+  collision.children[0].name = "Колізія тієї самої ревізії";
+  const collisionRaw = JSON.stringify(collision);
+  context.__storage.set(key, collisionRaw);
+  context.__windowListeners.storage({ key, newValue: collisionRaw });
+  const collisionResult = vm.runInContext(`({ name: store.children[0].name, revision: loadedStoreRevision, problem: storageProblem })`, context);
+  assert.equal(collisionResult.name, "Узгоджена зміна", "equal revisions with different timestamps must not be chosen silently");
+  assert.equal(collisionResult.revision, 3, "an equal-revision collision must preserve the accepted baseline");
+  assert.ok(collisionResult.problem.includes("однаковою версією"), "an equal-revision collision needs a visible warning");
+
+  context.__windowListeners.storage({ key: "unrelated.key", newValue: "{}" });
+  assert.equal(vm.runInContext(`store.children[0].name`, context), "Узгоджена зміна",
+    "storage events for unrelated keys must not affect product data");
+
+  const invalidRaw = JSON.stringify({ storeSchemaVersion: 1, revision: 4, children: [null], activeChildId: null });
+  context.__storage.set(key, invalidRaw);
+  context.__windowListeners.storage({ key, newValue: invalidRaw });
+  const rejected = vm.runInContext(`({ name: store.children[0].name, revision: loadedStoreRevision, problem: storageProblem })`, context);
+  assert.equal(rejected.name, "Узгоджена зміна", "an invalid external payload must not replace active data");
+  assert.equal(rejected.revision, 3, "an invalid external payload must not advance the accepted revision");
+  assert.ok(rejected.problem.includes("не вдалося безпечно прочитати"), "invalid external data needs a visible recovery warning");
+
+  context.__storage.delete(key);
+  context.__windowListeners.storage({ key, newValue: null });
+  const removed = vm.runInContext(`({ children: store.children.length, revision: loadedStoreRevision, updatedAt: loadedStoreUpdatedAt, hash: location.hash })`, context);
+  assert.equal(removed.children, 0, "external erase must clear the active in-memory store");
+  assert.equal(removed.revision, 0, "external erase must reset the revision baseline");
+  assert.equal(removed.updatedAt, "", "external erase must reset the timestamp baseline");
+  assert.equal(removed.hash, "#/welcome", "external erase must return the route to Welcome");
+}
+
 function testStorageFailureRecovery() {
   const readContext = appContext({ storageReadFails: true });
   const readFailure = vm.runInContext(`(() => ({
@@ -491,29 +576,40 @@ function testStorageFailureRecovery() {
     && readFailure.markup.includes('id="importBackup"')
     && readFailure.markup.includes('id="backupStatus"')
     && readFailure.markup.includes("Продовжити без відновлення"), "Welcome must expose restore before a fresh profile can overwrite unread data");
+  const confirmedRecovery = vm.runInContext(`(() => {
+    allowStorageOverwrite = true;
+    store = freshStore();
+    return { saved: save(), revision: store.revision };
+  })()`, readContext);
+  assert.equal(confirmedRecovery.saved, true, "confirmed recovery must be able to replace storage even when its previous value cannot be read");
+  assert.equal(confirmedRecovery.revision, 1, "confirmed unread-storage recovery must restart revisioning safely");
 
   const context = appContext({ storageWriteFails: true });
   const failed = vm.runInContext(`(() => {
     store = freshStore();
     const saved = save();
     const status = document.getElementById("storageStatus");
-    return { saved, problem: storageProblem, hidden: status.hidden, text: status.textContent, ariaLabel: status.ariaLabel };
+    return { saved, problem: storageProblem, hidden: status.hidden, text: status.textContent, ariaLabel: status.ariaLabel,
+      revision: store.revision, updatedAt: store.updatedAt };
   })()`, context);
   assert.equal(failed.saved, false, "blocked localStorage must not throw through the active interaction");
   assert.ok(failed.problem.includes("не зберіг"), "storage failure needs actionable calm guidance");
   assert.equal(failed.hidden, false, "storage failure status must become visible");
   assert.equal(failed.text, "Не збережено", "storage failure needs a short visible label");
   assert.ok(failed.ariaLabel.includes("резервну копію"), "assistive text must explain the recovery path");
+  assert.equal(failed.revision, 0, "a failed write must roll the in-memory revision back");
+  assert.equal(failed.updatedAt, "", "a failed write must roll the in-memory update timestamp back");
 
   context.__setStorageWriteFails(false);
   const recovered = vm.runInContext(`(() => {
     const saved = save();
     const status = document.getElementById("storageStatus");
-    return { saved, problem: storageProblem, hidden: status.hidden, text: status.textContent };
+    return { saved, problem: storageProblem, hidden: status.hidden, text: status.textContent, revision: store.revision };
   })()`, context);
   assert.equal(recovered.saved, true, "storage must recover without restarting the app");
   assert.equal(recovered.problem, "", "successful save must clear the stale failure state");
   assert.equal(recovered.hidden, true, "recovered storage must hide the warning");
+  assert.equal(recovered.revision, 1, "retrying a failed first write must persist revision 1, not skip a revision");
 }
 
 function testStoredDataSchemaRecovery() {
@@ -545,6 +641,16 @@ function testStoredDataSchemaRecovery() {
     invalidDiary.data.children[0].playDiary = [{ id: "play_1000_abcd", age, activityId, startedAt: now, endedAt: "2020-01-01T00:00:00.000Z", durationSeconds: -1, reaction: "", signal: "", note: "", saved: true, nextChoice: "done" }];
     const unsafeKey = clone(good);
     unsafeKey.data.children[0].surveys[age].states = JSON.parse('{"__proto__":"yes"}');
+    const badRevision = clone(good);
+    badRevision.data.revision = Number.MAX_SAFE_INTEGER;
+    const fractionalRevision = clone(good);
+    fractionalRevision.data.revision = 1.5;
+    const badUpdatedAt = clone(good);
+    badUpdatedAt.data.updatedAt = "not-a-date";
+    const legacyMetadata = clone(good);
+    delete legacyMetadata.data.revision;
+    delete legacyMetadata.data.updatedAt;
+    const legacyChecked = validateBackupPayload(legacyMetadata);
     const escapedHistory = historySnapshotHtml({ age: '<svg onload="alert(1)">', date: now, states: {}, questionIds: [] }, null, true);
 
     return {
@@ -555,10 +661,13 @@ function testStoredDataSchemaRecovery() {
       sessionRejected: !validateBackupPayload(staleSession).ok,
       diaryRejected: !validateBackupPayload(invalidDiary).ok,
       unsafeKeyRejected: !validateBackupPayload(unsafeKey).ok,
+      metadataRejected: !validateBackupPayload(badRevision).ok
+        && !validateBackupPayload(fractionalRevision).ok && !validateBackupPayload(badUpdatedAt).ok,
+      legacyMetadataNormalized: legacyChecked.ok && legacyChecked.store.revision === 0 && legacyChecked.store.updatedAt === "",
       historyEscaped: escapedHistory.includes("&lt;svg onload=&quot;alert(1)&quot;&gt;") && !escapedHistory.includes('<svg onload="alert(1)">')
     };
   })()`, context);
-  assert.deepEqual(Object.values(result), [true, true, true, true, true, true, true, true],
+  assert.deepEqual(Object.values(result), [true, true, true, true, true, true, true, true, true, true],
     "startup/import schema must reject hostile canonical fields while renderers escape as defense-in-depth");
 
   const malformedContext = appContext({ initialStore: { storeSchemaVersion: 1, consent: { accepted: true }, children: [null], activeChildId: null } });
@@ -847,9 +956,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-62-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-62-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-62-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-63-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-63-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-63-r1"), "the sourced library must be cached offline");
   assert.ok(!cachedShell.some((entry) => entry.includes("motion_cards") || entry.includes("activity-tummy-time")), "optional illustrations must not block core installation");
 
   const failingInstallListeners = {};
@@ -1916,6 +2025,7 @@ function testAppState() {
   testCurrentBuildBoundary();
   testContentAndEngine();
   testAppState();
+  testMultiContextStorageProtection();
   testStorageFailureRecovery();
   testStoredDataSchemaRecovery();
   testMultiPlayAttribution();

@@ -33,8 +33,8 @@ free + subscription.
 | 7 | ✅ | Закрити вікові межі, route prerequisites і доступ до даних | До 2 міс доступні data controls; після 12 міс немає нового 12-міс flow; incomplete Results → Survey | P2.60 · `fix: close age and result route gaps` |
 | 8 | ✅ | Закрити import/startup schema й XSS | Один strict validator; canonical IDs/timestamps; malformed local data → recovery | P2.61 · `fix: validate stored data before use` |
 | 9 | ✅ | Виправити multi-play attribution | Кожна нотатка/реакція належить конкретній грі; undo іншої гри її не стирає | P2.62 · `fix: keep play memories activity-specific` |
-| 10 | ⬜ | Захистити кілька вкладок/PWA від silent overwrite | Store revision, conflict detection і зовнішнє оновлення без втрати | Наступний крок |
-| 11 | ⬜ | Item-level content gate і age-safe Library | 27 `NEEDS_REVIEW` не потрапляють у parent Game; Library age-first | Після кроку 10 |
+| 10 | ✅ | Захистити кілька вкладок/PWA від silent overwrite | Store revision, conflict detection і зовнішнє оновлення без втрати | P2.63 · `fix: prevent stale tab overwrites` |
+| 11 | 🔄 | Item-level content gate і age-safe Library | 27 `NEEDS_REVIEW` не потрапляють у parent Game; Library age-first | Наступний крок |
 | 12 | 🔄 | Повна регресія, незалежний аудит і live UI-перевірка | QA/syntax/diff; фінальний реєстр; mobile/tablet/desktop та assistive tech | Автоматизована частина в роботі; live browser недоступний |
 | 13 | ⛔ | Expert review і 5 parent sessions | Реальні рішення експертів і реальні moderated sessions; нічого не симулюється | Після кроку 12 |
 | 14 | ⛔ | Підготовка subscription | Перевірено recurring value/WTP; визначено free safety floor; backend/entitlements/privacy спроєктовані | Після validation |
@@ -74,6 +74,8 @@ free + subscription.
   adversarial snapshot-XSS protection: ✅.
 - P2.62 activity-specific note/reaction keys, legacy migration and two-game attribution/undo
   regression: ✅.
+- P2.63 monotonic store revisions, pre-write conflict detection, safe external tab/PWA refresh
+  and malformed external-payload rejection: ✅.
 - Live browser/device pass: ⛔ 2026-07-14 runtime не надав жодного доступного браузера;
   автоматизований code/DOM QA пройдено, але pixel-perfect pass не заявляється.
 
