@@ -27,14 +27,14 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.52", "audit scope must identify the current release");
+  assert.equal(auditScope.release, "P2.53", "audit scope must identify the current release");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.52"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.52"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.53"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.53"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -66,8 +66,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260708-p2-52-r1"), "Stage5 assets must use the P2.52 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260708-p2-52-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-53-r1"), "Stage5 assets must use the P2.53 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-53-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -92,7 +92,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-52-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-53-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -472,9 +472,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260708-p2-52-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260708-p2-52-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260708-p2-52-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-53-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-53-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-53-r1"), "the sourced library must be cached offline");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -607,7 +607,35 @@ function testAppState() {
     const nearTermOldDue = new Date(thirteenMonthsAgo);
     nearTermOldDue.setDate(nearTermOldDue.getDate() + 14);
     const profileMarkup = renderProfile();
-    const correctedAgeOkay = usesCorrectedAge(preterm)
+    const youngerWindowOkay = [
+      [-1, null], [0, null], [1, null],
+      [2, 2], [3, 2], [4, 4], [5, 4],
+      [6, 6], [7, 6], [8, 6],
+      [9, 9], [10, 9], [11, 9], [12, 12]
+    ].every(([months, expected]) => ageWindowFor(months) === expected);
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setDate(1);
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const beforeFirst = freshChild("Новонароджена", localDateString(oneMonthAgo));
+    store.children.push(beforeFirst);
+    store.activeChildId = beforeFirst.id;
+    const beforeFirstHome = renderHome();
+    const beforeFirstSurvey = renderSurvey();
+    renderAppbar("home");
+    const beforeFirstAppbar = document.getElementById("appbarChild").innerHTML;
+    const beforeFirstOkay = currentAge() === null
+      && beforeFirstHome.includes("Перший чекліст ще попереду")
+      && beforeFirstSurvey.includes("Поверніться у 2 місяці")
+      && !beforeFirstSurvey.includes('class="state-controls"')
+      && beforeFirstAppbar.includes("До 2 міс")
+      && !beforeFirstAppbar.includes("undefined")
+      && !Object.prototype.hasOwnProperty.call(beforeFirst.surveys, "null")
+      && !Object.prototype.hasOwnProperty.call(beforeFirst.surveys, "2");
+    store.children = [first, second];
+    store.activeChildId = first.id;
+    const correctedAgeOkay = youngerWindowOkay
+      && beforeFirstOkay
+      && usesCorrectedAge(preterm)
       && ageWindowFor(developmentalMonths(preterm)) === 4
       && validateProfileDates(preterm.dob, preterm.expectedDueDate).corrected
       && !validateProfileDates(preterm.dob, preterm.expectedDueDate).error
@@ -1254,7 +1282,7 @@ function testAppState() {
   assert.equal(result.historyOkay, true, "history comparison must support old snapshots and describe answer changes");
   assert.equal(result.homeNextStepOkay, true, "home must expose a swipeable action deck, persistent two-tab content area, and calm safety nudges");
   assert.equal(result.programUiOkay, true, "program must keep today's game open and future days secondary");
-  assert.equal(result.livelyDayOkay, true, "P2.52 must preserve the compact play lifecycle");
+  assert.equal(result.livelyDayOkay, true, "P2.53 must preserve the compact play lifecycle");
   assert.equal(result.compactResultsOkay, true, "results must lead with one next step and keep detailed answers collapsed");
   assert.equal(result.specialistPrepOkay, true, "specialist prep must keep one overview, three structured notes, and a copyable summary");
   assert.equal(result.oneThumbSurveyOkay, true, "survey answers must save and advance without a separate next button");
@@ -1262,7 +1290,7 @@ function testAppState() {
   assert.equal(result.navIconsOkay, true, "bottom navigation must use one consistent four-icon SVG set");
   assert.equal(result.accessibilityOkay, true, "survey and home must expose focused, concise accessibility semantics");
   assert.equal(result.dataBackupOkay, true, "local backup must round-trip valid data and reject malformed answers");
-  assert.equal(result.correctedAgeOkay, true, "optional expected due date must select the corrected-age window without exposing a score");
+  assert.equal(result.correctedAgeOkay, true, "age routing must use the youngest completed window and keep pre-2-month profiles out of older checklists");
   assert.equal(result.gentleEngagementOkay, true, "favorites and optional post-play feedback must stay calm and local per child");
   assert.equal(result.weeklyRecapOkay, true, "weekly recap must describe recent play without a streak, progress bar, or competing action");
   assert.equal(result.privateMomentsOkay, true, "private moments must reuse local notes, show at most three, and support individual deletion without social mechanics");

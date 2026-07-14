@@ -23,9 +23,9 @@ free + subscription.
 
 | № | Статус | Крок | Критерій завершення | Коміт / реліз |
 |---:|:---:|---|---|---|
-| 0 | ✅ | Зафіксувати baseline і робочий трекер | Baseline QA проходить; план збережено в repo | `plan: start audited quality rebuild` |
-| 1 | 🔄 | Виправити вікову маршрутизацію | Між CDC-вікнами завжди молодший checklist; до 2 міс окремий стан; тести 0–12 + corrected age | — |
-| 2 | ⬜ | Усунути втрату даних при повторному спостереженні | Нове спостереження не стирає play diary, reactions, notes або completions | — |
+| 0 | ✅ | Зафіксувати baseline і робочий трекер | Baseline QA проходить; план збережено в repo | `060175a` |
+| 1 | ✅ | Виправити вікову маршрутизацію | Між CDC-вікнами завжди молодший checklist; до 2 міс окремий стан; тести 0–12 + corrected age | P2.53 · `fix: use younger completed checklist window` |
+| 2 | 🔄 | Усунути втрату даних при повторному спостереженні | Нове спостереження не стирає play diary, reactions, notes або completions | — |
 | 3 | ⬜ | Додати release gates і видиму safety-смугу | Draft-вміст не видається за approved; safety/stop видно до Start | — |
 | 4 | ⬜ | Спростити Home і маршрути | Один контекстний next step; без deck/nested scroll; стабільна навігація | — |
 | 5 | ⬜ | Спростити Game і дизайн-систему | Одна основна гра; одна primary action; узгоджені кнопки, іконки, кольори, градієнти | — |
@@ -51,8 +51,9 @@ free + subscription.
 - `node --check prototype_stage5_ua/library_ua.js`: ✅.
 - `node --check prototype_stage5_ua/sw.js`: ✅.
 - `git diff --check`: ✅ before tracker changes.
-- Live browser/device pass: ⬜ виконується після перших UI-змін; попередня browser-сесія
-  під час аудиту була недоступна, тому старий pixel-perfect pass не заявляється.
+- P2.53 age matrix `-1…12`, corrected-age routing and pre-2 render/storage gate: ✅.
+- Live browser/device pass: ⬜ 2026-07-14 runtime не надав жодного доступного браузера;
+  автоматизований code/DOM QA пройдено, але pixel-perfect pass не заявляється.
 
 ## Залишається після автоматизованої перебудови
 

@@ -715,16 +715,21 @@ function validateProfileDates(dobStr, expectedDueDate = "") {
 function validateDob(dobStr) { return validateProfileDates(dobStr); }
 function profileAgeHint(check) {
   if (!check || check.months == null || check.error) return "";
-  const label = AGE_LABELS[ageWindowFor(check.months)];
-  if (check.corrected && check.months < 0) return `Очікувана дата пологів ще попереду. Найближчий доступний віковий блок — ${label}.`;
+  const age = ageWindowFor(check.months);
+  if (age == null) {
+    if (check.corrected && check.months < 0) return "Очікувана дата пологів ще попереду. Перший блок спостереження стане доступним у 2 місяці скоригованого віку.";
+    if (check.corrected) return "Перший блок спостереження стане доступним у 2 місяці скоригованого віку.";
+    return "Перший блок спостереження стане доступним у 2 місяці.";
+  }
+  const label = AGE_LABELS[age];
   if (check.corrected) return `Показуватимемо питання для віку ${label} за скоригованим віком.`;
   if (check.earlyButNotCorrected) return `Різниця не перевищує 3 тижні, тому показуватимемо питання для віку ${label} за датою народження.`;
   return `Показуватимемо питання для віку ${label}.`;
 }
-// Snap real age to the nearest available CDC window (2/4/6/9/12).
+// Use the youngest completed CDC window. Never advance a child to an older checklist early.
 function ageWindowFor(months) {
-  if (months == null) return 6;
-  return AGES.reduce((best, a) => Math.abs(a - months) < Math.abs(best - months) ? a : best, AGES[0]);
+  if (!Number.isFinite(months) || months < AGES[0]) return null;
+  return AGES.reduce((window, age) => age <= months ? age : window, null);
 }
 function nextCheckAge(age) { return AGES.find((a) => a > age) || null; }
 function activityById(age, id) { return (ACTIVITIES_BY_AGE[age] || []).find((a) => a.id === id); }
@@ -788,7 +793,26 @@ function askedStats(age) {
   return stats;
 }
 
-function currentAge() { const c = cc(); return c && c.dob ? ageWindowFor(developmentalMonths(c)) : 6; }
+function currentAge() { const c = cc(); return c && c.dob ? ageWindowFor(developmentalMonths(c)) : null; }
+function beforeFirstChecklistHtml(context = "home") {
+  const child = cc();
+  const corrected = usesCorrectedAge(child);
+  const ageBasis = corrected ? " скоригованого віку" : "";
+  const homeAction = context === "home" ? "" : `<button type="button" class="btn ghost block" data-go="home">На головну</button>`;
+  return `
+    <section class="screen-pad">
+      <h1 tabindex="-1">Перший чекліст ще попереду</h1>
+      <article class="card empty-state">
+        <span class="mini-label">До першого вікового вікна</span>
+        <h2>Поверніться у 2 місяці${ageBasis}</h2>
+        <p class="muted">Ми навмисно не показуємо запитання для старшого віку завчасно. До цього можна читати короткі матеріали й просто спостерігати за звичайними моментами без перевірок.</p>
+        <button type="button" class="btn primary block" data-go="library">Відкрити короткі матеріали</button>
+        ${homeAction}
+        <button type="button" id="editProfile" class="linklike">Перевірити дату в профілі</button>
+      </article>
+      <p class="note">Якщо вас щось турбує, не чекайте вікового чекліста — занотуйте конкретний приклад і зверніться до педіатра або іншого фахівця.</p>
+    </section>`;
+}
 function profileForSurvey(survey, age) {
   const s = survey || { states: {}, questionIds: [] };
   return buildProfile(s.states || {}, age, ENGINE_CONFIG, s.questionIds || null);
@@ -1143,7 +1167,10 @@ function renderAppbar(screen) {
   const active = cc();
   const opts = store.children.map((c, i) =>
     `<option value="${c.id}"${c.id === active.id ? " selected" : ""}>${esc(c.name || ("Дитина " + (i + 1)))}</option>`).join("");
-  const ageTag = usesCorrectedAge(active) ? `${currentAge()} міс · скориг.` : AGE_LABELS[currentAge()];
+  const age = currentAge();
+  const ageTag = age == null
+    ? `До 2 міс${usesCorrectedAge(active) ? " · скориг." : ""}`
+    : (usesCorrectedAge(active) ? `${age} міс · скориг.` : AGE_LABELS[age]);
   slot.innerHTML =
     `<select id="childSwitch" class="appbar-select" aria-label="Активна дитина">${opts}<option value="__add">+ Додати дитину</option></select>` +
     `<span class="appbar-tag"${usesCorrectedAge(active) ? ' title="Віковий блок за скоригованим віком"' : ""}>${ageTag}</span>`;
@@ -1348,6 +1375,7 @@ function homeTabsHtml(age, weekly, moments, tested, task) {
 
 function renderHome() {
   const age = currentAge();
+  if (age == null) return beforeFirstChecklistHtml("home");
   const survey = cc().surveys[age];
   const task = todaysTask(age);
   const nextStep = homeNextStep(age);
@@ -1503,6 +1531,7 @@ let surveyAdvanceToken = 0;
 
 function renderSurvey() {
   const age = currentAge();
+  if (age == null) return beforeFirstChecklistHtml("survey");
   const ids = questionIdsFor(age);
   const survey = cc().surveys[age];
   if (survey.date) {
@@ -1631,6 +1660,7 @@ function resultFocusHtml(profile) {
 
 function renderResults() {
   const age = currentAge();
+  if (age == null) return beforeFirstChecklistHtml("results");
   const survey = cc().surveys[age] || { states: {} };
   const profile = profileForSurvey(survey, age);
   const flagged = (survey.questionIds || []).map((id) => milestoneById(age, id)).filter((m) => m && (survey.states[m.id] === "not_yet" || survey.states[m.id] === "not_sure") && DISCUSS_BY_ID[m.id]);
@@ -1940,6 +1970,7 @@ function playWeekCalendarHtml(program, currentIndex, now = new Date()) {
 
 function renderProgram() {
   const age = currentAge();
+  if (age == null) return beforeFirstChecklistHtml("program");
   const survey = cc().surveys[age];
   if (!survey || !survey.date) {
     return `<section class="screen-pad"><h1 tabindex="-1">Гра на сьогодні</h1><p class="muted">Спершу дайте відповіді на кілька коротких питань.</p><button type="button" class="btn primary block" data-go="survey">Почати спостереження</button></section>`;
@@ -2507,6 +2538,7 @@ function visitDateLabel(value) {
 
 function renderAsk() {
   const age = currentAge();
+  if (age == null) return beforeFirstChecklistHtml("ask");
   const survey = cc().surveys[age] || { states: {}, questionIds: [] };
   const ids = survey.questionIds || [];
   const flagged = ids.map((id) => milestoneById(age, id)).filter((m) => m && (survey.states[m.id] === "not_yet" || survey.states[m.id] === "not_sure") && DISCUSS_BY_ID[m.id]);

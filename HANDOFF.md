@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.52.** Read
+> **Current product baseline: Stage 5 UA / P2.53.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -115,12 +115,13 @@ scrollable horizontal shelves. P2.50 turns the
 observation result into one next-step card plus a compact play focus, with answer details collapsed
 and the specialist route preserved. P2.49 makes the
 Game surface action-first too: compact numbered choices, a collapsed moment picker, visual steps,
-and one secondary “Details and safety” disclosure. P2.48 turns
+and one secondary “Details and safety” disclosure. P2.53 supersedes the earlier nearest-age
+selection with the youngest completed checklist window and adds a truthful pre-2-month state. P2.48 turns
 Home into a four-action hub and gives every game an explicit Start → Finish → reflection → diary
 → continue/remind flow, with the timer hidden until Start. P2.47 exposes
 three curated play choices while saying one is enough, adds a calm timer, one-time calendar
 reminders, a low-effort post-play cue, and a sourced parent minute. The visible asset baseline is
-`20260708-p2-52-r1`; these additions do not change
+`20260714-p2-53-r1`; these additions do not change
 the product's safety rules or make draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
@@ -208,6 +209,15 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — P2.53 younger completed checklist routing
+- Replaced nearest-age snapping with the youngest completed CDC window: 2–3→2, 4–5→4,
+  6–8→6, 9–11→9, and 12→12 months. Corrected age uses the same path.
+- Added a separate pre-2-month state on Home, Survey, Results, Game, and Specialist routes.
+  It does not create a survey, explains when the first checklist becomes available, keeps a
+  library path open, and says not to wait when a parent is concerned.
+- Added exhaustive 0–12 routing and pre-2 rendering/storage regression checks. Bumped the
+  current build/cache marker to P2.53 / `20260714-p2-53-r1`.
 
 ### 2026-07-14 — independent audit converted into an executable quality rebuild
 - Owner authorized implementation with one commit per logical step and explicit done/remaining
