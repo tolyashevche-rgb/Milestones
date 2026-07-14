@@ -1,6 +1,6 @@
 # Milestones — personalized child-development assistant
 
-> **CURRENT BUILD: Stage 5 UA / P2.55.** Before running or auditing the product, read
+> **CURRENT BUILD: Stage 5 UA / P2.56.** Before running or auditing the product, read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md). The only current UI entry point is
 > `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references, not valid
 > evidence for a current UI/UX audit.
@@ -18,8 +18,8 @@ scoring, or replacing a professional.
 
 > **Active quality rebuild (2026-07-14):** feature expansion is frozen. Implementation proceeds
 > one verified commit at a time through
-> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.55 is the
-> current completed safety baseline in that sequence.
+> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.56 is the
+> current completed Home/navigation step in that sequence.
 
 ---
 
@@ -36,7 +36,7 @@ Milestones/
 │   └── app.js                 ← UI wiring
 ├── prototype_stage4_ua/       ← runtime data/engine; UI is a LEGACY reference
 │   └── data_ua.js  engine.js  app.js  legacy-reference.html
-├── prototype_stage5_ua/       ← CURRENT guided UA app (P2.55)
+├── prototype_stage5_ua/       ← CURRENT guided UA app (P2.56)
 │   └── index.html app5.js styles5.css questions_ua.js illustrations.js authors_ua.js (reuses stage4 data+engine)
 ├── docs/                      ← project documentation
 │   ├── safety_rules.md        ← SINGLE SOURCE OF TRUTH for claims/guardrails
@@ -117,7 +117,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
-> Release **P2.55** is the current product baseline. The P2.16 material below is retained
+> Release **P2.56** is the current product baseline. The P2.16 material below is retained
 > as historical implementation context, not as the current audit target. See
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) for the exact entry point and audit preflight.
 
@@ -125,6 +125,10 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   GitHub Pages remains disabled by owner decision. If public review is approved later, the workflow
   will run the full Stage 5 QA suite and deploy only Stage 5 UA plus the two canonical Stage 4 UA
   engine/data files it imports; it cannot run on an ordinary push.
+- **P2.56 contextual Home and stable routes:** Home now leads with exactly one next step for the
+  current state, then keeps the parent minute, recap and private notes in normal document flow.
+  The nested deck/tabs are gone. Bottom navigation now maps to Today, Observation, Game and
+  Records; Library and Specialist remain contextual secondary routes.
 - **P2.55 explicit draft/safety gates:** the ordinary validation app uses only canonical
   checklist wording and hides draft author notes. Motion review moved to a separate internal,
   noindex entry and now covers all 60 visuals including tummy time. Every game shows materials,
@@ -136,7 +140,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   window instead of the mathematically nearest one. Ages 8 and 11 months no longer advance to
   9/12-month questions, and children below 2 months receive a truthful waiting state rather than
   an early 2-month checklist. Corrected age follows the same rule.
-- **P2.52 persistent Home tabs:** “Для вас сьогодні” and “Корисне” now share one two-tab control.
+- **Historical P2.52 Home tabs (superseded by P2.56):** “Для вас сьогодні” and “Корисне” shared one two-tab control.
   Their labels remain visible while the selected panel scrolls vertically; click/tap and Left/Right
   arrow keys switch panels. The former horizontal shelves and ambiguous disclosures are gone.
 - **P2.51 dimensional Home:** the flat four-button grid is now a centered two-thirds-width

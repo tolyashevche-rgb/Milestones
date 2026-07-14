@@ -27,14 +27,14 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.55", "audit scope must identify the current release");
+  assert.equal(auditScope.release, "P2.56", "audit scope must identify the current release");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.55"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.55"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.56"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.56"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -67,8 +67,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260714-p2-55-r1"), "Stage5 assets must use the P2.55 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-55-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-56-r1"), "Stage5 assets must use the P2.56 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-56-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation"') && !stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation-review"'), "the ordinary app must not enable internal reviewer routing");
   assert.ok(motionReviewHtml.includes('MILESTONES_BUILD_CHANNEL = "validation-review"') && motionReviewHtml.includes('name="robots" content="noindex,nofollow"'), "Motion review needs a separate noindex internal entry point");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
@@ -76,15 +76,12 @@ function testContentAndEngine() {
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
   assert.ok(stage5Styles.includes("@media (forced-colors: active)"), "high-contrast mode needs explicit active-state support");
   assert.ok(stage5Styles.includes("@media (prefers-reduced-motion: reduce)"), "reduced-motion preference must stay supported");
-  assert.ok(stage5Styles.includes(".home-action-deck") && stage5Styles.includes("scroll-snap-type: y mandatory"), "home action deck must support one-finger vertical snapping");
-  assert.ok(stage5Styles.includes("width: 66.666%") && stage5Styles.includes("justify-self: center"), "home deck cards must occupy two thirds of the available width and stay centered");
-  assert.ok(stage5Styles.includes(".home-tabbar") && stage5Styles.includes(".home-tab-viewport") && stage5Styles.includes("overflow-y: auto"), "home tabs must remain visible above vertically scrollable content");
-  assert.ok(stage5App.includes("function initHomeDeck()") && stage5App.includes("data-home-deck-dot"), "home deck must synchronize depth state and position controls");
-  assert.ok(stage5App.includes("function activateHomeTab(") && stage5App.includes('"ArrowLeft", "ArrowRight"'), "home tabs must support persistent selection and keyboard switching");
+  assert.ok(stage5Styles.includes(".home-secondary-links") && !stage5Styles.includes(".home-action-deck") && !stage5Styles.includes(".home-tab-viewport"), "home must use a calm document flow without nested deck or tab scrolling");
+  assert.ok(stage5App.includes("homeNextStepHtml(nextStep)") && stage5App.includes("homeSecondaryLinksHtml(tested)"), "home must render the contextual next step before secondary routes");
+  assert.ok(!stage5App.includes("function initHomeDeck()") && !stage5App.includes("function activateHomeTab("), "retired home deck and tab controllers must not ship");
   assert.ok(stage5App.includes('document.getElementById("toggleTodayDone")?.focus'), "program updates must restore focus to the thumb action");
   assert.ok(stage5App.includes('class="private-moments"') && stage5App.includes('data-delete-moment='), "E6 needs a bounded local moments view with individual deletion");
   assert.ok(stage5App.includes('"DTEND:"') && !stage5App.includes("RRULE:FREQ=DAILY"), "calendar reminders must be single events without a hidden recurring series");
-  assert.ok(stage5App.includes('e.target.closest("#addIcs")'), "calendar shelf card must work when its nested label or arrow is tapped");
   assert.ok(stage5App.includes('id="installApp"') && stage5App.includes('id="installHelp"'), "data settings need install guidance without changing the primary home action");
   assert.ok(stage5App.includes('id="updateControls"') && stage5App.includes('id="applyUpdate"'), "PWA updates need an explicit action in collapsed settings");
   assert.equal(manifest.display, "standalone", "PWA manifest must request standalone display");
@@ -95,7 +92,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-55-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-56-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -496,9 +493,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-55-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-55-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-55-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-56-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-56-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-56-r1"), "the sourced library must be cached offline");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -672,8 +669,21 @@ function testAppState() {
 
     renderNav("home");
     const navMarkup = document.getElementById("bottomNav").innerHTML;
+    renderNav("results");
+    const resultsNavMarkup = document.getElementById("bottomNav").innerHTML;
+    renderNav("progress");
+    const progressNavMarkup = document.getElementById("bottomNav").innerHTML;
+    renderNav("ask");
+    const askNavMarkup = document.getElementById("bottomNav").innerHTML;
+    renderNav("library");
+    const libraryNavMarkup = document.getElementById("bottomNav").innerHTML;
     const navIconsOkay = (navMarkup.match(/class="nav-icon"/g) || []).length === 4
-      && ["home", "observe", "play", "pencil"].every((name) => navMarkup.includes('data-icon="' + name + '"'))
+      && ["home", "observe", "play", "history"].every((name) => navMarkup.includes('data-icon="' + name + '"'))
+      && ["Сьогодні", "Спостереження", "Гра", "Записи"].every((label) => navMarkup.includes(label))
+      && resultsNavMarkup.includes('data-icon="observe"') && resultsNavMarkup.includes('aria-current="page"')
+      && progressNavMarkup.includes('data-icon="history"') && progressNavMarkup.includes('aria-current="page"')
+      && !askNavMarkup.includes('aria-current="page"')
+      && !libraryNavMarkup.includes('aria-current="page"')
       && !navMarkup.includes("⌂") && !navMarkup.includes("◎") && !navMarkup.includes("◇") && !navMarkup.includes("✎");
 
     const ids = questionIdsFor(4);
@@ -755,11 +765,11 @@ function testAppState() {
       && surveyUi.index === 1;
     const continueStep = homeNextStep(4);
     const continueMarkup = renderHome();
-    const homeProgressAccessibilityOkay = continueMarkup.includes('aria-label="Головні розділи"')
-      && continueMarkup.includes('class="home-nudge continue-observation"')
-      && (continueMarkup.match(/data-home-card=/g) || []).length === 4
-      && (continueMarkup.match(/aria-current=/g) || []).length >= 4
-      && (continueMarkup.match(/data-home-deck-dot=/g) || []).length === 4;
+    const homeProgressAccessibilityOkay = continueMarkup.includes('class="card next-step continue-observation"')
+      && continueMarkup.includes('role="progressbar"')
+      && continueMarkup.includes('aria-valuenow="1"')
+      && (continueMarkup.match(/data-primary-action=/g) || []).length === 1
+      && continueMarkup.includes('aria-label="Додаткові розділи"');
     first.surveys[4].states = Object.fromEntries(ids.map((id) => [id, "yes"]));
     first.surveys[4].date = "2026-06-20T10:00:00.000Z";
     const allClearResultsMarkup = renderResults();
@@ -776,15 +786,21 @@ function testAppState() {
     const originalSurvey = first.surveys[4];
     first.surveys[4] = notYetSurvey;
     const discussStep = homeNextStep(4);
+    const discussHomeMarkup = renderHome();
     const discussResultsMarkup = renderResults();
     first.surveys[4] = notSureReadySurvey;
     const recheckStep = homeNextStep(4);
+    const recheckHomeMarkup = renderHome();
     first.surveys[4] = originalSurvey;
     const followUpRoutingOkay = observationRouteFor(notYetSurvey).kind === "discuss-now"
       && observationRouteFor(notSureRecentSurvey).kind === "watch-window"
       && observationRouteFor(notSureReadySurvey).kind === "recheck-ready"
       && discussStep.kind === "discuss-now" && discussStep.route === "ask"
       && recheckStep.kind === "recheck-ready" && recheckStep.restart === true
+      && (discussHomeMarkup.match(/data-primary-action=/g) || []).length === 1
+      && discussHomeMarkup.includes('data-primary-action="discuss-now"')
+      && (recheckHomeMarkup.match(/data-primary-action=/g) || []).length === 1
+      && recheckHomeMarkup.includes('data-primary-action="recheck-ready"')
       && discussResultsMarkup.includes("не замінюють обговорення")
       && discussResultsMarkup.includes('data-go="ask"');
     const compactResultsOkay = allClearResultsMarkup.includes('<article class="result-hero age-window">')
@@ -1223,26 +1239,17 @@ function testAppState() {
       && continueStep.progress.value === 1
       && playStep.kind === "play-today"
       && doneStep.kind === "done-today"
-      && [startMarkup, continueMarkup, playMarkup, doneMarkup].every((markup) => (markup.match(/data-home-card=/g) || []).length === 4)
-      && [startMarkup, continueMarkup, playMarkup, doneMarkup].every((markup) => ["Пограти разом", "Поспостерігати", "Знайти відповідь", "Переглянути записи"].every((label) => markup.includes(label)))
-      && [startMarkup, continueMarkup, playMarkup, doneMarkup].every((markup) => markup.includes("З чого почнемо?") && markup.includes("Гортайте вниз"))
-      && continueMarkup.includes('class="home-nudge continue-observation"')
-      && !startMarkup.includes('class="home-nudge')
-      && !doneMarkup.includes('class="home-nudge')
-      && !startMarkup.includes('class="hello"')
-      && !startMarkup.includes('class="profile-meta"')
-      && doneMarkup.includes('class="home-tabs"')
-      && doneMarkup.includes('role="tablist"')
-      && (doneMarkup.match(/role="tab"/g) || []).length === 2
-      && (doneMarkup.match(/role="tabpanel"/g) || []).length === 2
-      && doneMarkup.includes("Для вас сьогодні")
-      && doneMarkup.includes("Корисне")
-      && doneMarkup.includes('data-home-tab="today"')
-      && doneMarkup.includes('data-home-tab="useful"')
-      && !doneMarkup.includes("Сьогодні ще")
-      && !doneMarkup.includes("Ще корисне")
-      && typeof initHomeDeck === "function"
-      && typeof activateHomeTab === "function";
+      && [startMarkup, continueMarkup, playMarkup].every((markup) => (markup.match(/data-primary-action=/g) || []).length === 1)
+      && (doneMarkup.match(/data-primary-action=/g) || []).length === 0
+      && [startMarkup, continueMarkup, playMarkup, doneMarkup].every((markup) => markup.includes('<h1 tabindex="-1">Сьогодні</h1>') && markup.includes('class="card next-step'))
+      && [startMarkup, continueMarkup, playMarkup, doneMarkup].every((markup) => markup.includes("Короткі відповіді") && markup.includes("Записи"))
+      && [startMarkup, continueMarkup, playMarkup, doneMarkup].every((markup) => !markup.includes("data-home-card=") && !markup.includes('class="home-tabs"') && !markup.includes('role="tablist"'))
+      && !startMarkup.includes("Для фахівця")
+      && !continueMarkup.includes("Для фахівця")
+      && playMarkup.includes("Для фахівця")
+      && doneMarkup.includes("Для фахівця")
+      && typeof initHomeDeck === "undefined"
+      && typeof activateHomeTab === "undefined";
     first.snapshots.push({ id: "snap_existing" });
     first.programSelections["4"] = { "1": "act_004_language_001" };
     first.activityCompletions[completionKey(4)] = { activityId: "act_004_language_001" };
@@ -1351,9 +1358,9 @@ function testAppState() {
   assert.equal(result.childrenIsolated, true, "children must not share surveys, notes, or completions");
   assert.equal(result.migrationOkay, true, "legacy single-child data must migrate losslessly");
   assert.equal(result.historyOkay, true, "history comparison must support old snapshots and describe answer changes");
-  assert.equal(result.homeNextStepOkay, true, "home must expose a swipeable action deck, persistent two-tab content area, and calm safety nudges");
+  assert.equal(result.homeNextStepOkay, true, "home must expose one contextual primary action followed by secondary routes in document flow");
   assert.equal(result.programUiOkay, true, "program must keep today's game open and future days secondary");
-  assert.equal(result.livelyDayOkay, true, "P2.55 must preserve the compact play lifecycle");
+  assert.equal(result.livelyDayOkay, true, "P2.56 must preserve the compact play lifecycle");
   assert.equal(result.compactResultsOkay, true, "results must lead with one next step and keep detailed answers collapsed");
   assert.equal(result.specialistPrepOkay, true, "specialist prep must keep one overview, three structured notes, and a copyable summary");
   assert.equal(result.oneThumbSurveyOkay, true, "survey answers must save and advance without a separate next button");
@@ -1382,7 +1389,7 @@ function testAppState() {
   testReviewBuildIsolation();
   await testServiceWorker();
   await testPwaInstallUi();
-  console.log("P1/P2/E4 QA passed: centered vertical depth deck and persistent two-tab Home content, compact Game and one-glance Results, explicit play sessions, optional timer, diary and reminders, preserved specialist routing, 60 visual guides with safety details, 5 ages, content integrity, guarded local storage, offline shell, backup/restore, migration, and multi-child isolation.");
+  console.log("P1/P2/E4 QA passed: one contextual Home action with stable secondary routes, compact Game and one-glance Results, explicit play sessions, optional timer, diary and reminders, preserved specialist routing, 60 visual guides with safety details, 5 ages, content integrity, guarded local storage, offline shell, backup/restore, migration, and multi-child isolation.");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

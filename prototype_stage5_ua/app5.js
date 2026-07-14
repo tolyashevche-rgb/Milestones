@@ -90,7 +90,6 @@ let storageProblem = "";
 let playTimer = { activityId: "", duration: 180, remaining: 180, running: false };
 let playTimerInterval = null;
 let reminderDraft = { day: "today", time: "18:00" };
-let homeTabUi = "today";
 
 function freshMotionReview() { return { storeVersion: MOTION_REVIEW_STORE_VERSION, active: "parent_1", view: { status: "pending", age: "all" }, sessions: {} }; }
 function loadMotionReview() {
@@ -1018,10 +1017,10 @@ function privateMomentsHtml(moments) {
 
 // ---- routing ----
 const NAV = [
-  { route: "home", label: "Головна", icon: "home" },
+  { route: "home", label: "Сьогодні", icon: "home" },
   { route: "survey", label: "Спостереження", icon: "observe" },
   { route: "program", label: "Гра", icon: "play" },
-  { route: "ask", label: "Фахівець", icon: "pencil" }
+  { route: "progress", label: "Записи", icon: "history" }
 ];
 
 function navIcon(name) {
@@ -1064,7 +1063,6 @@ function show(screen) {
   renderAppbar(screen);
   renderStorageStatus();
   if (screen === "program") afterProgramRender();
-  if (screen === "home") initHomeDeck();
   initMotionCarousels();
   window.scrollTo(0, 0);
   const focusTarget = screen === "survey" ? root.querySelector("#questionTitle") : root.querySelector("h1");
@@ -1096,57 +1094,6 @@ function initMotionCarousels() {
       track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
     }));
   });
-}
-
-function initHomeDeck() {
-  if (typeof document === "undefined" || typeof document.querySelector !== "function") return;
-  const deck = document.querySelector("[data-home-deck]");
-  if (!deck || deck.dataset.deckReady) return;
-  deck.dataset.deckReady = "1";
-  const cards = Array.from(deck.querySelectorAll("[data-home-card]"));
-  const dots = Array.from(document.querySelectorAll("[data-home-deck-dot]"));
-  if (!cards.length) return;
-  const sync = () => {
-    const center = deck.scrollTop + deck.clientHeight / 2;
-    let activeIndex = 0;
-    let nearest = Infinity;
-    cards.forEach((card, index) => {
-      const distance = Math.abs(card.offsetTop + card.offsetHeight / 2 - center);
-      if (distance < nearest) { nearest = distance; activeIndex = index; }
-    });
-    cards.forEach((card, index) => {
-      card.classList.toggle("active", index === activeIndex);
-      card.setAttribute("aria-current", index === activeIndex ? "true" : "false");
-    });
-    dots.forEach((dot, index) => dot.classList.toggle("active", index === activeIndex));
-  };
-  let ticking = false;
-  deck.addEventListener("scroll", () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => { sync(); ticking = false; });
-  }, { passive: true });
-  dots.forEach((dot, index) => dot.addEventListener("click", () => {
-    if (cards[index]) deck.scrollTo({ top: Math.max(0, cards[index].offsetTop - 2), behavior: "smooth" });
-  }));
-  sync();
-}
-
-function activateHomeTab(tabId, focus = false) {
-  if (!HOME_TAB_IDS.includes(tabId)) return;
-  homeTabUi = tabId;
-  document.querySelectorAll("[data-home-tab]").forEach((tab) => {
-    const active = tab.dataset.homeTab === tabId;
-    tab.classList.toggle("active", active);
-    tab.setAttribute("aria-selected", String(active));
-    tab.tabIndex = active ? 0 : -1;
-    if (active && focus) tab.focus({ preventScroll: true });
-  });
-  document.querySelectorAll("[data-home-panel]").forEach((panel) => {
-    panel.hidden = panel.dataset.homePanel !== tabId;
-  });
-  const viewport = document.querySelector(".home-tab-viewport");
-  if (viewport) viewport.scrollTop = 0;
 }
 
 function renderNav(active) {
@@ -1349,41 +1296,15 @@ function homeNextStepHtml(step) {
       ${action}
     </article>`;
 }
-function homeActionHubHtml(age, tested) {
-  const actions = [
-    { icon: "play", eyebrow: "Разом зараз", title: "Пограти разом", note: tested ? "Три легкі ідеї на сьогодні" : "Спершу коротке спостереження", route: tested ? "program" : "survey", tone: "play" },
-    { icon: "observe", eyebrow: "Коротка перевірка", title: "Поспостерігати", note: tested ? "Підсумок і наступний крок" : "Почати спостереження", route: tested ? "results" : "survey", tone: "observe" },
-    { icon: "book", eyebrow: "Є запитання?", title: "Знайти відповідь", note: "Коротко, спокійно, з джерелами", route: "library", tone: "learn" },
-    { icon: "history", eyebrow: "Ваші моменти", title: "Переглянути записи", note: "Історія спостережень і щоденник", route: "progress", tone: "history" }
+function homeSecondaryLinksHtml(tested) {
+  const links = [
+    { route: "library", icon: "book", title: "Короткі відповіді", note: "Матеріали з джерелами" },
+    { route: "progress", icon: "history", title: "Записи", note: "Спостереження і щоденник гри" }
   ];
-  return `<section class="home-deck-shell" aria-label="Головні розділи">
-    <div class="home-deck-guide"><span>Гортайте вниз</span><div aria-label="Позиція в списку">${actions.map((_, index) => `<button type="button" data-home-deck-dot="${index}" class="home-deck-dot${index === 0 ? " active" : ""}" aria-label="Показати варіант ${index + 1}"></button>`).join("")}</div></div>
-    <div class="home-action-deck" data-home-deck>${actions.map((action, index) => `<button type="button" class="home-deck-card tone-${action.tone}${index === 0 ? " active" : ""}" data-home-card="${index}" data-go="${action.route}" aria-current="${index === 0 ? "true" : "false"}"><span class="home-deck-icon" aria-hidden="true">${navIcon(action.icon)}</span><span class="home-deck-copy"><small>${action.eyebrow}</small><strong>${action.title}</strong><span>${action.note}</span></span><span class="home-deck-arrow" aria-hidden="true">→</span></button>`).join("")}</div>
-  </section>`;
-}
-function homeNudgeHtml(step) {
-  if (!step || !["continue-observation", "discuss-now", "recheck-ready"].includes(step.kind)) return "";
-  return `<aside class="home-nudge ${step.kind}"><div><span>${esc(step.label)}</span><strong>${esc(step.title)}</strong></div><button type="button" class="btn ghost" data-go="${step.route}" ${step.restart ? 'data-restart="1"' : ""}>${esc(step.cta)}</button></aside>`;
-}
-const HOME_TAB_IDS = ["today", "useful"];
-function homeTabsHtml(age, weekly, moments, tested, task) {
-  const active = HOME_TAB_IDS.includes(homeTabUi) ? homeTabUi : "today";
-  const todayCards = [parentMinuteHtml(age), weeklyRecapHtml(weekly), privateMomentsHtml(moments)].filter(Boolean);
-  const usefulCards = tested ? `
-    <button type="button" class="home-useful-card" data-go="program"><span>Усі ігри</span><small>План на сім днів</small><b aria-hidden="true">→</b></button>
-    <button type="button" class="home-useful-card" data-go="ask"><span>Для фахівця</span><small>Підсумок і нотатки</small><b aria-hidden="true">→</b></button>
-    <button type="button" class="home-useful-card" data-go="survey" data-restart="1"><span>Оновити</span><small>Нове спостереження</small><b aria-hidden="true">→</b></button>
-    ${task ? `<button type="button" class="home-useful-card" id="addIcs"><span>У календар</span><small>Одне нагадування</small><b aria-hidden="true">→</b></button>` : ""}`
-    : `<button type="button" class="home-useful-card" data-go="survey"><span>Почати спостереження</span><small>Після нього з’явиться план і підсумок</small><b aria-hidden="true">→</b></button>`;
-  return `<section class="home-tabs" aria-label="Додаткові матеріали">
-    <div class="home-tabbar" role="tablist" aria-label="Матеріали головної сторінки">
-      <button type="button" role="tab" id="homeTabToday" data-home-tab="today" aria-controls="homePanelToday" aria-selected="${active === "today"}" tabindex="${active === "today" ? "0" : "-1"}" class="${active === "today" ? "active" : ""}">Для вас сьогодні</button>
-      <button type="button" role="tab" id="homeTabUseful" data-home-tab="useful" aria-controls="homePanelUseful" aria-selected="${active === "useful"}" tabindex="${active === "useful" ? "0" : "-1"}" class="${active === "useful" ? "active" : ""}">Корисне</button>
-    </div>
-    <div class="home-tab-viewport">
-      <div role="tabpanel" id="homePanelToday" data-home-panel="today" aria-labelledby="homeTabToday" ${active === "today" ? "" : "hidden"}><div class="home-tab-stack">${todayCards.map((card) => `<div class="home-tab-card">${card}</div>`).join("")}</div></div>
-      <div role="tabpanel" id="homePanelUseful" data-home-panel="useful" aria-labelledby="homeTabUseful" ${active === "useful" ? "" : "hidden"}><div class="home-tab-stack home-useful-stack">${usefulCards}</div></div>
-    </div>
+  if (tested) links.push({ route: "ask", icon: "pencil", title: "Для фахівця", note: "Підсумок і ваші нотатки" });
+  return `<section class="home-secondary" aria-labelledby="homeSecondaryTitle">
+    <h2 id="homeSecondaryTitle">Ще може знадобитися</h2>
+    <div class="home-secondary-links" aria-label="Додаткові розділи">${links.map((link) => `<button type="button" class="home-secondary-link" data-go="${link.route}"><span aria-hidden="true">${navIcon(link.icon)}</span><span><strong>${esc(link.title)}</strong><small>${esc(link.note)}</small></span><b aria-hidden="true">→</b></button>`).join("")}</div>
   </section>`;
 }
 
@@ -1391,7 +1312,6 @@ function renderHome() {
   const age = currentAge();
   if (age == null) return beforeFirstChecklistHtml("home");
   const survey = cc().surveys[age];
-  const task = todaysTask(age);
   const nextStep = homeNextStep(age);
   const weekly = weeklyPlaySummary();
   const moments = privateMoments();
@@ -1399,10 +1319,14 @@ function renderHome() {
   const tested = survey && survey.date;
   return `
     <section class="screen-pad">
-      <h1 tabindex="-1">З чого почнемо?</h1>
-      ${homeActionHubHtml(age, tested)}
-      ${homeNudgeHtml(nextStep)}
-      ${homeTabsHtml(age, weekly, moments, tested, task)}
+      <h1 tabindex="-1">Сьогодні</h1>
+      ${homeNextStepHtml(nextStep)}
+      <div class="home-today-flow">
+        ${weeklyRecapHtml(weekly)}
+        ${privateMomentsHtml(moments)}
+        ${parentMinuteHtml(age)}
+      </div>
+      ${homeSecondaryLinksHtml(tested)}
 
       ${next ? `<p class="note">Наступний віковий чекліст — приблизно у ${next} місяців. Спостереження й звернення при занепокоєнні не потрібно відкладати до цієї дати.</p>` : ""}
       <details class="data-controls">
@@ -2719,12 +2643,6 @@ document.addEventListener("click", async (e) => {
     setHash(go.dataset.go);
     return;
   }
-  const homeTab = e.target.closest("[data-home-tab]");
-  if (homeTab) {
-    activateHomeTab(homeTab.dataset.homeTab, true);
-    return;
-  }
-
   const deleteMoment = e.target.closest("[data-delete-moment]");
   if (deleteMoment) {
     const key = deleteMoment.dataset.deleteMoment;
@@ -3201,7 +3119,6 @@ document.addEventListener("click", async (e) => {
     document.getElementById("importBackup")?.click();
     return;
   }
-  if (e.target.closest("#addIcs")) { const t = todaysTask(currentAge()); downloadIcs(t ? t.act.title : "Гра з дитиною"); return; }
   if (e.target.id === "copySummary") {
     const st = document.getElementById("copyStatus");
     try {
@@ -3283,15 +3200,6 @@ document.addEventListener("click", async (e) => {
     const btn = document.getElementById("consentContinue"); if (btn) btn.disabled = !all;
     return;
   }
-});
-
-document.addEventListener("keydown", (e) => {
-  const tab = e.target.closest?.("[data-home-tab]");
-  if (!tab || !["ArrowLeft", "ArrowRight"].includes(e.key)) return;
-  e.preventDefault();
-  const current = HOME_TAB_IDS.indexOf(tab.dataset.homeTab);
-  const offset = e.key === "ArrowRight" ? 1 : -1;
-  activateHomeTab(HOME_TAB_IDS[(current + offset + HOME_TAB_IDS.length) % HOME_TAB_IDS.length], true);
 });
 
 document.addEventListener("input", (e) => {
