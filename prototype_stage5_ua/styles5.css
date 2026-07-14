@@ -337,17 +337,15 @@ main {
 .day-acc { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
 .day-acc.open { border-color: var(--teal); box-shadow: var(--shadow); }
 .today-game { margin-top: 14px; }
-.daily-play-menu { margin-top: 14px; padding: 14px; border: 1px solid #cfe2dd; border-radius: 15px; background: #f5faf8; }
-.daily-play-menu-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.daily-play-menu-head h2 { margin: 0; font-size: 18px; }
-.daily-play-menu-head > span { flex-shrink: 0; padding: 4px 8px; border-radius: 999px; background: #fff; color: var(--teal-dark); font-size: 11px; font-weight: 800; }
-.daily-play-menu > .daily-play-hint { margin: 9px 1px 0; color: var(--muted); font-size: 12px; }
-.daily-play-options { display: grid; gap: 7px; margin-top: 10px; }
-.daily-play-option { min-height: 58px; display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); cursor: pointer; text-align: left; }
-.daily-play-option > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; background: var(--mint); color: var(--teal-dark); font-size: 11px; font-weight: 800; }
+.daily-play-menu { margin-top: 14px; padding: 0 14px; border: 1px solid #cfe2dd; border-radius: 15px; background: #f5faf8; }
+.daily-play-menu > summary { min-height: 50px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--teal-dark); cursor: pointer; font-weight: 750; }
+.daily-play-menu > summary small { color: var(--muted); font-size: 12px; font-weight: 600; }
+.daily-play-menu[open] > summary { border-bottom: 1px solid #cfe2dd; }
+.daily-play-menu > .daily-play-hint { margin: 9px 1px 14px; color: var(--muted); font-size: 12px; }
+.daily-play-options { display: grid; gap: 7px; margin-top: 12px; }
+.daily-play-option { min-height: 58px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); cursor: pointer; text-align: left; }
 .daily-play-option > strong { font-size: 15px; }
 .daily-play-option > small { color: var(--muted); font-size: 11px; white-space: nowrap; }
-.daily-play-option.active { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(30, 122, 111, .1); }
 .daily-play-option.done { background: var(--mint); }
 .daily-play-option:disabled { opacity: .55; cursor: not-allowed; }
 .today-game-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 0; }
@@ -434,6 +432,7 @@ main {
 .saved-game-list { display: grid; gap: 8px; padding: 12px 0 14px; }
 .saved-game { width: 100%; min-height: 52px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: 1px solid var(--line); border-radius: 10px; background: #f7faf9; padding: 10px 12px; color: var(--ink); cursor: pointer; text-align: left; }
 .saved-game span { color: var(--muted); font-size: 13px; }
+.saved-game:disabled { opacity: .55; cursor: not-allowed; }
 .activity-feedback { margin-top: 14px; padding: 12px; border-radius: 12px; background: #fff4e8; border: 1px solid #eed3b7; }
 .activity-feedback > p { margin: 5px 0 10px; color: #71563f; font-size: 13px; }
 .feedback-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

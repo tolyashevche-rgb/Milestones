@@ -27,8 +27,8 @@ free + subscription.
 | 1 | ✅ | Виправити вікову маршрутизацію | Між CDC-вікнами завжди молодший checklist; до 2 міс окремий стан; тести 0–12 + corrected age | P2.53 · `a51b4b8` |
 | 2 | ✅ | Усунути втрату даних при повторному спостереженні | Нове спостереження не стирає play diary, reactions, notes або completions | P2.54 · `eaef86f` |
 | 3 | ✅ | Додати release gates і видиму safety-смугу | Draft-вміст не видається за approved; safety/stop видно до Start | P2.55 · `b675669` |
-| 4 | ✅ | Спростити Home і маршрути | Один контекстний next step; без deck/nested scroll; стабільна навігація | P2.56 · `refactor: simplify home and primary navigation` |
-| 5 | 🔄 | Спростити Game і дизайн-систему | Одна основна гра; одна primary action; узгоджені кнопки, іконки, кольори, градієнти | — |
+| 4 | ✅ | Спростити Home і маршрути | Один контекстний next step; без deck/nested scroll; стабільна навігація | P2.56 · `b4ea9dd` |
+| 5 | 🔄 | Спростити Game і дизайн-систему | Одна основна гра; одна primary action; узгоджені кнопки, іконки, кольори, градієнти | P2.57 Game ✅ · дизайн 🔄 |
 | 6 | ⬜ | Accessibility, responsive, recovery і PWA | Touch/contrast/zoom/keyboard; tablet layout; recovery states; lean safe cache | — |
 | 7 | ⬜ | Повна регресія і UI-перевірка | QA/syntax/diff/E2E; ключові маршрути на mobile/tablet/desktop; фінальний список залишку | — |
 | 8 | ⛔ | Expert review і 5 parent sessions | Реальні рішення експертів і реальні moderated sessions; нічого не симулюється | Після кроку 7 |
@@ -57,6 +57,8 @@ free + subscription.
   pre-Start safety ordering/blocking: ✅.
 - P2.56 one contextual Home action, stable secondary routes, four-destination primary
   navigation and removal of nested Home scrolling: ✅.
+- P2.57 one visible safe activity, optional alternatives, active/unsaved flow lock and
+  primary “На сьогодні все” with preserved diary lifecycle: ✅.
 - Live browser/device pass: ⬜ 2026-07-14 runtime не надав жодного доступного браузера;
   автоматизований code/DOM QA пройдено, але pixel-perfect pass не заявляється.
 

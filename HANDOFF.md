@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.56.** Read
+> **Current product baseline: Stage 5 UA / P2.57.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -122,8 +122,10 @@ Home into a four-action hub and gives every game an explicit Start → Finish �
 three curated play choices while saying one is enough, adds a calm timer, one-time calendar
 reminders, a low-effort post-play cue, and a sourced parent minute. P2.56 replaces the Home deck
 and nested tabs with one contextual next action plus stable secondary routes, and aligns the
-bottom navigation with Today → Observation → Game → Records. The visible asset baseline is
-`20260714-p2-56-r1`; these additions do not change
+bottom navigation with Today → Observation → Game → Records. P2.57 then makes one complete
+activity the Game focus, moves alternatives behind an optional disclosure, locks route-changing
+controls during active/unsaved play and makes stopping the primary post-play choice. The visible
+asset baseline is `20260714-p2-57-r1`; these additions do not change
 the product's safety rules or make draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
@@ -173,8 +175,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 > completed author-card backlog, simulate feedback, or call draft content validated.
 
 1. **Automated quality rebuild** — currently active. Follow
-   `docs/product_quality_rebuild_tracker_ua.md`; the next implementation step is simplifying
-   Game to one visible activity and one primary completion action, followed by the design-system pass.
+   `docs/product_quality_rebuild_tracker_ua.md`; the next implementation step is the visual
+   design-system pass: semantic colors, restrained surfaces, consistent button/icon states and gradients.
 2. **Motion Cards review** — use the isolated reviewer flow and collection dashboard already in
    Stage 5; collect real reviewer decisions for the 59 cards and retain their provenance. The
    production inventory is `docs/motion_cards_production_manifest_ua.md`.
@@ -211,6 +213,19 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — P2.57 one focused Game and protected session flow
+- Moved the complete selected activity, visible pre-start safety and session controls ahead of
+  all alternatives. The two optional ideas now live in a closed “Хочете іншу гру?” disclosure;
+  the selected game, numbering, completion count and “three ideas” framing were removed.
+- Centralized the play-flow lock. Context, alternative and saved-game changes — including direct
+  handler calls — cannot hide an active session or an unsaved diary reflection; direct Start is
+  blocked until that reflection is saved.
+- Made “На сьогодні все” the sole primary post-play action. “Ще одна за бажанням” and reminder
+  remain secondary, and tests exercise Save → Done through the delegated handlers while proving
+  the same diary entry remains stored.
+- Bumped the current build/cache marker to P2.57 / `20260714-p2-57-r1`; automated regression,
+  syntax and diff checks pass. Live browser/device verification remains open.
 
 ### 2026-07-14 — P2.56 contextual Home and primary navigation
 - Replaced the four-card vertical deck and nested Home tabs with the existing contextual

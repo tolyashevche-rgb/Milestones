@@ -1695,9 +1695,14 @@ function contextStatusText(context, found = true, done = false) {
   if (context === "low_energy") return "Показуємо полегшений варіант. Одного маленького кроку достатньо.";
   return "Показуємо основну рекомендацію для сьогодні.";
 }
+function playFlowLocked(child = cc()) {
+  return Boolean(child?.activePlaySession)
+    || Boolean(child?.playDiary?.some((entry) => !entry.saved
+      && String(entry.endedAt || "").slice(0, 10) === localDateString()));
+}
 function playContextHtml(age) {
   const done = completedActivityIdsToday(age).length >= 3;
-  const flowLocked = Boolean(cc().activePlaySession) || cc().playDiary.some((entry) => !entry.saved && String(entry.endedAt).slice(0, 10) === localDateString());
+  const flowLocked = playFlowLocked();
   const active = programState.context || "any";
   const status = flowLocked ? "Спершу завершіть поточну гру й збережіть коротку відмітку." : (done ? contextStatusText(active, true, true) : (programState.contextNotice || contextStatusText(active)));
   return `<details class="play-context" ${active !== "any" || flowLocked ? "open" : ""}>
@@ -1730,18 +1735,18 @@ function dailyPlayChoiceIds(age, day) {
 }
 function dailyPlayMenuHtml(age, day) {
   const selected = programState.selected[day.day] || day.options[0];
-  const ids = dailyPlayChoiceIds(age, day);
-  const labels = ["Основна", "Інша сфера", "Ще одна"];
-  const flowLocked = Boolean(cc().activePlaySession) || cc().playDiary.some((entry) => !entry.saved && String(entry.endedAt).slice(0, 10) === localDateString());
-  return `<section class="daily-play-menu" aria-labelledby="dailyPlayMenuTitle">
-    <div class="daily-play-menu-head"><h2 id="dailyPlayMenuTitle">3 ідеї на сьогодні</h2><span>${completedActivityIdsToday(age).length} ✓</span></div>
-    <div class="daily-play-options">${ids.map((id, index) => {
+  const ids = dailyPlayChoiceIds(age, day).filter((id) => id !== selected);
+  if (!ids.length) return "";
+  const flowLocked = playFlowLocked();
+  return `<details class="daily-play-menu">
+    <summary id="dailyPlayAlternatives"><span>Хочете іншу гру?</span><small>Необов’язково</small></summary>
+    <div class="daily-play-options" role="group" aria-labelledby="dailyPlayAlternatives">${ids.map((id) => {
       const activity = activityById(age, id);
       const done = activityCompletedToday(age, id);
-      return `<button type="button" data-daily-play-choice="${id}" aria-pressed="${id === selected}" class="daily-play-option ${id === selected ? "active" : ""} ${done ? "done" : ""}" ${flowLocked && id !== selected ? "disabled" : ""}><span>${index + 1}${done ? " · ✓" : ""}</span><strong>${esc(activity.title)}</strong><small>⏱ ${esc(activity.time)}</small></button>`;
+      return `<button type="button" data-daily-play-choice="${id}" class="daily-play-option${done ? " done" : ""}" ${flowLocked ? "disabled" : ""}><strong>${esc(activity.title)}</strong><small>${done ? "Збережено · " : ""}${esc(activity.time)}</small></button>`;
     }).join("")}</div>
-    <p class="daily-play-hint">Одна — достатньо. Решта за бажанням.</p>
-  </section>`;
+    <p class="daily-play-hint">${flowLocked ? "Спершу завершіть поточну гру й збережіть коротку відмітку." : "Одна гра на сьогодні — достатньо."}</p>
+  </details>`;
 }
 
 function activePlaySession(age, activityId, child = cc()) {
@@ -1761,7 +1766,7 @@ function activityHasMinimumSafety(activity) {
 function startPlaySession(age, activityId) {
   const activity = activityById(age, activityId);
   if (!activityHasMinimumSafety(activity)) return false;
-  if (cc().activePlaySession) return false;
+  if (playFlowLocked()) return false;
   if (!activityCompletedToday(age, activityId) && completedActivityIdsToday(age).length >= 3) return false;
   cc().activePlaySession = { activityId, age, startedAt: new Date().toISOString() };
   ensurePlayTimer(activityId);
@@ -1823,7 +1828,7 @@ function playContinueHtml(entry) {
   const scheduling = entry.nextChoice === "later";
   return `<section class="play-continue" aria-labelledby="playContinueTitle">
     <div class="play-step-label"><span>3</span><strong id="playContinueTitle">Що далі?</strong></div>
-    <div class="play-continue-actions"><button type="button" class="btn primary" data-play-next="now" data-entry-id="${entry.id}">Ще одна зараз</button><button type="button" class="btn ghost" data-play-next="later" data-entry-id="${entry.id}">Нагадати пізніше</button><button type="button" class="linklike" data-play-next="done" data-entry-id="${entry.id}">На сьогодні все</button></div>
+    <div class="play-continue-actions"><button type="button" class="btn primary" data-play-next="done" data-entry-id="${entry.id}">На сьогодні все</button><button type="button" class="btn ghost" data-play-next="now" data-entry-id="${entry.id}">Ще одна за бажанням</button><button type="button" class="linklike" data-play-next="later" data-entry-id="${entry.id}">Нагадати пізніше</button></div>
     ${scheduling ? playScheduleHtml(entry) : ""}
   </section>`;
 }
@@ -2163,14 +2168,14 @@ function todayActivityHtml(age, d) {
   const sel = programState.selected[d.day] || d.options[0];
   const selectedDomain = domainOf(sel) || d.domain;
   return `
-    ${dailyPlayMenuHtml(age, d)}
     <article class="day-acc open today-game">
       <div class="today-game-head">
         <span class="day-num">Сьогодні</span>
         <span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span>
       </div>
       <div class="day-acc-body">${activityDetailHtml(age, sel, programState.context === "low_energy")}${playSessionControlsHtml(age, sel)}</div>
-    </article>`;
+    </article>
+    ${dailyPlayMenuHtml(age, d)}`;
 }
 
 function favoriteIcon(filled = false) {
@@ -2182,10 +2187,11 @@ function favoriteActivityIds(age) {
 function savedGamesHtml(age) {
   const ids = favoriteActivityIds(age);
   if (!ids.length) return "";
+  const flowLocked = playFlowLocked();
   return `<details class="saved-games"><summary><span>Збережені ігри</span><span class="saved-count">${ids.length}</span></summary>
     <div class="saved-game-list">${ids.map((id) => {
       const activity = activityById(age, id);
-      return `<button type="button" class="saved-game" data-saved-game="${id}"><strong>${esc(activity.title)}</strong><span>${esc(activity.time)} · ${esc(activity.materials)}</span></button>`;
+      return `<button type="button" class="saved-game" data-saved-game="${id}" ${flowLocked ? "disabled" : ""}><strong>${esc(activity.title)}</strong><span>${esc(activity.time)} · ${esc(activity.materials)}</span></button>`;
     }).join("")}</div></details>`;
 }
 function activityReactionHtml(age, activityId) {
@@ -2932,7 +2938,7 @@ document.addEventListener("click", async (e) => {
     if (entry.signal) cc().activitySignals[activitySignalKey(entry.age, entry.activityId)] = entry.signal;
     if (String(entry.note || "").trim()) cc().activityNotes[key] = entry.note;
     save(); renderProgramList();
-    document.querySelector(`[data-play-next="now"][data-entry-id="${entry.id}"]`)?.focus({ preventScroll: true });
+    document.querySelector(`[data-play-next="done"][data-entry-id="${entry.id}"]`)?.focus({ preventScroll: true });
     return;
   }
   const playNext = e.target.closest("[data-play-next]");
@@ -2980,7 +2986,7 @@ document.addEventListener("click", async (e) => {
   const contextButton = e.target.closest("[data-play-context]");
   if (contextButton) {
     const requested = contextButton.dataset.playContext;
-    if (!PLAY_CONTEXT_IDS.includes(requested) || contextButton.disabled) return;
+    if (!PLAY_CONTEXT_IDS.includes(requested) || contextButton.disabled || playFlowLocked()) return;
     const currentDay = programState.program.find((day) => day.day === programState.currentDay);
     const replacement = requested === "any" ? (currentDay && currentDay.options[0]) : contextActivityId(programState.age, requested);
     if (!replacement) {
@@ -3015,7 +3021,7 @@ document.addEventListener("click", async (e) => {
   if (dailyChoice) {
     const id = dailyChoice.dataset.dailyPlayChoice;
     const day = programState.currentDay;
-    if (!activityById(programState.age, id) || day == null) return;
+    if (dailyChoice.disabled || playFlowLocked() || !activityById(programState.age, id) || day == null) return;
     programState.context = "any";
     programState.contextNotice = "";
     cc().playContext = "any";
@@ -3027,14 +3033,14 @@ document.addEventListener("click", async (e) => {
     }
     save();
     renderProgramList();
-    document.querySelector(`[data-daily-play-choice="${id}"]`)?.focus({ preventScroll: true });
+    document.getElementById("dailyPlayAlternatives")?.focus({ preventScroll: true });
     return;
   }
   const savedGameButton = e.target.closest("[data-saved-game]");
   if (savedGameButton) {
     const id = savedGameButton.dataset.savedGame;
     const day = programState.currentDay;
-    if (!activityById(programState.age, id) || day == null) return;
+    if (savedGameButton.disabled || playFlowLocked() || !activityById(programState.age, id) || day == null) return;
     programState.context = "any";
     programState.contextNotice = "";
     cc().playContext = "any";

@@ -27,14 +27,14 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.56", "audit scope must identify the current release");
+  assert.equal(auditScope.release, "P2.57", "audit scope must identify the current release");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.56"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.56"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.57"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.57"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -67,8 +67,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260714-p2-56-r1"), "Stage5 assets must use the P2.56 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-56-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-57-r1"), "Stage5 assets must use the P2.57 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-57-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation"') && !stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation-review"'), "the ordinary app must not enable internal reviewer routing");
   assert.ok(motionReviewHtml.includes('MILESTONES_BUILD_CHANNEL = "validation-review"') && motionReviewHtml.includes('name="robots" content="noindex,nofollow"'), "Motion review needs a separate noindex internal entry point");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
@@ -79,6 +79,8 @@ function testContentAndEngine() {
   assert.ok(stage5Styles.includes(".home-secondary-links") && !stage5Styles.includes(".home-action-deck") && !stage5Styles.includes(".home-tab-viewport"), "home must use a calm document flow without nested deck or tab scrolling");
   assert.ok(stage5App.includes("homeNextStepHtml(nextStep)") && stage5App.includes("homeSecondaryLinksHtml(tested)"), "home must render the contextual next step before secondary routes");
   assert.ok(!stage5App.includes("function initHomeDeck()") && !stage5App.includes("function activateHomeTab("), "retired home deck and tab controllers must not ship");
+  assert.ok(stage5App.includes("function playFlowLocked(") && stage5App.includes('<details class="daily-play-menu">') && !stage5App.includes("3 ідеї на сьогодні"), "Game must protect the active flow and keep alternative activities optional");
+  assert.ok(stage5App.includes('class="btn primary" data-play-next="done"') && stage5App.includes("Ще одна за бажанням"), "post-play completion must make stopping the primary choice");
   assert.ok(stage5App.includes('document.getElementById("toggleTodayDone")?.focus'), "program updates must restore focus to the thumb action");
   assert.ok(stage5App.includes('class="private-moments"') && stage5App.includes('data-delete-moment='), "E6 needs a bounded local moments view with individual deletion");
   assert.ok(stage5App.includes('"DTEND:"') && !stage5App.includes("RRULE:FREQ=DAILY"), "calendar reminders must be single events without a hidden recurring series");
@@ -92,7 +94,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-56-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-57-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -493,9 +495,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-56-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-56-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-56-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-57-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-57-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-57-r1"), "the sourced library must be cached offline");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -1149,8 +1151,39 @@ function testAppState() {
     const upcomingMarkup = dayAccordionHtml(4, upcomingProgramDay);
     const savedMarkup = savedGamesHtml(4);
     const selectedPlayId = programState.selected[currentProgramDay.day] || currentProgramDay.options[0];
-    first.activePlaySession = { activityId: selectedPlayId, age: 4, startedAt: new Date().toISOString() };
+    const alternativeIds = dailyPlayChoiceIds(4, currentProgramDay).filter((id) => id !== selectedPlayId);
+    const focusedPlayOkay = (todayMarkup.match(/class="activity-title-row"/g) || []).length === 1
+      && todayMarkup.includes('<details class="daily-play-menu"')
+      && !todayMarkup.includes('<details class="daily-play-menu" open')
+      && todayMarkup.indexOf('class="day-acc open today-game"') < todayMarkup.indexOf('<details class="daily-play-menu"')
+      && (todayMarkup.match(/data-daily-play-choice=/g) || []).length === alternativeIds.length
+      && alternativeIds.every((id) => todayMarkup.includes('data-daily-play-choice="' + id + '"'))
+      && !todayMarkup.includes('data-daily-play-choice="' + selectedPlayId + '"')
+      && !todayMarkup.includes("3 ідеї на сьогодні")
+      && todayMarkup.includes("Хочете іншу гру?");
+    const activeSessionObject = { activityId: selectedPlayId, age: 4, startedAt: new Date().toISOString() };
+    first.activePlaySession = activeSessionObject;
     const activeSessionMarkup = playSessionControlsHtml(4, selectedPlayId);
+    const otherPlayId = alternativeIds[0];
+    const addedAlternativeFavorite = Boolean(otherPlayId && !first.favoriteActivities.includes(otherPlayId));
+    if (addedAlternativeFavorite) first.favoriteActivities.push(otherPlayId);
+    const selectedBeforeLock = programState.selected[currentProgramDay.day] || currentProgramDay.options[0];
+    const lockedAlternativesMarkup = dailyPlayMenuHtml(4, currentProgramDay);
+    const lockedContextMarkup = playContextHtml(4);
+    const lockedSavedMarkup = savedGamesHtml(4);
+    if (otherPlayId) {
+      const lockedChoiceNode = { dataset: { dailyPlayChoice: otherPlayId }, disabled: false };
+      __listeners.click({ target: { id: "", closest: (selector) => selector === "[data-daily-play-choice]" ? lockedChoiceNode : null } });
+      const lockedSavedNode = { dataset: { savedGame: otherPlayId }, disabled: false };
+      __listeners.click({ target: { id: "", closest: (selector) => selector === "[data-saved-game]" ? lockedSavedNode : null } });
+    }
+    const flowLockOkay = playFlowLocked()
+      && (lockedAlternativesMarkup.match(/ disabled/g) || []).length === alternativeIds.length
+      && (lockedContextMarkup.match(/ disabled/g) || []).length === PLAY_CONTEXTS.length
+      && (!otherPlayId || lockedSavedMarkup.includes('data-saved-game="' + otherPlayId + '" disabled'))
+      && (programState.selected[currentProgramDay.day] || currentProgramDay.options[0]) === selectedBeforeLock
+      && first.activePlaySession === activeSessionObject;
+    if (addedAlternativeFavorite) first.favoriteActivities.splice(first.favoriteActivities.indexOf(otherPlayId), 1);
     first.activePlaySession = null;
     const diaryProbe = { id: "play_probe", age: 4, activityId: selectedPlayId, startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), durationSeconds: 125, reaction: "liked", signal: "voice", note: "Усміхнулася на голос.", saved: false, nextChoice: "" };
     first.playDiary.unshift(diaryProbe);
@@ -1170,11 +1203,28 @@ function testAppState() {
       && !playSessionControlsHtml(4, selectedPlayId).includes('id="startPlaySession"');
     selectedActivity.stop = selectedStop;
     const sessionStarted = startPlaySession(4, selectedPlayId);
-    const otherPlayId = dailyPlayChoiceIds(4, currentProgramDay).find((id) => id !== selectedPlayId);
     const parallelSessionBlocked = otherPlayId ? !startPlaySession(4, otherPlayId) : true;
     const finishedSession = finishPlaySession(4, selectedPlayId);
+    const unsavedSessionBlocksStart = otherPlayId ? !startPlaySession(4, otherPlayId) : true;
     const sessionLifecycleOkay = sessionStarted && parallelSessionBlocked && finishedSession && !first.activePlaySession
+      && unsavedSessionBlocksStart
       && first.playDiary[0].id === finishedSession.id && first.playDiary[0].saved === false;
+    const saveFinishedNode = { dataset: { savePlayEntry: finishedSession.id } };
+    __listeners.click({ target: { id: "", closest: (selector) => selector === "[data-save-play-entry]" ? saveFinishedNode : null } });
+    const savedContinueMarkup = playSessionControlsHtml(4, selectedPlayId);
+    const calmFinishOkay = savedContinueMarkup.includes('class="btn primary" data-play-next="done"')
+      && (savedContinueMarkup.match(/class="btn primary"/g) || []).length === 1
+      && savedContinueMarkup.includes("На сьогодні все")
+      && savedContinueMarkup.includes("Ще одна за бажанням")
+      && savedContinueMarkup.includes("Нагадати пізніше");
+    location.hash = "#/program";
+    const doneNode = { dataset: { playNext: "done", entryId: finishedSession.id } };
+    __listeners.click({ target: { id: "", closest: (selector) => selector === "[data-play-next]" ? doneNode : null } });
+    const diaryFinishOkay = first.playDiary.includes(finishedSession)
+      && finishedSession.saved === true
+      && finishedSession.nextChoice === "done"
+      && location.hash === "#/home";
+    location.hash = "#/program";
     const releaseGateOkay = canonicalPromptsOnly
       && draftAuthorHidden
       && safetyEscapesHtml
@@ -1190,8 +1240,10 @@ function testAppState() {
       && reflectionMarkup.includes('data-diary-note="play_probe"')
       && reflectionMarkup.includes("пам’ять про момент, не оцінка дитини")
       && savedMarkup.includes('data-saved-game="' + playStep.task.act.id + '"');
-    const livelyDayOkay = (todayMarkup.match(/data-daily-play-choice=/g) || []).length === 3
-      && todayMarkup.includes("Одна — достатньо")
+    const livelyDayOkay = focusedPlayOkay
+      && flowLockOkay
+      && calmFinishOkay
+      && diaryFinishOkay
       && todayMarkup.includes('<details class="activity-more">')
       && playContextHtml(4).includes('<details class="play-context"')
       && playContextHtml(4).includes("Підібрати під момент")
@@ -1205,7 +1257,8 @@ function testAppState() {
       && activeSessionMarkup.includes('id="finishPlaySession"')
       && activeSessionMarkup.includes("таймер")
       && reflectionMarkup.includes("Зберегти в щоденник")
-      && continueMarkupAfterPlay.includes("Ще одна зараз")
+      && continueMarkupAfterPlay.includes("Ще одна за бажанням")
+      && continueMarkupAfterPlay.includes("На сьогодні все")
       && continueMarkupAfterPlay.includes("Нагадати пізніше")
       && scheduleMarkup.includes('type="time"')
       && scheduleMarkup.includes("Сьогодні") && scheduleMarkup.includes("Завтра")
@@ -1360,7 +1413,7 @@ function testAppState() {
   assert.equal(result.historyOkay, true, "history comparison must support old snapshots and describe answer changes");
   assert.equal(result.homeNextStepOkay, true, "home must expose one contextual primary action followed by secondary routes in document flow");
   assert.equal(result.programUiOkay, true, "program must keep today's game open and future days secondary");
-  assert.equal(result.livelyDayOkay, true, "P2.56 must preserve the compact play lifecycle");
+  assert.equal(result.livelyDayOkay, true, "Game must show one primary activity, keep alternatives optional, and preserve the full play diary lifecycle");
   assert.equal(result.compactResultsOkay, true, "results must lead with one next step and keep detailed answers collapsed");
   assert.equal(result.specialistPrepOkay, true, "specialist prep must keep one overview, three structured notes, and a copyable summary");
   assert.equal(result.oneThumbSurveyOkay, true, "survey answers must save and advance without a separate next button");
@@ -1389,7 +1442,7 @@ function testAppState() {
   testReviewBuildIsolation();
   await testServiceWorker();
   await testPwaInstallUi();
-  console.log("P1/P2/E4 QA passed: one contextual Home action with stable secondary routes, compact Game and one-glance Results, explicit play sessions, optional timer, diary and reminders, preserved specialist routing, 60 visual guides with safety details, 5 ages, content integrity, guarded local storage, offline shell, backup/restore, migration, and multi-child isolation.");
+  console.log("P1/P2/E4 QA passed: one contextual Home action, one focused Game with optional alternatives, one-glance Results, protected play sessions, diary and reminders, preserved specialist routing, 60 visual guides with safety details, 5 ages, content integrity, guarded local storage, offline shell, backup/restore, migration, and multi-child isolation.");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;
