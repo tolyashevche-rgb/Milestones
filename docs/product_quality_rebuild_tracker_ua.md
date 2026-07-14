@@ -28,11 +28,16 @@ free + subscription.
 | 2 | ✅ | Усунути втрату даних при повторному спостереженні | Нове спостереження не стирає play diary, reactions, notes або completions | P2.54 · `eaef86f` |
 | 3 | ✅ | Додати release gates і видиму safety-смугу | Draft-вміст не видається за approved; safety/stop видно до Start | P2.55 · `b675669` |
 | 4 | ✅ | Спростити Home і маршрути | Один контекстний next step; без deck/nested scroll; стабільна навігація | P2.56 · `b4ea9dd` |
-| 5 | ✅ | Спростити Game і дизайн-систему | Одна основна гра; одна primary action; узгоджені кнопки, іконки, кольори, градієнти | P2.57 · `cbba1bf`; P2.58 · `style: consolidate visual system and controls` |
-| 6 | ✅ | Accessibility, responsive, recovery і PWA | Touch/contrast/zoom/keyboard; tablet layout; recovery states; lean safe cache | P2.59 · `fix: harden accessibility recovery and offline core` |
-| 7 | 🔄 | Повна регресія і UI-перевірка | QA/syntax/diff/E2E; ключові маршрути на mobile/tablet/desktop; фінальний список залишку | — |
-| 8 | ⛔ | Expert review і 5 parent sessions | Реальні рішення експертів і реальні moderated sessions; нічого не симулюється | Після кроку 7 |
-| 9 | ⛔ | Підготовка subscription | Перевірено recurring value/WTP; визначено free safety floor; backend/entitlements/privacy спроєктовані | Після validation |
+| 5 | ✅ | Спростити Game і дизайн-систему | Одна основна гра; одна primary action; узгоджені кнопки, іконки, кольори, градієнти | P2.57 · `cbba1bf`; P2.58 · `c2ad968` |
+| 6 | ✅ | Accessibility, responsive, recovery і PWA | Touch/contrast/zoom/keyboard; tablet layout; recovery states; lean safe cache | P2.59 · `431c667` |
+| 7 | ✅ | Закрити вікові межі, route prerequisites і доступ до даних | До 2 міс доступні data controls; після 12 міс немає нового 12-міс flow; incomplete Results → Survey | P2.60 · `fix: close age and result route gaps` |
+| 8 | ⬜ | Закрити import/startup schema й XSS | Один strict validator; canonical IDs/timestamps; malformed local data → recovery | Наступний крок |
+| 9 | ⬜ | Виправити multi-play attribution | Кожна нотатка/реакція належить конкретній грі; undo іншої гри її не стирає | Після кроку 8 |
+| 10 | ⬜ | Захистити кілька вкладок/PWA від silent overwrite | Store revision, conflict detection і зовнішнє оновлення без втрати | Після кроку 9 |
+| 11 | ⬜ | Item-level content gate і age-safe Library | 27 `NEEDS_REVIEW` не потрапляють у parent Game; Library age-first | Після кроку 10 |
+| 12 | 🔄 | Повна регресія, незалежний аудит і live UI-перевірка | QA/syntax/diff; фінальний реєстр; mobile/tablet/desktop та assistive tech | Автоматизована частина в роботі; live browser недоступний |
+| 13 | ⛔ | Expert review і 5 parent sessions | Реальні рішення експертів і реальні moderated sessions; нічого не симулюється | Після кроку 12 |
+| 14 | ⛔ | Підготовка subscription | Перевірено recurring value/WTP; визначено free safety floor; backend/entitlements/privacy спроєктовані | Після validation |
 
 ## Зафіксовані продуктові рішення
 
@@ -63,7 +68,9 @@ free + subscription.
   contrast calculations and 44–48 px touch-target guards: ✅.
 - P2.59 route/focus/ARIA hardening, ≤400 px source-level reflow, pre-onboarding restore,
   strict backup diary IDs and a 452,488-byte core shell with lazy visual caching: ✅.
-- Live browser/device pass: ⬜ 2026-07-14 runtime не надав жодного доступного браузера;
+- P2.60 pre-2 data controls, post-12 completion state, editable aged-out profiles and
+  Results/unknown-route canonicalization: ✅.
+- Live browser/device pass: ⛔ 2026-07-14 runtime не надав жодного доступного браузера;
   автоматизований code/DOM QA пройдено, але pixel-perfect pass не заявляється.
 
 ## Залишається після автоматизованої перебудови

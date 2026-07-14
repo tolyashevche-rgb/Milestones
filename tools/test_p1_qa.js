@@ -43,15 +43,15 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.59", "audit scope must identify the current release");
-  assert.equal(auditScope.assetVersion, "20260714-p2-59-r1", "audit scope must identify the current asset version");
+  assert.equal(auditScope.release, "P2.60", "audit scope must identify the current release");
+  assert.equal(auditScope.assetVersion, "20260714-p2-60-r1", "audit scope must identify the current asset version");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.59"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.59"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.60"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.60"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -84,8 +84,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260714-p2-59-r1"), "Stage5 assets must use the P2.59 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-59-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-60-r1"), "Stage5 assets must use the P2.60 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-60-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation"') && !stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation-review"'), "the ordinary app must not enable internal reviewer routing");
   assert.ok(motionReviewHtml.includes('MILESTONES_BUILD_CHANNEL = "validation-review"') && motionReviewHtml.includes('name="robots" content="noindex,nofollow"'), "Motion review needs a separate noindex internal entry point");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
@@ -139,7 +139,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-59-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-60-r1"'), "service worker cache must be versioned");
   assert.ok(serviceWorker.includes("const CORE_SHELL = ["), "PWA install must separate the functional core from optional visuals");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
@@ -545,6 +545,15 @@ function testParentRouteAndControlRecovery() {
     const secondaryBackEnabled = !back.disabled && back.tabIndex === 0 && back.ariaHidden === "";
 
     const age = currentAge();
+    location.hash = "#/results";
+    route();
+    const incompleteResultsCanonical = location.hash === "#/survey"
+      && document.getElementById("screen").innerHTML.includes('id="questionTitle"')
+      && !document.getElementById("screen").innerHTML.includes("Готово");
+    location.hash = "#/unknown-route";
+    route();
+    const unknownRouteCanonical = location.hash === "#/home"
+      && document.getElementById("screen").innerHTML.includes("Сьогодні");
     const ids = questionIdsFor(age);
     child.surveys[age] = {
       questionIds: ids,
@@ -562,6 +571,10 @@ function testParentRouteAndControlRecovery() {
 
     child.surveys[age].states = Object.fromEntries(ids.map((id) => [id, "yes"]));
     child.surveys[age].date = new Date().toISOString();
+    location.hash = "#/results";
+    route();
+    const completedResultsRemain = location.hash === "#/results"
+      && document.getElementById("screen").innerHTML.includes("Готово");
     child.playDiary = [];
     child.activePlaySession = null;
     location.hash = "#/program";
@@ -640,7 +653,8 @@ function testParentRouteAndControlRecovery() {
 
     return {
       routeOkay: staleRoutesCanonical && explicitAddWorks && explicitEditWorks
-        && inactiveBackHidden && secondaryBackEnabled && sameHashRestartWorks,
+        && inactiveBackHidden && secondaryBackEnabled && sameHashRestartWorks
+        && incompleteResultsCanonical && unknownRouteCanonical && completedResultsRemain,
       nestedControlsOkay: nestedStartWorks && nestedFinishWorks,
       semanticsOkay: reflectionSemantics && uniqueInstanceIds && labelInNameOkay && reducedMotionOkay && libraryDebounceOkay,
       secureBackupIds
@@ -716,9 +730,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-59-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-59-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-59-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-60-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-60-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-60-r1"), "the sourced library must be cached offline");
   assert.ok(!cachedShell.some((entry) => entry.includes("motion_cards") || entry.includes("activity-tummy-time")), "optional illustrations must not block core installation");
 
   const failingInstallListeners = {};
@@ -942,7 +956,8 @@ function testAppState() {
       [-1, null], [0, null], [1, null],
       [2, 2], [3, 2], [4, 4], [5, 4],
       [6, 6], [7, 6], [8, 6],
-      [9, 9], [10, 9], [11, 9], [12, 12]
+      [9, 9], [10, 9], [11, 9], [12, 12],
+      [13, null], [120, null]
     ].every(([months, expected]) => ageWindowFor(months) === expected);
     const oneMonthAgo = new Date();
     oneMonthAgo.setDate(1);
@@ -956,16 +971,40 @@ function testAppState() {
     const beforeFirstAppbar = document.getElementById("appbarChild").innerHTML;
     const beforeFirstOkay = currentAge() === null
       && beforeFirstHome.includes("Перший чекліст ще попереду")
+      && ["exportBackup", "chooseBackup", "editProfile", "deleteChild", "eraseAll"].every((id) => beforeFirstHome.includes('id="' + id + '"'))
       && beforeFirstSurvey.includes("Поверніться у 2 місяці")
       && !beforeFirstSurvey.includes('class="state-controls"')
       && (IS_MOTION_REVIEW_BUILD ? beforeFirstAppbar.includes("Перевірка Motion Cards") : beforeFirstAppbar.includes("До 2 міс"))
       && !beforeFirstAppbar.includes("undefined")
       && !Object.prototype.hasOwnProperty.call(beforeFirst.surveys, "null")
       && !Object.prototype.hasOwnProperty.call(beforeFirst.surveys, "2");
+    const afterScope = freshChild("Старша", localDateString(thirteenMonthsAgo));
+    store.children.push(afterScope);
+    store.activeChildId = afterScope.id;
+    const afterScopeHome = renderHome();
+    const afterScopeSurvey = renderSurvey();
+    renderAppbar("home");
+    const afterScopeAppbar = document.getElementById("appbarChild").innerHTML;
+    profileMode = "edit";
+    const afterScopeEdit = renderProfile();
+    profileMode = "add";
+    const afterScopeNew = renderProfile();
+    profileMode = null;
+    const afterScopeOkay = currentAge() === null
+      && afterScopeHome.includes("Маршрут 0–12 місяців завершено")
+      && afterScopeHome.includes('data-go="progress"')
+      && ["exportBackup", "chooseBackup", "editProfile", "deleteChild", "eraseAll"].every((id) => afterScopeHome.includes('id="' + id + '"'))
+      && !afterScopeHome.includes("Почати спостереження")
+      && afterScopeSurvey.includes("Нових чеклістів та ігор для цього віку поки немає")
+      && (IS_MOTION_REVIEW_BUILD ? afterScopeAppbar.includes("Перевірка Motion Cards") : afterScopeAppbar.includes("0–12 міс завершено"))
+      && afterScopeEdit.includes('value="Старша"')
+      && !/id="profileSave"[^>]*disabled/.test(afterScopeEdit)
+      && afterScopeNew.includes('id="profileSave"') && afterScopeNew.includes("disabled");
     store.children = [first, second];
     store.activeChildId = first.id;
     const correctedAgeOkay = youngerWindowOkay
       && beforeFirstOkay
+      && afterScopeOkay
       && usesCorrectedAge(preterm)
       && ageWindowFor(developmentalMonths(preterm)) === 4
       && validateProfileDates(preterm.dob, preterm.expectedDueDate).corrected
@@ -973,7 +1012,7 @@ function testAppState() {
       && validateProfileDates(preterm.dob, preterm.dob).field === "expectedDueDate"
       && !usesCorrectedAge(nearTerm)
       && validateProfileDates(nearTerm.dob, nearTerm.expectedDueDate).earlyButNotCorrected
-      && Boolean(validateProfileDates(localDateString(thirteenMonthsAgo), localDateString(nearTermOldDue)).error)
+      && validateProfileDates(localDateString(thirteenMonthsAgo), localDateString(nearTermOldDue)).outOfScope
       && profileMarkup.includes('id="expectedDueDate"')
       && profileMarkup.includes("не оцінка розвитку");
 

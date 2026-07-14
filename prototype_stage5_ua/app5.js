@@ -733,12 +733,12 @@ function validateProfileDates(dobStr, expectedDueDate = "") {
       earlyButNotCorrected = true;
     }
   }
-  if (months > 12) return { months, corrected, error: "Зараз застосунок підтримує вік до 12 місяців.", field: corrected ? "expectedDueDate" : "dob" };
-  return { months, corrected, earlyButNotCorrected, error: "", field: "" };
+  return { months, corrected, earlyButNotCorrected, outOfScope: months > AGES[AGES.length - 1], error: "", field: "" };
 }
 function validateDob(dobStr) { return validateProfileDates(dobStr); }
 function profileAgeHint(check) {
   if (!check || check.months == null || check.error) return "";
+  if (check.outOfScope) return "Маршрут Milestones зараз охоплює 0–12 місяців. Збережені записи й керування даними залишаться доступними.";
   const age = ageWindowFor(check.months);
   if (age == null) {
     if (check.corrected && check.months < 0) return "Очікувана дата пологів ще попереду. Перший блок спостереження стане доступним у 2 місяці скоригованого віку.";
@@ -750,9 +750,14 @@ function profileAgeHint(check) {
   if (check.earlyButNotCorrected) return `Різниця не перевищує 3 тижні, тому показуватимемо питання для віку ${label} за датою народження.`;
   return `Показуватимемо питання для віку ${label}.`;
 }
+function profileFormError(check, editing = profileMode === "edit") {
+  if (check?.error) return check.error;
+  if (check?.outOfScope && !editing) return "Новий профіль можна створити для дитини віком до 12 місяців.";
+  return "";
+}
 // Use the youngest completed CDC window. Never advance a child to an older checklist early.
 function ageWindowFor(months) {
-  if (!Number.isFinite(months) || months < AGES[0]) return null;
+  if (!Number.isFinite(months) || months < AGES[0] || months > AGES[AGES.length - 1]) return null;
   return AGES.reduce((window, age) => age <= months ? age : window, null);
 }
 function nextCheckAge(age) { return AGES.find((a) => a > age) || null; }
@@ -814,9 +819,30 @@ function askedStats(age) {
 function currentAge() { const c = cc(); return c && c.dob ? ageWindowFor(developmentalMonths(c)) : null; }
 function beforeFirstChecklistHtml(context = "home") {
   const child = cc();
+  const months = developmentalMonths(child);
+  const afterLastChecklist = Number.isFinite(months) && months > AGES[AGES.length - 1];
   const corrected = usesCorrectedAge(child);
   const ageBasis = corrected ? " скоригованого віку" : "";
   const homeAction = context === "home" ? "" : `<button type="button" class="btn ghost block" data-go="home">На головну</button>`;
+  const editAction = context === "home" ? "" : `<button type="button" id="editProfile" class="linklike">Перевірити дату в профілі</button>`;
+  const homeControls = context === "home" ? homeDataControlsHtml() : "";
+  if (afterLastChecklist) {
+    return `
+      <section class="screen-pad">
+        <h1 tabindex="-1">Маршрут 0–12 місяців завершено</h1>
+        <article class="card empty-state">
+          <span class="mini-label">Після 12 місяців</span>
+          <h2>Нових чеклістів та ігор для цього віку поки немає</h2>
+          <p class="muted">Ми не продовжуємо 12-місячний блок після завершення його вікового вікна. Ваші попередні спостереження, щоденник гри та нотатки залишаються доступними.</p>
+          <button type="button" class="btn primary block" data-go="progress">Відкрити записи</button>
+          <button type="button" class="btn ghost block" data-go="library">Відкрити короткі матеріали</button>
+          ${homeAction}
+          ${editAction}
+        </article>
+        <p class="note">Якщо щось турбує або дитина втратила навичку, не чекайте нового модуля застосунку — зверніться до педіатра або іншого фахівця.</p>
+        ${homeControls}
+      </section>`;
+  }
   return `
     <section class="screen-pad">
       <h1 tabindex="-1">Перший чекліст ще попереду</h1>
@@ -826,9 +852,10 @@ function beforeFirstChecklistHtml(context = "home") {
         <p class="muted">Ми навмисно не показуємо запитання для старшого віку завчасно. До цього можна читати короткі матеріали й просто спостерігати за звичайними моментами без перевірок.</p>
         <button type="button" class="btn primary block" data-go="library">Відкрити короткі матеріали</button>
         ${homeAction}
-        <button type="button" id="editProfile" class="linklike">Перевірити дату в профілі</button>
+        ${editAction}
       </article>
       <p class="note">Якщо вас щось турбує, не чекайте вікового чекліста — занотуйте конкретний приклад і зверніться до педіатра або іншого фахівця.</p>
+      ${homeControls}
     </section>`;
 }
 function profileForSurvey(survey, age) {
@@ -1097,7 +1124,17 @@ function route() {
     return show("home");
   }
   const known = ["home", "survey", "results", "program", "progress", "ask", "library", "profile", "consent", "welcome"];
-  show(known.includes(r) ? r : "home");
+  let target = known.includes(r) ? r : "home";
+  if (target !== r) replaceHash(target);
+  if (target === "results") {
+    const age = currentAge();
+    const survey = age == null ? null : cc().surveys[age];
+    if (!survey || !survey.date) {
+      target = "survey";
+      replaceHash(target);
+    }
+  }
+  show(target);
 }
 
 function show(screen) {
@@ -1196,9 +1233,12 @@ function renderAppbar(screen) {
   const active = cc();
   const opts = store.children.map((c, i) =>
     `<option value="${c.id}"${c.id === active.id ? " selected" : ""}>${esc(c.name || ("Дитина " + (i + 1)))}</option>`).join("");
-  const age = currentAge();
-  const ageTag = age == null
-    ? `До 2 міс${usesCorrectedAge(active) ? " · скориг." : ""}`
+  const months = developmentalMonths(active);
+  const age = ageWindowFor(months);
+  const ageTag = Number.isFinite(months) && months > AGES[AGES.length - 1]
+    ? "0–12 міс завершено"
+    : age == null
+      ? `До 2 міс${usesCorrectedAge(active) ? " · скориг." : ""}`
     : (usesCorrectedAge(active) ? `${age} міс · скориг.` : AGE_LABELS[age]);
   slot.innerHTML =
     `<select id="childSwitch" class="appbar-select" aria-label="Активна дитина">${opts}<option value="__add">Додати дитину</option></select>` +
@@ -1244,6 +1284,7 @@ function renderProfile() {
   const editing = profileMode === "edit";
   const c = editing ? (cc() || {}) : {};
   const profileCheck = c.dob ? validateProfileDates(c.dob, c.expectedDueDate || "") : { months: null, error: "" };
+  const formError = profileFormError(profileCheck, editing);
   const ageHint = profileAgeHint(profileCheck);
   return `
     <section class="screen-pad">
@@ -1258,8 +1299,8 @@ function renderProfile() {
         <p id="correctedAgeNote" class="corrected-age-note">Дата допомагає лише обрати віковий блок. Це не оцінка розвитку дитини.</p>
       </details>
       <div id="ageHint" class="age-hint">${ageHint}</div>
-      <div id="profileError" class="field-error" role="alert">${esc(profileCheck.error)}</div>
-      <button type="button" id="profileSave" class="btn primary block" ${profileCheck.error || !c.dob ? "disabled" : ""}>${editing ? "Зберегти зміни" : "Зберегти і продовжити"}</button>
+      <div id="profileError" class="field-error" role="alert">${esc(formError)}</div>
+      <button type="button" id="profileSave" class="btn primary block" ${formError || !c.dob ? "disabled" : ""}>${editing ? "Зберегти зміни" : "Зберегти і продовжити"}</button>
     </section>`;
 }
 
@@ -1388,6 +1429,37 @@ function homeSecondaryLinksHtml(tested) {
   </section>`;
 }
 
+function homeDataControlsHtml() {
+  return `
+    <details class="data-controls">
+      <summary>Керування профілем і даними</summary>
+      <div class="install-controls">
+        <p id="installHelp" class="muted small">Щоб відкривати Milestones одним дотиком, у меню браузера оберіть «Додати на головний екран».</p>
+        <button type="button" id="installApp" class="btn ghost" hidden>Встановити на телефон</button>
+        <p id="installStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
+      </div>
+      <div id="updateControls" class="update-controls" hidden>
+        <p class="muted small">Нова версія вже готова. Поточні відповіді збережені локально.</p>
+        <button type="button" id="applyUpdate" class="btn ghost">Оновити зараз</button>
+        <p id="updateStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
+      </div>
+      <div class="backup-controls">
+        <p class="muted small">Резервна копія залишається у вас. Вона містить локальні спостереження, тому зберігайте файл приватно.</p>
+        <div class="backup-actions">
+          <button type="button" id="exportBackup" class="btn ghost">Зберегти копію</button>
+          <button type="button" id="chooseBackup" class="btn">Відновити з файлу</button>
+          <input id="importBackup" class="visually-hidden" type="file" accept="application/json,.json" tabindex="-1">
+        </div>
+        <p id="backupStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true">${esc(dataNotice)}</p>
+      </div>
+      <div class="home-danger">
+        <button type="button" id="editProfile" class="linklike">Редагувати профіль</button>
+        <button type="button" id="deleteChild" class="linklike danger">Видалити цю дитину</button>
+        <button type="button" id="eraseAll" class="linklike danger">Стерти всі мої дані</button>
+      </div>
+    </details>`;
+}
+
 function renderHome() {
   const age = currentAge();
   if (age == null) return beforeFirstChecklistHtml("home");
@@ -1410,33 +1482,7 @@ function renderHome() {
       ${homeSecondaryLinksHtml(tested)}
 
       ${next ? `<p class="note">Наступний віковий чекліст — приблизно у ${next} місяців. Спостереження й звернення при занепокоєнні не потрібно відкладати до цієї дати.</p>` : ""}
-      <details class="data-controls">
-        <summary>Керування профілем і даними</summary>
-        <div class="install-controls">
-          <p id="installHelp" class="muted small">Щоб відкривати Milestones одним дотиком, у меню браузера оберіть «Додати на головний екран».</p>
-          <button type="button" id="installApp" class="btn ghost" hidden>Встановити на телефон</button>
-          <p id="installStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
-        </div>
-        <div id="updateControls" class="update-controls" hidden>
-          <p class="muted small">Нова версія вже готова. Поточні відповіді збережені локально.</p>
-          <button type="button" id="applyUpdate" class="btn ghost">Оновити зараз</button>
-          <p id="updateStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
-        </div>
-        <div class="backup-controls">
-          <p class="muted small">Резервна копія залишається у вас. Вона містить локальні спостереження, тому зберігайте файл приватно.</p>
-          <div class="backup-actions">
-            <button type="button" id="exportBackup" class="btn ghost">Зберегти копію</button>
-            <button type="button" id="chooseBackup" class="btn">Відновити з файлу</button>
-            <input id="importBackup" class="visually-hidden" type="file" accept="application/json,.json" tabindex="-1">
-          </div>
-          <p id="backupStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true">${esc(dataNotice)}</p>
-        </div>
-        <div class="home-danger">
-          <button type="button" id="editProfile" class="linklike">Редагувати профіль</button>
-          <button type="button" id="deleteChild" class="linklike danger">Видалити цю дитину</button>
-          <button type="button" id="eraseAll" class="linklike danger">Стерти всі мої дані</button>
-        </div>
-      </details>
+      ${homeDataControlsHtml()}
     </section>`;
 }
 
@@ -1690,7 +1736,8 @@ function resultFocusHtml(profile) {
 function renderResults() {
   const age = currentAge();
   if (age == null) return beforeFirstChecklistHtml("results");
-  const survey = cc().surveys[age] || { states: {} };
+  const survey = cc().surveys[age];
+  if (!survey || !survey.date) return renderSurvey();
   const profile = profileForSurvey(survey, age);
   const flagged = (survey.questionIds || []).map((id) => milestoneById(age, id)).filter((m) => m && (survey.states[m.id] === "not_yet" || survey.states[m.id] === "not_sure") && DISCUSS_BY_ID[m.id]);
   const discuss = flagged.length ? `
@@ -2965,10 +3012,11 @@ document.addEventListener("click", async (e) => {
     const dob = document.getElementById("childDob").value;
     const expectedDueDate = document.getElementById("expectedDueDate")?.value || "";
     const checked = validateProfileDates(dob, expectedDueDate);
+    const validationError = profileFormError(checked);
     const error = document.getElementById("profileError");
     const input = document.getElementById(checked.field === "expectedDueDate" ? "expectedDueDate" : "childDob");
-    if (checked.error) {
-      if (error) error.textContent = checked.error;
+    if (validationError) {
+      if (error) error.textContent = validationError;
       if (input) { input.setAttribute("aria-invalid", "true"); input.focus(); }
       return;
     }
@@ -3394,9 +3442,10 @@ document.addEventListener("input", (e) => {
     const error = document.getElementById("profileError");
     const button = document.getElementById("profileSave");
     const checked = validateProfileDates(dobInput?.value || "", dueInput?.value || "");
+    const validationError = profileFormError(checked);
     if (hint) hint.textContent = profileAgeHint(checked);
-    if (error) error.textContent = checked.error;
-    if (button) button.disabled = Boolean(checked.error || !dobInput?.value);
+    if (error) error.textContent = validationError;
+    if (button) button.disabled = Boolean(validationError || !dobInput?.value);
     dobInput?.toggleAttribute("aria-invalid", checked.field === "dob");
     dueInput?.toggleAttribute("aria-invalid", checked.field === "expectedDueDate");
   }

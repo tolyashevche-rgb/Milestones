@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.59.** Read
+> **Current product baseline: Stage 5 UA / P2.60.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -127,9 +127,10 @@ activity the Game focus, moves alternatives behind an optional disclosure, locks
 controls during active/unsaved play and makes stopping the primary post-play choice. P2.58
 consolidates semantic colors, solid controls, restraint in elevation and one shared outline-SVG
 family across parent-facing actions. P2.59 then hardens route/focus semantics, narrow reflow,
-recovery and a 442 KiB functional offline core. The visible asset baseline is
-`20260714-p2-59-r1`; neither release changes the product's safety rules or makes draft content
-expert-validated.
+recovery and a 442 KiB functional offline core. P2.60 adds an honest post-12-month state,
+keeps data controls reachable before the first checklist and prevents incomplete Results.
+The visible asset baseline is `20260714-p2-60-r1`; none of these releases changes the product's
+safety rules or makes draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
 and teal remains the action/trust color. A derived seven-day recap appears only after at least
@@ -216,6 +217,17 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — P2.60 honest age scope, route prerequisites and data rights
+- Profiles below the first two-month checkpoint now retain the same collapsed install, update,
+  backup, restore, edit, child-delete and erase-all controls as every other Home state.
+- Added an explicit post-12-month completion state: no new 12-month observation or game is offered,
+  while Records, Library, profile editing, export and deletion remain reachable. The appbar no
+  longer labels an older child as currently 12 months.
+- Incomplete `#/results` links now replace-route to Observation, completed Results remain stable,
+  and unknown hashes canonicalize to Home without adding a misleading history entry.
+- Bumped the build/cache marker to P2.60 / `20260714-p2-60-r1`; automated age-boundary, route,
+  syntax, regression and diff guards pass. Live browser/device verification remains open.
 
 ### 2026-07-14 — P2.59 accessibility, reflow, recovery and lean PWA core
 - Fixed two interaction defects found after the SVG pass: clicks on nested Start/Finish contents now
