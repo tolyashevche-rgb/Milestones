@@ -178,14 +178,14 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ## What's next (prioritized)
 
 > **Assistant told only "continue" / "давай продовжимо"? Do this:** do not enable GitHub Pages;
-> public preview is paused. Continue the first unfinished step in
-> [the quality rebuild tracker](docs/product_quality_rebuild_tracker_ua.md), make one logical
-> commit, record its checks, then advance the tracker. Do not build a parallel UI, reopen the
-> completed author-card backlog, simulate feedback, or call draft content validated.
+> public preview is paused. The automated P2.53–P2.64 baseline and source audit are complete.
+> Read [the audit](docs/product_quality_audit_ua.md) and
+> [the quality rebuild tracker](docs/product_quality_rebuild_tracker_ua.md). The next gates require
+> a live browser/device, real experts or real parents; report that dependency unless the user supplies
+> the needed evidence or environment. Do not simulate feedback or call draft content validated.
 
-1. **Automated quality rebuild** — currently active. Follow
-   `docs/product_quality_rebuild_tracker_ua.md`; the next implementation step is the final automated
-   regression/audit report and an explicit inventory of manual browser, expert, parent and commercial gates.
+1. **Live UI/device/accessibility matrix** — run the prepared smoke checklist on real browsers,
+   physical devices, keyboard/zoom and assistive technology; record actual evidence only.
 2. **Motion Cards review** — use the isolated reviewer flow and collection dashboard already in
    Stage 5; collect real reviewer decisions for the 59 cards and retain their provenance. The
    production inventory is `docs/motion_cards_production_manifest_ua.md`.
@@ -222,6 +222,14 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — independent product-quality audit finalized
+- Published `docs/product_quality_audit_ua.md`: product, routes, UI/UX, colors, controls, icons,
+  gradients, responsive/accessibility, functionality, content, safety, privacy, free and paid model.
+- Automated P2.53–P2.64 implementation baseline is complete and green. Public Free remains
+  NO-GO until live device/a11y, expert, parent and privacy gates; subscription remains HOLD until
+  longitudinal retention, willingness-to-pay and backend/legal architecture are evidenced.
+- No live browser, physical-device, screen-reader, clinician or parent pass is claimed.
 
 ### 2026-07-14 — P2.64 fail-closed activity boundary and age-safe Library
 - Added a CSV-verified runtime allowlist: ordinary validation can use only 33 structurally

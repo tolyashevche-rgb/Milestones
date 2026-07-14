@@ -16,10 +16,10 @@ scoring, or replacing a professional.
 > **Resuming work or switching assistants?** Start with [HANDOFF.md](HANDOFF.md) — current
 > state, decisions, what's next, and how to run/verify, in one place.
 
-> **Active quality rebuild (2026-07-14):** feature expansion is frozen. Implementation proceeds
-> one verified commit at a time through
-> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.64 is the
-> current completed content-boundary and age-safe Library step in that sequence.
+> **Automated quality baseline complete (2026-07-14):** P2.53–P2.64 were implemented one
+> verified commit at a time. See the [independent product-quality audit](docs/product_quality_audit_ua.md)
+> and [rebuild tracker](docs/product_quality_rebuild_tracker_ua.md). Live device/accessibility,
+> expert, parent and business gates remain explicitly open.
 
 ---
 
@@ -152,7 +152,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   canonical Back behavior; nested Start/Finish targets, same-route re-observation, reduced motion,
   grouped controls, unique ARIA references and live-status updates are regression-tested. Narrow
   screens reflow instead of relying on nested horizontal scrolling. Corrupt local data exposes
-  restore before overwrite. The mandatory PWA install is 18 core entries / about 471 KiB; large
+  restore before overwrite. The mandatory PWA install is 18 core entries / about 472 KiB; large
   illustrations cache only after use and quota failures cannot swallow successful online responses.
 - **P2.58 restrained visual system:** parent-facing screens now use semantic teal, mint, warm,
   danger and focus tokens; solid primary/outline secondary controls; consistent radii and weak

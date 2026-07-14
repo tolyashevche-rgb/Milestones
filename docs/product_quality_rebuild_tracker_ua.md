@@ -30,14 +30,16 @@ free + subscription.
 | 4 | ✅ | Спростити Home і маршрути | Один контекстний next step; без deck/nested scroll; стабільна навігація | P2.56 · `b4ea9dd` |
 | 5 | ✅ | Спростити Game і дизайн-систему | Одна основна гра; одна primary action; узгоджені кнопки, іконки, кольори, градієнти | P2.57 · `cbba1bf`; P2.58 · `c2ad968` |
 | 6 | ✅ | Accessibility, responsive, recovery і PWA | Touch/contrast/zoom/keyboard; tablet layout; recovery states; lean safe cache | P2.59 · `431c667` |
-| 7 | ✅ | Закрити вікові межі, route prerequisites і доступ до даних | До 2 міс доступні data controls; після 12 міс немає нового 12-міс flow; incomplete Results → Survey | P2.60 · `fix: close age and result route gaps` |
-| 8 | ✅ | Закрити import/startup schema й XSS | Один strict validator; canonical IDs/timestamps; malformed local data → recovery | P2.61 · `fix: validate stored data before use` |
-| 9 | ✅ | Виправити multi-play attribution | Кожна нотатка/реакція належить конкретній грі; undo іншої гри її не стирає | P2.62 · `fix: keep play memories activity-specific` |
-| 10 | ✅ | Захистити кілька вкладок/PWA від silent overwrite | Store revision, conflict detection і зовнішнє оновлення без втрати | P2.63 · `fix: prevent stale tab overwrites` |
-| 11 | ✅ | Item-level content gate і age-safe Library | 27 `NEEDS_REVIEW` не потрапляють у parent Game; Library age-first | P2.64 · `fix: enforce content release boundaries` |
-| 12 | 🔄 | Повна регресія, незалежний аудит і live UI-перевірка | QA/syntax/diff; фінальний реєстр; mobile/tablet/desktop та assistive tech | Автоматизована частина в роботі; live browser недоступний |
-| 13 | ⛔ | Expert review і 5 parent sessions | Реальні рішення експертів і реальні moderated sessions; нічого не симулюється | Після кроку 12 |
-| 14 | ⛔ | Підготовка subscription | Перевірено recurring value/WTP; визначено free safety floor; backend/entitlements/privacy спроєктовані | Після validation |
+| 7 | ✅ | Закрити вікові межі, route prerequisites і доступ до даних | До 2 міс доступні data controls; після 12 міс немає нового 12-міс flow; incomplete Results → Survey | P2.60 · `a5e4b71` |
+| 8 | ✅ | Закрити import/startup schema й XSS | Один strict validator; canonical IDs/timestamps; malformed local data → recovery | P2.61 · `ae1dafe` |
+| 9 | ✅ | Виправити multi-play attribution | Кожна нотатка/реакція належить конкретній грі; undo іншої гри її не стирає | P2.62 · `706c6d2` |
+| 10 | ✅ | Захистити кілька вкладок/PWA від silent overwrite | Store revision, conflict detection і зовнішнє оновлення без втрати | P2.63 · `a85a23d` |
+| 11 | ✅ | Item-level content gate і age-safe Library | 27 `NEEDS_REVIEW` не потрапляють у parent Game; Library age-first | P2.64 · `edd4388` |
+| 12 | ✅ | Повна автоматизована регресія й незалежний source-аудит | QA/syntax/diff зелені; опубліковано фінальний реєстр рекомендацій | `docs: publish independent product quality audit` |
+| 13 | ⛔ | Live UI/device/accessibility matrix | Mobile/tablet/desktop, keyboard, zoom і assistive tech пройдені реально | Runtime без браузера; потрібні фізичні/живі середовища |
+| 14 | ⛔ | Expert review | Реальні рішення для 54 milestones, 60 activities, 60 visual guides (59 Motion Cards + 1 tummy-time guide) і 13 library drafts | Нічого не симулюється |
+| 15 | ⛔ | 5 moderated parent sessions | Core tasks виконані без критичної допомоги; safety зрозуміла | Після expert permission + live smoke |
+| 16 | ⛔ | Підготовка subscription | Перевірено recurring value/WTP; визначено free safety floor; backend/entitlements/privacy спроєктовані | Після longitudinal validation |
 
 ## Зафіксовані продуктові рішення
 
@@ -78,6 +80,7 @@ free + subscription.
   and malformed external-payload rejection: ✅.
 - P2.64 CSV-verified 33/27 activity gate, fail-closed future release, safe stale-data handling and
   age-scoped Library defaults/search/suggestions with an explicit all-ages action: ✅.
+- Незалежний source-аудит усіх заявлених параметрів і пріоритетний реєстр рекомендацій: ✅.
 - Live browser/device pass: ⛔ 2026-07-14 runtime не надав жодного доступного браузера;
   автоматизований code/DOM QA пройдено, але pixel-perfect pass не заявляється.
 
@@ -85,7 +88,7 @@ free + subscription.
 
 - Реальний clinician/expert sign-off для всього parent-facing developmental content.
 - Рішення експертів для 27 `NEEDS_REVIEW` activity safety rows.
-- Review 60 Motion Cards із зафіксованим provenance.
+- Review 60 visual guides: 59 Motion Cards + 1 окремий tummy-time guide, із provenance.
 - П’ять перших parent sessions за готовим facilitator pack.
 - Юридичний/privacy review перед cloud sync, акаунтами або оплатою.
 - Willingness-to-pay і retention evidence перед реалізацією subscription.
