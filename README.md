@@ -1,6 +1,6 @@
 # Milestones — personalized child-development assistant
 
-> **CURRENT BUILD: Stage 5 UA / P2.61.** Before running or auditing the product, read
+> **CURRENT BUILD: Stage 5 UA / P2.62.** Before running or auditing the product, read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md). The only current UI entry point is
 > `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references, not valid
 > evidence for a current UI/UX audit.
@@ -18,8 +18,8 @@ scoring, or replacing a professional.
 
 > **Active quality rebuild (2026-07-14):** feature expansion is frozen. Implementation proceeds
 > one verified commit at a time through
-> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.61 is the
-> current completed stored-data schema and import-security step in that sequence.
+> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.62 is the
+> current completed per-activity play-memory step in that sequence.
 
 ---
 
@@ -36,7 +36,7 @@ Milestones/
 │   └── app.js                 ← UI wiring
 ├── prototype_stage4_ua/       ← runtime data/engine; UI is a LEGACY reference
 │   └── data_ua.js  engine.js  app.js  legacy-reference.html
-├── prototype_stage5_ua/       ← CURRENT guided UA app (P2.61)
+├── prototype_stage5_ua/       ← CURRENT guided UA app (P2.62)
 │   └── index.html app5.js styles5.css questions_ua.js illustrations.js authors_ua.js (reuses stage4 data+engine)
 ├── docs/                      ← project documentation
 │   ├── safety_rules.md        ← SINGLE SOURCE OF TRUTH for claims/guardrails
@@ -117,7 +117,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
-> Release **P2.61** is the current product baseline. The P2.16 material below is retained
+> Release **P2.62** is the current product baseline. The P2.16 material below is retained
 > as historical implementation context, not as the current audit target. See
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) for the exact entry point and audit preflight.
 
@@ -125,6 +125,10 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   GitHub Pages remains disabled by owner decision. If public review is approved later, the workflow
   will run the full Stage 5 QA suite and deploy only Stage 5 UA plus the two canonical Stage 4 UA
   engine/data files it imports; it cannot run on an ordinary push.
+- **P2.62 per-activity play memory:** notes and reactions now belong to the exact date, age and
+  activity instead of whichever game happened to be the day's latest completion. A second game or
+  undo cannot relabel or erase the first game's note; legacy day-level records migrate, private
+  deletion clears the diary source, and weekly/specialist summaries retain correct attribution.
 - **P2.61 strict startup/import boundary:** local startup and backup restore now share one
   fail-closed schema. Canonical ages, milestone IDs, activity IDs, keys and timestamps are
   allowlisted; hostile snapshot ages and stale sessions are rejected. Parseable corrupt storage

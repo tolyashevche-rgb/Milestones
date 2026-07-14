@@ -548,6 +548,32 @@ function backupPayload(source = store) {
   };
 }
 function isRecord(value) { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
+function normalizeActivityMemories(child) {
+  const fields = [["activityReactions", "reaction"], ["activityNotes", "note"]];
+  for (const [mapName, diaryField] of fields) {
+    const map = child[mapName];
+    for (const entry of child.playDiary || []) {
+      const value = entry?.saved ? entry[diaryField] : "";
+      const ended = new Date(entry?.endedAt || "");
+      if (!value || isNaN(ended) || !activityById(Number(entry.age), entry.activityId)) continue;
+      const specificKey = activityMemoryKey(Number(entry.age), entry.activityId, ended);
+      if (map[specificKey] == null) map[specificKey] = value;
+    }
+    for (const [legacyKey, value] of Object.entries({ ...map })) {
+      const parsed = parseDayAgeKey(legacyKey);
+      if (!parsed) continue;
+      const alreadyRepresented = (child.playDiary || []).some((entry) => entry?.saved
+        && String(entry.endedAt || "").slice(0, 10) === parsed.date && Number(entry.age) === parsed.age
+        && entry[diaryField] === value);
+      const activityId = child.activityCompletions?.[legacyKey]?.activityId;
+      if (!alreadyRepresented && activityById(parsed.age, activityId)) {
+        const specificKey = activityMemoryKey(parsed.age, activityId, parseLocalDate(parsed.date));
+        if (map[specificKey] == null) map[specificKey] = value;
+      }
+      delete map[legacyKey];
+    }
+  }
+}
 function normalizeChild(child) {
   child.expectedDueDate = typeof child.expectedDueDate === "string" ? child.expectedDueDate : "";
   child.programSelections = isRecord(child.programSelections) ? child.programSelections : {};
@@ -566,6 +592,7 @@ function normalizeChild(child) {
     if (!ids.includes(completion.activityId)) ids.push(completion.activityId);
     child.dailyPlayCompletions[key] = ids;
   }
+  normalizeActivityMemories(child);
   child.playContext = PLAY_CONTEXT_IDS.includes(child.playContext) ? child.playContext : "any";
   return child;
 }
@@ -1045,11 +1072,22 @@ function weeklyPlaySummary(child = cc(), now = new Date()) {
     const ageInDays = today == null || day == null ? null : today - day;
     if (ageInDays == null || ageInDays < 0 || ageInDays > 6 || !Array.isArray(activityIds) || !activityIds.length) continue;
     summary.count += activityIds.length;
-    if (child.activityReactions?.[key] === "liked") summary.liked += 1;
-    if (child.activityReactions?.[key] === "repeat_later") summary.repeatLater += 1;
-    if (child.activityReactions?.[key] === "not_today") summary.notToday += 1;
-    if (child.activityReactions?.[key] === "hard") summary.hard += 1;
-    if (String(child.activityNotes?.[key] || "").trim()) summary.notes += 1;
+  }
+  for (const [key, reaction] of Object.entries(child.activityReactions || {})) {
+    const parsed = parseActivityDataKey(key) || parseDayAgeKey(key);
+    const date = parsed ? parseLocalDate(parsed.date) : null;
+    const ageInDays = date ? today - calendarDayNumber(date) : Infinity;
+    if (!parsed || ageInDays < 0 || ageInDays > 6) continue;
+    if (reaction === "liked") summary.liked += 1;
+    if (reaction === "repeat_later") summary.repeatLater += 1;
+    if (reaction === "not_today") summary.notToday += 1;
+    if (reaction === "hard") summary.hard += 1;
+  }
+  for (const [key, note] of Object.entries(child.activityNotes || {})) {
+    const parsed = parseActivityDataKey(key) || parseDayAgeKey(key);
+    const date = parsed ? parseLocalDate(parsed.date) : null;
+    const ageInDays = date ? today - calendarDayNumber(date) : Infinity;
+    if (parsed && ageInDays >= 0 && ageInDays <= 6 && String(note).trim()) summary.notes += 1;
   }
   return summary;
 }
@@ -1093,7 +1131,8 @@ function currentProgramDayIndex(survey, programLength) {
   const elapsed = started == null || today == null ? 0 : Math.max(0, today - started);
   return elapsed % programLength;
 }
-function completionKey(age) { return `${localDateString()}:${age}`; }
+function completionKey(age, date = new Date()) { return `${localDateString(date)}:${age}`; }
+function activityMemoryKey(age, activityId, date = new Date()) { return `${completionKey(age, date)}:${activityId}`; }
 function completedActivityToday(age) { return cc().activityCompletions[completionKey(age)] || null; }
 function completedActivityIdsToday(age, child = cc()) {
   if (!child) return [];
@@ -1109,7 +1148,7 @@ function activityCompletedToday(age, activityId, child = cc()) {
 function activitySignalKey(age, activityId) { return `${completionKey(age)}:${activityId}`; }
 function toggleActivityCompletion(age, activityId, child = cc(), now = new Date()) {
   if (!child || !activityById(age, activityId)) return false;
-  const key = completionKey(age);
+  const key = completionKey(age, now);
   const ids = completedActivityIdsToday(age, child);
   const existingIndex = ids.indexOf(activityId);
   if (existingIndex >= 0) {
@@ -1121,39 +1160,51 @@ function toggleActivityCompletion(age, activityId, child = cc(), now = new Date(
       if (fallback) child.activityCompletions[key] = { activityId: fallback, completedAt: now.toISOString() };
       else delete child.activityCompletions[key];
     }
-    delete child.activityReactions[key];
-    delete child.activityNotes[key];
     return true;
   }
   if (ids.length >= 3) return false;
   ids.push(activityId);
   child.dailyPlayCompletions[key] = ids;
   child.activityCompletions[key] = { activityId, completedAt: now.toISOString() };
-  delete child.activityReactions[key];
   return true;
 }
 function recentActivityNoteLines(age, child = cc(), now = new Date(), days = 14) {
   const today = calendarDayNumber(now);
   return Object.entries(child?.activityNotes || {}).flatMap(([key, note]) => {
-    const match = /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(key);
-    const date = match ? parseLocalDate(match[1]) : null;
+    const parsed = parseActivityDataKey(key) || parseDayAgeKey(key);
+    const date = parsed ? parseLocalDate(parsed.date) : null;
     const ageInDays = date ? today - calendarDayNumber(date) : Infinity;
-    if (!match || Number(match[2]) !== age || ageInDays < 0 || ageInDays >= days || !String(note).trim()) return [];
-    const activityId = child.activityCompletions?.[key]?.activityId;
+    if (!parsed || parsed.age !== age || ageInDays < 0 || ageInDays >= days || !String(note).trim()) return [];
+    const dayKey = `${parsed.date}:${parsed.age}`;
+    const activityId = parsed.activityId || child.activityCompletions?.[dayKey]?.activityId;
     const activity = activityById(age, activityId);
-    return [`- ${match[1]} · ${activity ? activity.title : "Гра"}: ${String(note).trim()}`];
+    return [`- ${parsed.date} · ${activity ? activity.title : "Гра"}: ${String(note).trim()}`];
   });
 }
 function privateMoments(child = cc(), limit = 3) {
   if (!child) return [];
   return Object.entries(child.activityNotes || {}).flatMap(([key, note]) => {
-    const match = /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(key);
-    if (!match || !String(note).trim()) return [];
-    const age = Number(match[2]);
-    const completion = child.activityCompletions?.[key];
-    const activity = completion?.activityId ? activityById(age, completion.activityId) : null;
-    return [{ key, date: match[1], age, title: activity?.title || "Гра разом", note: String(note).trim() }];
+    const parsed = parseActivityDataKey(key) || parseDayAgeKey(key);
+    if (!parsed || !String(note).trim()) return [];
+    const dayKey = `${parsed.date}:${parsed.age}`;
+    const activityId = parsed.activityId || child.activityCompletions?.[dayKey]?.activityId;
+    const activity = activityId ? activityById(parsed.age, activityId) : null;
+    return [{ key, date: parsed.date, age: parsed.age, title: activity?.title || "Гра разом", note: String(note).trim() }];
   }).sort((a, b) => b.date.localeCompare(a.date)).slice(0, Math.max(0, limit));
+}
+function deletePrivateMomentByKey(key, child = cc()) {
+  if (!child || (!parseActivityDataKey(key) && !parseDayAgeKey(key)) || !child.activityNotes?.[key]) return false;
+  const parsed = parseActivityDataKey(key) || parseDayAgeKey(key);
+  const note = child.activityNotes[key];
+  const dayKey = `${parsed.date}:${parsed.age}`;
+  const activityId = parsed.activityId || child.activityCompletions?.[dayKey]?.activityId;
+  for (const entry of child.playDiary || []) {
+    if (!entry?.saved || String(entry.endedAt || "").slice(0, 10) !== parsed.date
+      || Number(entry.age) !== parsed.age || entry.activityId !== activityId || entry.note !== note) continue;
+    entry.note = "";
+  }
+  delete child.activityNotes[key];
+  return true;
 }
 function privateMomentsHtml(moments) {
   if (!Array.isArray(moments) || !moments.length) return "";
@@ -1908,10 +1959,12 @@ function activityReactionRank(id, child = cc(), now = new Date()) {
   const today = calendarDayNumber(now);
   let rank = 0;
   for (const [key, reaction] of Object.entries(child.activityReactions || {})) {
-    const completion = child.activityCompletions?.[key];
-    if (!completion || completion.activityId !== id) continue;
-    const match = /^(\d{4}-\d{2}-\d{2}):\d+$/.exec(key);
-    const date = match ? parseLocalDate(match[1]) : null;
+    const parsed = parseActivityDataKey(key) || parseDayAgeKey(key);
+    if (!parsed) continue;
+    const dayKey = `${parsed.date}:${parsed.age}`;
+    const activityId = parsed.activityId || child.activityCompletions?.[dayKey]?.activityId;
+    if (activityId !== id) continue;
+    const date = parseLocalDate(parsed.date);
     const day = date ? calendarDayNumber(date) : null;
     const ageInDays = today == null || day == null ? Infinity : today - day;
     if (reaction === "liked" && ageInDays <= 30) rank = Math.max(rank, 2);
@@ -2458,7 +2511,7 @@ function savedGamesHtml(age) {
 function activityReactionHtml(age, activityId) {
   const completion = completedActivityToday(age);
   if (!completion || completion.activityId !== activityId) return "";
-  const reaction = cc().activityReactions[completionKey(age)] || "";
+  const reaction = cc().activityReactions[activityMemoryKey(age, activityId)] || "";
   const response = reaction === "repeat_later" ? "Добре — повернемо цю гру не одразу, а за кілька днів."
     : reaction === "hard" ? "Зрозуміло. Це не оцінка дитини — наступні ідеї будуть простішими."
     : "";
@@ -2478,7 +2531,7 @@ function activityReactionHtml(age, activityId) {
 function activityObservationHtml(age, activityId) {
   const completion = completedActivityToday(age);
   if (!completion || completion.activityId !== activityId) return "";
-  const key = completionKey(age);
+  const key = activityMemoryKey(age, activityId);
   const note = cc().activityNotes[key] || "";
   return `<div class="activity-observation">
     <label for="activityObservation"><strong>Що саме ви помітили?</strong><span>Не оцінюйте результат вправи — запишіть конкретний звук, рух, погляд, інтерес або втому.</span></label>
@@ -2924,13 +2977,13 @@ document.addEventListener("click", async (e) => {
   const deleteMoment = e.target.closest("[data-delete-moment]");
   if (deleteMoment) {
     const key = deleteMoment.dataset.deleteMoment;
-    if (!/^\d{4}-\d{2}-\d{2}:\d+$/.test(key) || !cc()?.activityNotes?.[key]) return;
+    if ((!parseActivityDataKey(key) && !parseDayAgeKey(key)) || !cc()?.activityNotes?.[key]) return;
     if (!confirm("Видалити цей приватний момент? Відновити його можна буде лише з раніше збереженої резервної копії.")) return;
     const buttonsBefore = typeof document.querySelectorAll === "function"
       ? Array.from(document.querySelectorAll("[data-delete-moment]"))
       : [];
     const deletedIndex = Math.max(0, buttonsBefore.indexOf(deleteMoment));
-    delete cc().activityNotes[key];
+    if (!deletePrivateMomentByKey(key)) return;
     save();
     const slot = document.getElementById("privateMomentsSlot");
     if (slot) slot.innerHTML = privateMomentsHtml(privateMoments());
@@ -3229,7 +3282,8 @@ document.addEventListener("click", async (e) => {
     const entry = playDiaryEntry(savePlayEntry.dataset.savePlayEntry);
     if (!entry || entry.saved) return;
     entry.saved = true;
-    const key = completionKey(entry.age);
+    const ended = new Date(entry.endedAt);
+    const key = activityMemoryKey(entry.age, entry.activityId, isNaN(ended) ? new Date() : ended);
     if (entry.reaction) cc().activityReactions[key] = entry.reaction;
     if (entry.signal) cc().activitySignals[activitySignalKey(entry.age, entry.activityId)] = entry.signal;
     if (String(entry.note || "").trim()) cc().activityNotes[key] = entry.note;
@@ -3350,7 +3404,9 @@ document.addEventListener("click", async (e) => {
   }
   const reactionButton = e.target.closest("[data-activity-reaction]");
   if (reactionButton) {
-    const key = completionKey(programState.age);
+    const completion = completedActivityToday(programState.age);
+    if (!completion?.activityId) return;
+    const key = activityMemoryKey(programState.age, completion.activityId);
     const reaction = reactionButton.dataset.activityReaction;
     if (!["liked", "repeat_later", "not_today", "hard"].includes(reaction) || !completedActivityToday(programState.age)) return;
     if (cc().activityReactions[key] === reaction) delete cc().activityReactions[key];
@@ -3518,7 +3574,7 @@ document.addEventListener("input", (e) => {
     return;
   }
   const activityNoteKey = e.target.dataset.activityNote;
-  if (activityNoteKey && /^\d{4}-\d{2}-\d{2}:\d+$/.test(activityNoteKey)) {
+  if (activityNoteKey && (parseActivityDataKey(activityNoteKey) || parseDayAgeKey(activityNoteKey))) {
     const value = e.target.value.slice(0, 1000);
     if (value.trim()) cc().activityNotes[activityNoteKey] = value;
     else delete cc().activityNotes[activityNoteKey];

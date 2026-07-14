@@ -43,15 +43,15 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.61", "audit scope must identify the current release");
-  assert.equal(auditScope.assetVersion, "20260714-p2-61-r1", "audit scope must identify the current asset version");
+  assert.equal(auditScope.release, "P2.62", "audit scope must identify the current release");
+  assert.equal(auditScope.assetVersion, "20260714-p2-62-r1", "audit scope must identify the current asset version");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.61"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.61"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.62"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.62"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -84,8 +84,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260714-p2-61-r1"), "Stage5 assets must use the P2.61 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-61-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-62-r1"), "Stage5 assets must use the P2.62 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-62-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation"') && !stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation-review"'), "the ordinary app must not enable internal reviewer routing");
   assert.ok(motionReviewHtml.includes('MILESTONES_BUILD_CHANNEL = "validation-review"') && motionReviewHtml.includes('name="robots" content="noindex,nofollow"'), "Motion review needs a separate noindex internal entry point");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
@@ -139,7 +139,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-61-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-62-r1"'), "service worker cache must be versioned");
   assert.ok(serviceWorker.includes("const CORE_SHELL = ["), "PWA install must separate the functional core from optional visuals");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
@@ -573,6 +573,62 @@ function testStoredDataSchemaRecovery() {
     "invalid JSON localStorage must use the same pre-onboarding recovery path");
 }
 
+function testMultiPlayAttribution() {
+  const context = appContext({ buildChannel: "validation" });
+  const result = vm.runInContext(`(() => {
+    const born = new Date();
+    born.setDate(1);
+    born.setMonth(born.getMonth() - 4);
+    const child = freshChild("Дві гри", localDateString(born));
+    store = { storeSchemaVersion: STORE_SCHEMA_VERSION, consent: { accepted: true }, children: [child], activeChildId: child.id };
+    const age = currentAge();
+    const [firstActivity, secondActivity] = ACTIVITIES_BY_AGE[age];
+    const dayKey = completionKey(age);
+    const firstKey = activityMemoryKey(age, firstActivity.id);
+    const secondKey = activityMemoryKey(age, secondActivity.id);
+
+    toggleActivityCompletion(age, firstActivity.id, child);
+    child.activityNotes[firstKey] = "Нотатка належить першій грі.";
+    child.activityReactions[firstKey] = "liked";
+    toggleActivityCompletion(age, secondActivity.id, child);
+    const momentsAfterSecond = privateMoments(child, 10);
+    const summaryAfterSecond = weeklyPlaySummary(child);
+    const specialistLines = recentActivityNoteLines(age, child);
+    const correctAfterSecond = child.activityCompletions[dayKey].activityId === secondActivity.id
+      && child.activityNotes[firstKey] === "Нотатка належить першій грі."
+      && child.activityNotes[secondKey] == null
+      && momentsAfterSecond.length === 1 && momentsAfterSecond[0].title === firstActivity.title
+      && specialistLines.length === 1 && specialistLines[0].includes(firstActivity.title)
+      && !specialistLines[0].includes(secondActivity.title)
+      && summaryAfterSecond.count === 2 && summaryAfterSecond.notes === 1 && summaryAfterSecond.liked === 1;
+
+    toggleActivityCompletion(age, secondActivity.id, child);
+    const correctAfterUndo = child.activityNotes[firstKey] === "Нотатка належить першій грі."
+      && child.activityReactions[firstKey] === "liked"
+      && privateMoments(child, 10)[0].title === firstActivity.title
+      && activityReactionRank(firstActivity.id, child) > activityReactionRank(secondActivity.id, child);
+
+    child.playDiary = [{ id: "play_2000_abcd", age, activityId: firstActivity.id, startedAt: new Date().toISOString(),
+      endedAt: new Date().toISOString(), durationSeconds: 1, reaction: "liked", signal: "", note: child.activityNotes[firstKey], saved: true, nextChoice: "done" }];
+    const deletionAccepted = deletePrivateMomentByKey(firstKey, child);
+    normalizeChild(child);
+    const deletionPersists = deletionAccepted && child.playDiary[0].note === "" && child.activityNotes[firstKey] == null;
+
+    const legacy = freshChild("Legacy", child.dob);
+    legacy.activityCompletions[dayKey] = { activityId: firstActivity.id, completedAt: new Date().toISOString() };
+    legacy.activityNotes[dayKey] = "Стара нотатка";
+    legacy.activityReactions[dayKey] = "not_today";
+    normalizeChild(legacy);
+    const legacyMigrated = legacy.activityNotes[firstKey] === "Стара нотатка"
+      && legacy.activityReactions[firstKey] === "not_today"
+      && legacy.activityNotes[dayKey] == null && legacy.activityReactions[dayKey] == null;
+
+    return { correctAfterSecond, correctAfterUndo, deletionPersists, legacyMigrated };
+  })()`, context);
+  assert.deepEqual(Object.values(result), [true, true, true, true],
+    "multiple games on one day must keep notes/reactions attributed to the exact activity through undo and migration");
+}
+
 function testParentRouteAndControlRecovery() {
   const context = appContext({ buildChannel: "validation" });
   const result = vm.runInContext(`(() => {
@@ -791,9 +847,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-61-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-61-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-61-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-62-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-62-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-62-r1"), "the sourced library must be cached offline");
   assert.ok(!cachedShell.some((entry) => entry.includes("motion_cards") || entry.includes("activity-tummy-time")), "optional illustrations must not block core installation");
 
   const failingInstallListeners = {};
@@ -1862,6 +1918,7 @@ function testAppState() {
   testAppState();
   testStorageFailureRecovery();
   testStoredDataSchemaRecovery();
+  testMultiPlayAttribution();
   testParentRouteAndControlRecovery();
   testReviewBuildIsolation();
   await testServiceWorker();

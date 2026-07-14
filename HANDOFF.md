@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.61.** Read
+> **Current product baseline: Stage 5 UA / P2.62.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -130,8 +130,9 @@ family across parent-facing actions. P2.59 then hardens route/focus semantics, n
 recovery and a 442 KiB functional offline core. P2.60 adds an honest post-12-month state,
 keeps data controls reachable before the first checklist and prevents incomplete Results.
 P2.61 makes startup and backup restore share a strict canonical schema and closes imported
-snapshot XSS. The visible asset baseline is `20260714-p2-61-r1`; none of these releases changes
-the product's safety rules or makes draft content expert-validated.
+snapshot XSS. P2.62 makes play notes/reactions per-activity so multiple games cannot relabel or
+erase one another. The visible asset baseline is `20260714-p2-62-r1`; none of these releases
+changes the product's safety rules or makes draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
 and teal remains the action/trust color. A derived seven-day recap appears only after at least
@@ -218,6 +219,18 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — P2.62 lossless per-activity play memory
+- Changed notes and reactions from a day+age key to day+age+activity. Completing or undoing a
+  second game no longer relabels or deletes the first game's user-authored observation.
+- Added idempotent migration for legacy day-level memories. Saved per-session diary data takes
+  precedence; legacy-only notes attach to their recorded activity without deleting history.
+- Updated weekly recap, adaptive ranking, private moments and specialist summary to understand
+  exact activity attribution. Private deletion also clears its diary source so the note cannot
+  reappear on the next normalization pass.
+- Added a two-game same-day regression covering empty second notes, undo, title/summary accuracy,
+  deletion persistence and legacy migration. Bumped marker to P2.62 / `20260714-p2-62-r1`;
+  syntax, regression and diff checks pass.
 
 ### 2026-07-14 — P2.61 strict startup/import schema and XSS closure
 - Replaced parse-only startup with the same fail-closed validation pipeline used by backup restore.
