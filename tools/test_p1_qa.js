@@ -43,15 +43,15 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.60", "audit scope must identify the current release");
-  assert.equal(auditScope.assetVersion, "20260714-p2-60-r1", "audit scope must identify the current asset version");
+  assert.equal(auditScope.release, "P2.61", "audit scope must identify the current release");
+  assert.equal(auditScope.assetVersion, "20260714-p2-61-r1", "audit scope must identify the current asset version");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.60"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.60"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.61"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.61"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -84,8 +84,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260714-p2-60-r1"), "Stage5 assets must use the P2.60 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-60-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-61-r1"), "Stage5 assets must use the P2.61 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-61-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation"') && !stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation-review"'), "the ordinary app must not enable internal reviewer routing");
   assert.ok(motionReviewHtml.includes('MILESTONES_BUILD_CHANNEL = "validation-review"') && motionReviewHtml.includes('name="robots" content="noindex,nofollow"'), "Motion review needs a separate noindex internal entry point");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
@@ -139,7 +139,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-60-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-61-r1"'), "service worker cache must be versioned");
   assert.ok(serviceWorker.includes("const CORE_SHELL = ["), "PWA install must separate the functional core from optional visuals");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
@@ -422,6 +422,10 @@ function testContentAndEngine() {
 
 function appContext(options = {}) {
   const storage = new Map();
+  if (Object.prototype.hasOwnProperty.call(options, "initialStore")) {
+    storage.set("milestonesMap.stage5.ua", typeof options.initialStore === "string"
+      ? options.initialStore : JSON.stringify(options.initialStore));
+  }
   let storageWriteFails = Boolean(options.storageWriteFails);
   let storageReadFails = Boolean(options.storageReadFails);
   const listeners = {};
@@ -510,6 +514,63 @@ function testStorageFailureRecovery() {
   assert.equal(recovered.saved, true, "storage must recover without restarting the app");
   assert.equal(recovered.problem, "", "successful save must clear the stale failure state");
   assert.equal(recovered.hidden, true, "recovered storage must hide the warning");
+}
+
+function testStoredDataSchemaRecovery() {
+  const context = appContext({ buildChannel: "validation" });
+  const result = vm.runInContext(`(() => {
+    const born = new Date();
+    born.setDate(1);
+    born.setMonth(born.getMonth() - 4);
+    const child = freshChild("Безпечний профіль", localDateString(born));
+    store = { storeSchemaVersion: STORE_SCHEMA_VERSION, consent: { accepted: true, date: new Date().toISOString() }, children: [child], activeChildId: child.id };
+    const age = currentAge();
+    const ids = questionIdsFor(age);
+    const now = new Date().toISOString();
+    child.surveys[age] = { questionIds: ids, states: Object.fromEntries(ids.map((id) => [id, "yes"])), variants: {}, date: now };
+    child.snapshots = [{ id: "snap_100", date: now, age, questionIds: ids, states: { ...child.surveys[age].states }, counts: { observed: ids.length, notSure: 0, notYet: 0 } }];
+    const good = backupPayload();
+    const clone = (value) => JSON.parse(JSON.stringify(value));
+
+    const snapshotXss = clone(good);
+    snapshotXss.data.children[0].snapshots[0].age = '<img src=x onerror="alert(1)">';
+    const unknownQuestion = clone(good);
+    unknownQuestion.data.children[0].surveys[age].questionIds[0] = "ms_unknown";
+    const unknownDaily = clone(good);
+    unknownDaily.data.children[0].dailyPlayCompletions[localDateString() + ":" + age] = ["act_unknown"];
+    const staleSession = clone(good);
+    staleSession.data.children[0].activePlaySession = { age, activityId: "act_unknown", startedAt: now };
+    const invalidDiary = clone(good);
+    const activityId = ACTIVITIES_BY_AGE[age][0].id;
+    invalidDiary.data.children[0].playDiary = [{ id: "play_1000_abcd", age, activityId, startedAt: now, endedAt: "2020-01-01T00:00:00.000Z", durationSeconds: -1, reaction: "", signal: "", note: "", saved: true, nextChoice: "done" }];
+    const unsafeKey = clone(good);
+    unsafeKey.data.children[0].surveys[age].states = JSON.parse('{"__proto__":"yes"}');
+    const escapedHistory = historySnapshotHtml({ age: '<svg onload="alert(1)">', date: now, states: {}, questionIds: [] }, null, true);
+
+    return {
+      good: validateBackupPayload(good).ok,
+      snapshotRejected: !validateBackupPayload(snapshotXss).ok,
+      questionRejected: !validateBackupPayload(unknownQuestion).ok,
+      dailyRejected: !validateBackupPayload(unknownDaily).ok,
+      sessionRejected: !validateBackupPayload(staleSession).ok,
+      diaryRejected: !validateBackupPayload(invalidDiary).ok,
+      unsafeKeyRejected: !validateBackupPayload(unsafeKey).ok,
+      historyEscaped: escapedHistory.includes("&lt;svg onload=&quot;alert(1)&quot;&gt;") && !escapedHistory.includes('<svg onload="alert(1)">')
+    };
+  })()`, context);
+  assert.deepEqual(Object.values(result), [true, true, true, true, true, true, true, true],
+    "startup/import schema must reject hostile canonical fields while renderers escape as defense-in-depth");
+
+  const malformedContext = appContext({ initialStore: { storeSchemaVersion: 1, consent: { accepted: true }, children: [null], activeChildId: null } });
+  const malformed = vm.runInContext(`({ problem: storageProblem, markup: document.getElementById("screen").innerHTML, children: store.children.length })`, malformedContext);
+  assert.ok(malformed.problem.includes("прочитати локальні дані") && malformed.children === 0
+    && malformed.markup.includes('id="chooseBackup"') && malformed.markup.includes("Продовжити без відновлення"),
+  "parseable malformed localStorage must reach recovery without overwriting the raw source");
+
+  const invalidJsonContext = appContext({ initialStore: "{not-json" });
+  const invalidJson = vm.runInContext(`({ problem: storageProblem, markup: document.getElementById("screen").innerHTML })`, invalidJsonContext);
+  assert.ok(invalidJson.problem && invalidJson.markup.includes('id="chooseBackup"'),
+    "invalid JSON localStorage must use the same pre-onboarding recovery path");
 }
 
 function testParentRouteAndControlRecovery() {
@@ -730,9 +791,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-60-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-60-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-60-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-61-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-61-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-61-r1"), "the sourced library must be cached offline");
   assert.ok(!cachedShell.some((entry) => entry.includes("motion_cards") || entry.includes("activity-tummy-time")), "optional illustrations must not block core installation");
 
   const failingInstallListeners = {};
@@ -1800,6 +1861,7 @@ function testAppState() {
   testContentAndEngine();
   testAppState();
   testStorageFailureRecovery();
+  testStoredDataSchemaRecovery();
   testParentRouteAndControlRecovery();
   testReviewBuildIsolation();
   await testServiceWorker();

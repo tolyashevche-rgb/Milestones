@@ -84,6 +84,7 @@ const MOTION_REVIEW_CHECKPOINT_SIZE = 10;
 const MAX_MOTION_REVIEW_SESSION_BYTES = 512 * 1024;
 const BACKUP_SCHEMA = "milestones.stage5.ua.backup";
 const BACKUP_VERSION = 1;
+const STORE_SCHEMA_VERSION = 1;
 const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
 const CORRECTED_AGE_MIN_DAYS = 21;
 let storageProblem = "";
@@ -479,11 +480,11 @@ function freshChild(name, dob, expectedDueDate = "") {
            favoriteActivities: [], activityReactions: {}, activityNotes: {}, dailyPlayCompletions: {}, activitySignals: {}, playDiary: [], activePlaySession: null, playContext: "any",
            specialistPrep: emptySpecialistPrep() };
 }
-function freshStore() { return { consent: null, children: [], activeChildId: null }; }
+function freshStore() { return { storeSchemaVersion: STORE_SCHEMA_VERSION, consent: null, children: [], activeChildId: null }; }
 // Migrate the old single-child shape ({consent, child, surveys, ...}) into children[]. Idempotent.
 function migrate(s) {
   if (!s || typeof s !== "object") return freshStore();
-  if (Array.isArray(s.children)) return Object.assign(freshStore(), s);
+  if (Array.isArray(s.children)) return Object.assign(freshStore(), s, { storeSchemaVersion: STORE_SCHEMA_VERSION });
   const st = freshStore();
   st.consent = s.consent || null;
   if (s.child) {
@@ -517,7 +518,10 @@ function renderStorageStatus() {
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return migrate(raw ? JSON.parse(raw) : null);
+    if (!raw) return freshStore();
+    const checked = validateStoredData(JSON.parse(raw));
+    if (!checked.ok) throw new Error(checked.error);
+    return checked.store;
   } catch {
     storageProblem = "Не вдалося прочитати локальні дані. Не закривайте вкладку; скористайтеся резервною копією, якщо вона є.";
     return freshStore();
@@ -565,103 +569,216 @@ function normalizeChild(child) {
   child.playContext = PLAY_CONTEXT_IDS.includes(child.playContext) ? child.playContext : "any";
   return child;
 }
-function validateBackupPayload(payload) {
+function isIsoTimestamp(value) {
+  return typeof value === "string" && value.length <= 64 && !isNaN(new Date(value));
+}
+function hasUnsafeStructure(value, depth = 0) {
+  if (depth > 24) return true;
+  if (Array.isArray(value)) return value.some((item) => hasUnsafeStructure(item, depth + 1));
+  if (!isRecord(value)) return false;
+  const keys = Object.keys(value);
+  if (keys.length > 2000 || keys.some((key) => ["__proto__", "prototype", "constructor"].includes(key))) return true;
+  return keys.some((key) => hasUnsafeStructure(value[key], depth + 1));
+}
+function parseDayAgeKey(key) {
+  const match = /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(key || "");
+  if (!match || !parseLocalDate(match[1]) || !AGES.includes(Number(match[2]))) return null;
+  return { date: match[1], age: Number(match[2]) };
+}
+function parseActivityDataKey(key) {
+  const match = /^(\d{4}-\d{2}-\d{2}):(\d+):([A-Za-z0-9_-]{1,160})$/.exec(key || "");
+  if (!match || !parseLocalDate(match[1]) || !AGES.includes(Number(match[2]))
+    || !activityById(Number(match[2]), match[3])) return null;
+  return { date: match[1], age: Number(match[2]), activityId: match[3] };
+}
+function knownMilestoneIds(age) {
+  return new Set((MILESTONES_BY_AGE[age] || []).map((milestone) => milestone.id));
+}
+function validateStoredData(source) {
   const fail = (error) => ({ ok: false, error });
-  if (!isRecord(payload) || payload.schema !== BACKUP_SCHEMA || payload.version !== BACKUP_VERSION || !isRecord(payload.data)) {
-    return fail("Це не схоже на резервну копію Milestones.");
+  if (!isRecord(source) || hasUnsafeStructure(source)) return fail("Дані мають непідтримувану структуру.");
+  let serialized;
+  try { serialized = JSON.stringify(source); }
+  catch { return fail("Дані не вдалося прочитати."); }
+  if (serialized.length > MAX_BACKUP_BYTES) return fail("Дані перевищують дозволений розмір.");
+  if (source.storeSchemaVersion != null && source.storeSchemaVersion !== STORE_SCHEMA_VERSION) {
+    return fail("Дані створено для непідтримуваної версії застосунку.");
   }
-  const imported = migrate(JSON.parse(JSON.stringify(payload.data)));
-  if (!Array.isArray(imported.children) || imported.children.length > 20) return fail("Файл має непідтримувану структуру.");
-  if (imported.consent != null && (!isRecord(imported.consent) || typeof imported.consent.accepted !== "boolean")) {
-    return fail("У файлі є пошкоджені налаштування.");
+  const imported = migrate(JSON.parse(serialized));
+  if (!Array.isArray(imported.children) || imported.children.length > 20) return fail("Дані мають непідтримувану структуру.");
+  if (imported.consent != null && (!isRecord(imported.consent) || typeof imported.consent.accepted !== "boolean"
+    || (imported.consent.date != null && !isIsoTimestamp(imported.consent.date)))) {
+    return fail("У даних є пошкоджені налаштування.");
   }
   const childIds = new Set();
   for (const child of imported.children) {
     if (!isRecord(child) || typeof child.id !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(child.id) || childIds.has(child.id)) {
-      return fail("У файлі є пошкоджений профіль.");
+      return fail("У даних є пошкоджений профіль.");
     }
     childIds.add(child.id);
     const profileCheck = validateProfileDates(child.dob, child.expectedDueDate || "");
     if (typeof child.name !== "string" || child.name.length > 200
       || (child.expectedDueDate != null && typeof child.expectedDueDate !== "string") || profileCheck.error) {
-      return fail("У файлі є некоректні дані профілю.");
+      return fail("У даних є некоректний профіль.");
     }
-    if (!isRecord(child.surveys) || !Array.isArray(child.snapshots) || !isRecord(child.programSelections)
-      || !isRecord(child.activityCompletions) || !Array.isArray(child.triedActivities)) {
-      return fail("У файлі є пошкоджені дані спостережень.");
+    if (!isRecord(child.surveys) || Object.keys(child.surveys).length > AGES.length
+      || !Array.isArray(child.snapshots) || child.snapshots.length > 1000
+      || !isRecord(child.programSelections) || !isRecord(child.activityCompletions)
+      || !Array.isArray(child.triedActivities)) {
+      return fail("У даних є пошкоджені спостереження.");
     }
-    if (Object.values(child.programSelections).some((selection) => !isRecord(selection))
-      || Object.values(child.activityCompletions).some((completion) => !isRecord(completion))
-      || child.triedActivities.some((id) => typeof id !== "string")
-      || child.snapshots.some((snapshot) => !isRecord(snapshot) || !isRecord(snapshot.states || {})
-        || (snapshot.questionIds != null && !Array.isArray(snapshot.questionIds)))) {
-      return fail("У файлі є пошкоджена історія або план.");
+    for (const [ageKey, survey] of Object.entries(child.surveys)) {
+      const age = Number(ageKey);
+      const knownIds = knownMilestoneIds(age);
+      if (!AGES.includes(age) || String(age) !== ageKey || !isRecord(survey) || !isRecord(survey.states || {})
+        || (survey.questionIds != null && !Array.isArray(survey.questionIds))
+        || (survey.variants != null && !isRecord(survey.variants))
+        || (survey.date != null && !isIsoTimestamp(survey.date))) {
+        return fail("У даних є пошкоджені відповіді.");
+      }
+      const questionIds = survey.questionIds || Object.keys(survey.states || {});
+      const stateIds = Object.keys(survey.states || {});
+      if (questionIds.length > knownIds.size || new Set(questionIds).size !== questionIds.length
+        || questionIds.some((id) => typeof id !== "string" || !knownIds.has(id))
+        || stateIds.some((id) => !knownIds.has(id) || (questionIds.length && !questionIds.includes(id)))
+        || Object.values(survey.states || {}).some((state) => !["yes", "not_sure", "not_yet"].includes(state))
+        || Object.entries(survey.variants || {}).some(([id, variant]) => !knownIds.has(id)
+          || !Number.isInteger(variant) || variant < 0 || variant > 20)) {
+        return fail("У даних є невідоме питання або відповідь.");
+      }
+    }
+    const snapshotIds = new Set();
+    for (const snapshot of child.snapshots) {
+      if (!isRecord(snapshot) || !AGES.includes(Number(snapshot.age)) || Number(snapshot.age) !== snapshot.age
+        || !isRecord(snapshot.states || {}) || (snapshot.questionIds != null && !Array.isArray(snapshot.questionIds))
+        || (snapshot.date != null && !isIsoTimestamp(snapshot.date))
+        || (snapshot.id != null && (typeof snapshot.id !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(snapshot.id)))) {
+        return fail("У даних є пошкоджена історія спостережень.");
+      }
+      if (snapshot.id && snapshotIds.has(snapshot.id)) return fail("У даних є дублікати історії спостережень.");
+      if (snapshot.id) snapshotIds.add(snapshot.id);
+      const knownIds = knownMilestoneIds(snapshot.age);
+      const questionIds = snapshot.questionIds || Object.keys(snapshot.states || {});
+      if (questionIds.length > knownIds.size || new Set(questionIds).size !== questionIds.length
+        || questionIds.some((id) => typeof id !== "string" || !knownIds.has(id))
+        || Object.keys(snapshot.states || {}).some((id) => !knownIds.has(id))
+        || Object.values(snapshot.states || {}).some((state) => !["yes", "not_sure", "not_yet"].includes(state))) {
+        return fail("У даних є невідоме питання в історії.");
+      }
+      if (snapshot.counts != null && (!isRecord(snapshot.counts)
+        || ["observed", "notSure", "notYet"].some((key) => !Number.isFinite(Number(snapshot.counts[key])) || Number(snapshot.counts[key]) < 0))) {
+        return fail("У даних є пошкоджений підсумок спостереження.");
+      }
+    }
+    for (const [ageKey, selection] of Object.entries(child.programSelections)) {
+      const age = Number(ageKey);
+      if (!AGES.includes(age) || String(age) !== ageKey || !isRecord(selection) || Object.keys(selection).length > 14
+        || Object.entries(selection).some(([day, id]) => !/^([1-9]|1[0-4])$/.test(day)
+          || typeof id !== "string" || !activityById(age, id))) {
+        return fail("У даних є пошкоджений план гри.");
+      }
+    }
+    for (const [key, completion] of Object.entries(child.activityCompletions)) {
+      const parsed = parseDayAgeKey(key);
+      if (!parsed || !isRecord(completion) || typeof completion.activityId !== "string"
+        || !activityById(parsed.age, completion.activityId)
+        || (completion.completedAt != null && !isIsoTimestamp(completion.completedAt))) {
+        return fail("У даних є пошкоджене завершення гри.");
+      }
+      if (completion.completedAt == null) completion.completedAt = new Date(`${parsed.date}T12:00:00`).toISOString();
+    }
+    if (child.triedActivities.length > 500 || new Set(child.triedActivities).size !== child.triedActivities.length
+      || child.triedActivities.some((id) => typeof id !== "string" || !AGES.some((age) => activityById(age, id)))) {
+      return fail("У даних є пошкоджена історія ігор.");
     }
     if (child.favoriteActivities != null && (!Array.isArray(child.favoriteActivities)
-      || child.favoriteActivities.length > 500 || child.favoriteActivities.some((id) => typeof id !== "string"))) {
-      return fail("У файлі є пошкоджені збережені ігри.");
+      || child.favoriteActivities.length > 500 || new Set(child.favoriteActivities).size !== child.favoriteActivities.length
+      || child.favoriteActivities.some((id) => typeof id !== "string" || !AGES.some((age) => activityById(age, id))))) {
+      return fail("У даних є пошкоджені збережені ігри.");
     }
     if (child.activityReactions != null && (!isRecord(child.activityReactions)
-      || Object.values(child.activityReactions).some((reaction) => !["liked", "repeat_later", "not_today", "hard"].includes(reaction)))) {
-      return fail("У файлі є пошкоджені відгуки про ігри.");
+      || Object.entries(child.activityReactions).some(([key, reaction]) => (!parseDayAgeKey(key) && !parseActivityDataKey(key))
+        || !["liked", "repeat_later", "not_today", "hard"].includes(reaction)))) {
+      return fail("У даних є пошкоджені відгуки про ігри.");
     }
     if (child.activityNotes != null && (!isRecord(child.activityNotes)
-      || Object.values(child.activityNotes).some((note) => typeof note !== "string" || note.length > 1000))) {
-      return fail("У файлі є пошкоджені нотатки після ігор.");
+      || Object.entries(child.activityNotes).some(([key, note]) => (!parseDayAgeKey(key) && !parseActivityDataKey(key))
+        || typeof note !== "string" || note.length > 1000))) {
+      return fail("У даних є пошкоджені нотатки після ігор.");
     }
     if (child.dailyPlayCompletions != null && (!isRecord(child.dailyPlayCompletions)
-      || Object.values(child.dailyPlayCompletions).some((ids) => !Array.isArray(ids) || ids.length > 20
-        || ids.some((id) => typeof id !== "string")))) {
-      return fail("У файлі є пошкоджений щоденник ігор.");
+      || Object.entries(child.dailyPlayCompletions).some(([key, ids]) => {
+        const parsed = parseDayAgeKey(key);
+        return !parsed || !Array.isArray(ids) || ids.length > 3 || new Set(ids).size !== ids.length
+          || ids.some((id) => typeof id !== "string" || !activityById(parsed.age, id));
+      }))) {
+      return fail("У даних є пошкоджений щоденник ігор.");
     }
     if (child.activitySignals != null && (!isRecord(child.activitySignals)
-      || Object.values(child.activitySignals).some((signal) => !["voice", "face", "movement", "object", "not_today"].includes(signal)))) {
-      return fail("У файлі є пошкоджені спостереження після гри.");
+      || Object.entries(child.activitySignals).some(([key, signal]) => !parseActivityDataKey(key)
+        || !["voice", "face", "movement", "object", "not_today"].includes(signal)))) {
+      return fail("У даних є пошкоджені спостереження після гри.");
     }
     if (child.playDiary != null && (!Array.isArray(child.playDiary) || child.playDiary.length > 1000
-      || child.playDiary.some((entry) => !isRecord(entry) || typeof entry.id !== "string"
-        || !/^play_\d+_[a-z0-9]{4}$/.test(entry.id) || typeof entry.activityId !== "string"
-        || !Number.isFinite(Number(entry.age)) || typeof entry.startedAt !== "string" || typeof entry.endedAt !== "string"
-        || !activityById(Number(entry.age), entry.activityId)
-        || (entry.reaction && !["liked", "not_today", "hard"].includes(entry.reaction))
-        || (entry.signal && !["voice", "face", "movement", "object", "not_today"].includes(entry.signal))
-        || typeof (entry.note || "") !== "string" || String(entry.note || "").length > 1000))) {
-      return fail("У файлі є пошкоджений щоденник гри.");
+      || child.playDiary.some((entry) => {
+        if (!isRecord(entry) || typeof entry.id !== "string" || !/^play_\d+_[a-z0-9]{4}$/.test(entry.id)
+          || !AGES.includes(Number(entry.age)) || Number(entry.age) !== entry.age || typeof entry.activityId !== "string"
+          || !activityById(entry.age, entry.activityId) || !isIsoTimestamp(entry.startedAt) || !isIsoTimestamp(entry.endedAt)) return true;
+        const started = new Date(entry.startedAt);
+        const ended = new Date(entry.endedAt);
+        return ended < started || (entry.durationSeconds != null && (!Number.isFinite(Number(entry.durationSeconds))
+          || Number(entry.durationSeconds) < 0 || Number(entry.durationSeconds) > 86400))
+          || (entry.reaction && !["liked", "not_today", "hard"].includes(entry.reaction))
+          || (entry.signal && !["voice", "face", "movement", "object", "not_today"].includes(entry.signal))
+          || typeof (entry.note || "") !== "string" || String(entry.note || "").length > 1000
+          || (entry.saved != null && typeof entry.saved !== "boolean")
+          || (entry.nextChoice != null && !["", "now", "later", "done"].includes(entry.nextChoice));
+      }))) {
+      return fail("У даних є пошкоджений щоденник гри.");
     }
-    if (child.playDiary != null
-      && new Set(child.playDiary.map((entry) => entry.id)).size !== child.playDiary.length) {
-      return fail("У файлі є дублікати записів щоденника гри.");
+    if (child.playDiary != null && new Set(child.playDiary.map((entry) => entry.id)).size !== child.playDiary.length) {
+      return fail("У даних є дублікати записів щоденника гри.");
     }
-    if (child.activePlaySession != null && (!isRecord(child.activePlaySession)
-      || typeof child.activePlaySession.activityId !== "string" || !Number.isFinite(Number(child.activePlaySession.age))
-      || typeof child.activePlaySession.startedAt !== "string")) {
-      return fail("У файлі є пошкоджена активна гра.");
+    if (child.activePlaySession != null) {
+      const session = child.activePlaySession;
+      if (!isRecord(session) || !AGES.includes(Number(session.age)) || Number(session.age) !== session.age
+        || typeof session.activityId !== "string" || !activityById(session.age, session.activityId)
+        || !isIsoTimestamp(session.startedAt) || new Date(session.startedAt).getTime() > Date.now() + 5 * 60 * 1000) {
+        return fail("У даних є пошкоджена активна гра.");
+      }
     }
     if (child.playContext != null && !PLAY_CONTEXT_IDS.includes(child.playContext)) {
-      return fail("У файлі є пошкоджені налаштування гри.");
+      return fail("У даних є пошкоджені налаштування гри.");
     }
-    for (const survey of Object.values(child.surveys)) {
-      if (!isRecord(survey) || !isRecord(survey.states || {})
-        || (survey.questionIds != null && !Array.isArray(survey.questionIds))
-        || (survey.variants != null && !isRecord(survey.variants))) {
-        return fail("У файлі є пошкоджені відповіді.");
-      }
-      if (Object.values(survey.states || {}).some((state) => !["yes", "not_sure", "not_yet"].includes(state))) {
-        return fail("У файлі є невідомий варіант відповіді.");
-      }
+    if (child.notes != null && (typeof child.notes !== "string" || child.notes.length > 10000)) {
+      return fail("У даних є пошкоджені нотатки.");
     }
-    if (child.notes != null && typeof child.notes !== "string") return fail("У файлі є пошкоджені нотатки.");
     if (child.specialistPrep != null && (!isRecord(child.specialistPrep)
-      || ["noticed", "tried", "questions"].some((key) => child.specialistPrep[key] != null && typeof child.specialistPrep[key] !== "string"))) {
-      return fail("У файлі є пошкоджені нотатки для фахівця.");
+      || ["noticed", "tried", "questions"].some((key) => child.specialistPrep[key] != null
+        && (typeof child.specialistPrep[key] !== "string" || child.specialistPrep[key].length > 10000)))) {
+      return fail("У даних є пошкоджені нотатки для фахівця.");
     }
     child.notes = child.notes || "";
     normalizeChild(child);
     child.specialistPrep = child.specialistPrep || emptySpecialistPrep(child.notes);
     specialistPrepFor(child);
   }
+  imported.storeSchemaVersion = STORE_SCHEMA_VERSION;
   imported.activeChildId = childIds.has(imported.activeChildId) ? imported.activeChildId : (imported.children[0]?.id || null);
   return { ok: true, store: imported };
+}
+function validateBackupPayload(payload) {
+  const fail = (error) => ({ ok: false, error });
+  if (!isRecord(payload) || payload.schema !== BACKUP_SCHEMA || payload.version !== BACKUP_VERSION
+    || !isIsoTimestamp(payload.exportedAt) || !isRecord(payload.data) || hasUnsafeStructure(payload)) {
+    return fail("Це не схоже на резервну копію Milestones.");
+  }
+  let serialized;
+  try { serialized = JSON.stringify(payload); }
+  catch { return fail("Резервну копію не вдалося прочитати."); }
+  if (serialized.length > MAX_BACKUP_BYTES) return fail("Резервна копія завелика.");
+  const checked = validateStoredData(payload.data);
+  return checked.ok ? checked : fail(checked.error);
 }
 // Active child — per-child data lives here. Null only before the first child exists.
 function cc() { return store.children.find((c) => c.id === store.activeChildId) || store.children[0] || null; }
@@ -2597,7 +2714,7 @@ function historySnapshotHtml(snap, previous, isLatest) {
   return `
     <article class="history-item ${isLatest ? "latest" : ""}">
       <div class="history-head">
-        <div><span class="mini-label">${isLatest ? "Останнє спостереження" : "Збережене спостереження"}</span><h2>${AGE_LABELS[snap.age] || `${snap.age} міс.`}</h2></div>
+        <div><span class="mini-label">${isLatest ? "Останнє спостереження" : "Збережене спостереження"}</span><h2>${esc(AGE_LABELS[snap.age] || `${snap.age} міс.`)}</h2></div>
         <time datetime="${esc(snap.date || "")}">${esc(date)}</time>
       </div>
       <div class="history-counts" aria-label="Підсумок відповідей">

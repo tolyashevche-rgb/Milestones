@@ -31,8 +31,8 @@ free + subscription.
 | 5 | ✅ | Спростити Game і дизайн-систему | Одна основна гра; одна primary action; узгоджені кнопки, іконки, кольори, градієнти | P2.57 · `cbba1bf`; P2.58 · `c2ad968` |
 | 6 | ✅ | Accessibility, responsive, recovery і PWA | Touch/contrast/zoom/keyboard; tablet layout; recovery states; lean safe cache | P2.59 · `431c667` |
 | 7 | ✅ | Закрити вікові межі, route prerequisites і доступ до даних | До 2 міс доступні data controls; після 12 міс немає нового 12-міс flow; incomplete Results → Survey | P2.60 · `fix: close age and result route gaps` |
-| 8 | ⬜ | Закрити import/startup schema й XSS | Один strict validator; canonical IDs/timestamps; malformed local data → recovery | Наступний крок |
-| 9 | ⬜ | Виправити multi-play attribution | Кожна нотатка/реакція належить конкретній грі; undo іншої гри її не стирає | Після кроку 8 |
+| 8 | ✅ | Закрити import/startup schema й XSS | Один strict validator; canonical IDs/timestamps; malformed local data → recovery | P2.61 · `fix: validate stored data before use` |
+| 9 | ⬜ | Виправити multi-play attribution | Кожна нотатка/реакція належить конкретній грі; undo іншої гри її не стирає | Наступний крок |
 | 10 | ⬜ | Захистити кілька вкладок/PWA від silent overwrite | Store revision, conflict detection і зовнішнє оновлення без втрати | Після кроку 9 |
 | 11 | ⬜ | Item-level content gate і age-safe Library | 27 `NEEDS_REVIEW` не потрапляють у parent Game; Library age-first | Після кроку 10 |
 | 12 | 🔄 | Повна регресія, незалежний аудит і live UI-перевірка | QA/syntax/diff; фінальний реєстр; mobile/tablet/desktop та assistive tech | Автоматизована частина в роботі; live browser недоступний |
@@ -70,6 +70,8 @@ free + subscription.
   strict backup diary IDs and a 452,488-byte core shell with lazy visual caching: ✅.
 - P2.60 pre-2 data controls, post-12 completion state, editable aged-out profiles and
   Results/unknown-route canonicalization: ✅.
+- P2.61 shared startup/import schema, canonical ID/time allowlists, corrupt-storage recovery and
+  adversarial snapshot-XSS protection: ✅.
 - Live browser/device pass: ⛔ 2026-07-14 runtime не надав жодного доступного браузера;
   автоматизований code/DOM QA пройдено, але pixel-perfect pass не заявляється.
 

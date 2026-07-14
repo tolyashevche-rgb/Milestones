@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.60.** Read
+> **Current product baseline: Stage 5 UA / P2.61.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -129,8 +129,9 @@ consolidates semantic colors, solid controls, restraint in elevation and one sha
 family across parent-facing actions. P2.59 then hardens route/focus semantics, narrow reflow,
 recovery and a 442 KiB functional offline core. P2.60 adds an honest post-12-month state,
 keeps data controls reachable before the first checklist and prevents incomplete Results.
-The visible asset baseline is `20260714-p2-60-r1`; none of these releases changes the product's
-safety rules or makes draft content expert-validated.
+P2.61 makes startup and backup restore share a strict canonical schema and closes imported
+snapshot XSS. The visible asset baseline is `20260714-p2-61-r1`; none of these releases changes
+the product's safety rules or makes draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
 and teal remains the action/trust color. A derived seven-day recap appears only after at least
@@ -217,6 +218,19 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — P2.61 strict startup/import schema and XSS closure
+- Replaced parse-only startup with the same fail-closed validation pipeline used by backup restore.
+  Parseable malformed localStorage now reaches the existing recovery UI while the raw source stays
+  untouched instead of throwing during normalization.
+- Added a versioned store schema and canonical allowlists for child/snapshot IDs, five ages,
+  milestone questions, activities, play keys, timestamps, session state and bounded free text.
+  Unknown questions, activities, duplicate entries and stale active sessions fail validation.
+- Closed confirmed imported snapshot-age XSS by rejecting non-canonical ages and escaping the
+  Records fallback as defense-in-depth. Added adversarial tests for HTML payloads, unsafe object
+  keys, unknown questions/daily activities, invalid diary order and corrupt startup JSON.
+- Bumped the build/cache marker to P2.61 / `20260714-p2-61-r1`; syntax, regression and diff checks
+  pass. This is engineering hardening, not expert validation of developmental content.
 
 ### 2026-07-14 — P2.60 honest age scope, route prerequisites and data rights
 - Profiles below the first two-month checkpoint now retain the same collapsed install, update,
