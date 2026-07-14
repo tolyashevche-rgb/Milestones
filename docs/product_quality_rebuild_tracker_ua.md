@@ -29,8 +29,8 @@ free + subscription.
 | 3 | ✅ | Додати release gates і видиму safety-смугу | Draft-вміст не видається за approved; safety/stop видно до Start | P2.55 · `b675669` |
 | 4 | ✅ | Спростити Home і маршрути | Один контекстний next step; без deck/nested scroll; стабільна навігація | P2.56 · `b4ea9dd` |
 | 5 | ✅ | Спростити Game і дизайн-систему | Одна основна гра; одна primary action; узгоджені кнопки, іконки, кольори, градієнти | P2.57 · `cbba1bf`; P2.58 · `style: consolidate visual system and controls` |
-| 6 | 🔄 | Accessibility, responsive, recovery і PWA | Touch/contrast/zoom/keyboard; tablet layout; recovery states; lean safe cache | — |
-| 7 | ⬜ | Повна регресія і UI-перевірка | QA/syntax/diff/E2E; ключові маршрути на mobile/tablet/desktop; фінальний список залишку | — |
+| 6 | ✅ | Accessibility, responsive, recovery і PWA | Touch/contrast/zoom/keyboard; tablet layout; recovery states; lean safe cache | P2.59 · `fix: harden accessibility recovery and offline core` |
+| 7 | 🔄 | Повна регресія і UI-перевірка | QA/syntax/diff/E2E; ключові маршрути на mobile/tablet/desktop; фінальний список залишку | — |
 | 8 | ⛔ | Expert review і 5 parent sessions | Реальні рішення експертів і реальні moderated sessions; нічого не симулюється | Після кроку 7 |
 | 9 | ⛔ | Підготовка subscription | Перевірено recurring value/WTP; визначено free safety floor; backend/entitlements/privacy спроєктовані | Після validation |
 
@@ -61,6 +61,8 @@ free + subscription.
   primary “На сьогодні все” with preserved diary lifecycle: ✅.
 - P2.58 semantic visual tokens, solid controls, one outline icon family, restrained elevation,
   contrast calculations and 44–48 px touch-target guards: ✅.
+- P2.59 route/focus/ARIA hardening, ≤400 px source-level reflow, pre-onboarding restore,
+  strict backup diary IDs and a 452,488-byte core shell with lazy visual caching: ✅.
 - Live browser/device pass: ⬜ 2026-07-14 runtime не надав жодного доступного браузера;
   автоматизований code/DOM QA пройдено, але pixel-perfect pass не заявляється.
 

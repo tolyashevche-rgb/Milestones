@@ -5,6 +5,7 @@
   let swRegistration = null;
   let reloadingForUpdate = false;
   let updateRequested = false;
+  let swProblem = "";
 
   function updateConnectionStatus() {
     if (!offlineStatus) return;
@@ -22,6 +23,7 @@
   function syncInstallUi() {
     const button = document.getElementById("installApp");
     const help = document.getElementById("installHelp");
+    const status = document.getElementById("installStatus");
     const standalone = isStandalone();
     if (button) button.hidden = standalone || !deferredInstallPrompt;
     if (help) {
@@ -30,6 +32,7 @@
         ? "Milestones можна додати на головний екран і відкривати одним дотиком."
         : "Щоб відкривати Milestones одним дотиком, у меню браузера оберіть «Додати на головний екран».";
     }
+    if (status && swProblem && !status.textContent) status.textContent = swProblem;
   }
 
   function syncUpdateUi() {
@@ -48,6 +51,10 @@
       if (!worker || !worker.addEventListener) return;
       worker.addEventListener("statechange", () => {
         if (worker.state === "installed") syncUpdateUi();
+        if (worker.state === "redundant") {
+          swProblem = "Застосунок працює онлайн, але офлайн-режим у цьому браузері не підготувався.";
+          syncInstallUi();
+        }
       });
     });
   }
@@ -121,7 +128,8 @@
       try {
         monitorRegistration(await navigator.serviceWorker.register("./sw.js"));
       } catch {
-        // The guided flow remains usable online if private mode or browser policy blocks SW.
+        swProblem = "Застосунок працює онлайн, але офлайн-режим у цьому браузері недоступний.";
+        syncInstallUi();
       }
     });
   }

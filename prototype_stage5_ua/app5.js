@@ -619,12 +619,18 @@ function validateBackupPayload(payload) {
       return fail("У файлі є пошкоджені спостереження після гри.");
     }
     if (child.playDiary != null && (!Array.isArray(child.playDiary) || child.playDiary.length > 1000
-      || child.playDiary.some((entry) => !isRecord(entry) || typeof entry.id !== "string" || typeof entry.activityId !== "string"
+      || child.playDiary.some((entry) => !isRecord(entry) || typeof entry.id !== "string"
+        || !/^play_\d+_[a-z0-9]{4}$/.test(entry.id) || typeof entry.activityId !== "string"
         || !Number.isFinite(Number(entry.age)) || typeof entry.startedAt !== "string" || typeof entry.endedAt !== "string"
+        || !activityById(Number(entry.age), entry.activityId)
         || (entry.reaction && !["liked", "not_today", "hard"].includes(entry.reaction))
         || (entry.signal && !["voice", "face", "movement", "object", "not_today"].includes(entry.signal))
         || typeof (entry.note || "") !== "string" || String(entry.note || "").length > 1000))) {
       return fail("У файлі є пошкоджений щоденник гри.");
+    }
+    if (child.playDiary != null
+      && new Set(child.playDiary.map((entry) => entry.id)).size !== child.playDiary.length) {
+      return fail("У файлі є дублікати записів щоденника гри.");
     }
     if (child.activePlaySession != null && (!isRecord(child.activePlaySession)
       || typeof child.activePlaySession.activityId !== "string" || !Number.isFinite(Number(child.activePlaySession.age))
@@ -665,7 +671,7 @@ store.children.forEach((c) => {
   normalizeChild(c);
   specialistPrepFor(c);
 });
-let profileEditing = false;
+let profileMode = null;
 let dataNotice = "";
 
 // ---- helpers ----
@@ -1008,7 +1014,7 @@ function privateMoments(child = cc(), limit = 3) {
 function privateMomentsHtml(moments) {
   if (!Array.isArray(moments) || !moments.length) return "";
   return `<section class="private-moments" aria-labelledby="privateMomentsTitle">
-    <div class="private-moments-head"><div><span class="mini-label">Лише в цьому профілі</span><h2 id="privateMomentsTitle">Маленькі моменти</h2></div><span>${moments.length} останні</span></div>
+    <div class="private-moments-head"><div><span class="mini-label">Лише в цьому профілі</span><h2 id="privateMomentsTitle" tabindex="-1">Маленькі моменти</h2></div><span>${moments.length} останні</span></div>
     <p>Це не стрічка досягнень і не оцінка розвитку — лише ваші короткі нотатки після гри.</p>
     <ul>${moments.map((moment) => `<li><div><time datetime="${esc(moment.date)}">${esc(shortDate(parseLocalDate(moment.date)))}</time><strong>${esc(moment.title)}</strong><p>${esc(moment.note)}</p></div><button type="button" data-delete-moment="${esc(moment.key)}" aria-label="Видалити момент: ${esc(moment.title)}">Видалити</button></li>`).join("")}</ul>
     <small>Показуємо максимум три записи. Вони не передаються назовні й входять до вашої приватної резервної копії.</small>
@@ -1050,15 +1056,46 @@ function outlineIcon(name, className) {
 function navIcon(name) { return outlineIcon(name, "nav-icon"); }
 function uiIcon(name) { return outlineIcon(name, "ui-icon"); }
 
-function setHash(route) { location.hash = "#/" + route; }
+function setHash(routeName) {
+  const nextHash = "#/" + routeName;
+  if (location.hash === nextHash) {
+    route();
+    return;
+  }
+  location.hash = nextHash;
+}
+function replaceHash(routeName) {
+  const nextHash = "#/" + routeName;
+  if (typeof history !== "undefined" && typeof history.replaceState === "function") {
+    history.replaceState(null, "", nextHash);
+  } else {
+    location.hash = nextHash;
+  }
+}
 function currentRoute() { return (location.hash.replace(/^#\//, "") || "home").split("?")[0]; }
+
+const SCREEN_TITLES = {
+  welcome: "Початок", consent: "Згода", profile: "Профіль дитини",
+  home: "Сьогодні", survey: "Спостереження", results: "Підсумок спостереження",
+  program: "Гра", progress: "Записи", ask: "Для фахівця", library: "Короткі відповіді",
+  "visual-pilot": "Перевірка Motion Cards"
+};
+function screenTitle(screen) { return `${SCREEN_TITLES[screen] || "Milestones"} · Milestones`; }
+function prefersReducedMotion() {
+  return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+function motionScrollBehavior() { return prefersReducedMotion() ? "auto" : "smooth"; }
 
 function route() {
   const r = currentRoute();
   if (IS_MOTION_REVIEW_BUILD) return show("visual-pilot");
   // Onboarding gate: welcome first, then consent, then child profile.
   if (!store.consent || !store.consent.accepted) return show(r === "consent" ? "consent" : "welcome");
-  if (!store.children.length) return show("profile");
+  if (!store.children.length) { profileMode = "add"; return show("profile"); }
+  if (["welcome", "consent"].includes(r) || (r === "profile" && !profileMode)) {
+    replaceHash("home");
+    return show("home");
+  }
   const known = ["home", "survey", "results", "program", "progress", "ask", "library", "profile", "consent", "welcome"];
   show(known.includes(r) ? r : "home");
 }
@@ -1074,6 +1111,7 @@ function show(screen) {
   };
   if (IS_MOTION_REVIEW_BUILD) renderers["visual-pilot"] = renderVisualPilot;
   root.innerHTML = (renderers[screen] || renderHome)();
+  document.title = screenTitle(screen);
   renderNav(screen);
   renderAppbar(screen);
   renderStorageStatus();
@@ -1097,7 +1135,12 @@ function initMotionCarousels() {
     const sync = () => {
       const slideW = track.clientWidth || 1;
       const idx = Math.round(track.scrollLeft / slideW);
-      dots.forEach((d, i) => d.classList.toggle("active", i === idx));
+      dots.forEach((d, i) => {
+        const active = i === idx;
+        d.classList.toggle("active", active);
+        if (active) d.setAttribute("aria-current", "step");
+        else d.removeAttribute("aria-current");
+      });
     };
     let ticking = false;
     track.addEventListener("scroll", () => {
@@ -1106,7 +1149,7 @@ function initMotionCarousels() {
       requestAnimationFrame(() => { sync(); ticking = false; });
     }, { passive: true });
     dots.forEach((dot, i) => dot.addEventListener("click", () => {
-      track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
+      track.scrollTo({ left: i * track.clientWidth, behavior: motionScrollBehavior() });
     }));
   });
 }
@@ -1130,6 +1173,16 @@ function renderNav(active) {
 function renderAppbar(screen) {
   const slot = document.getElementById("appbarChild");
   if (!slot) return;
+  const back = typeof document.querySelector === "function" ? document.querySelector(".appbar-back") : null;
+  const backEnabled = !IS_MOTION_REVIEW_BUILD
+    && !["welcome", "consent", "home"].includes(screen)
+    && !(screen === "profile" && !store.children.length);
+  if (back) {
+    back.disabled = !backEnabled;
+    back.tabIndex = backEnabled ? 0 : -1;
+    if (backEnabled) back.removeAttribute("aria-hidden");
+    else back.setAttribute("aria-hidden", "true");
+  }
   const reviewerSession = motionReviewReviewerSession();
   if (IS_MOTION_REVIEW_BUILD) {
     slot.innerHTML = `<strong>Перевірка Motion Cards</strong><span class="appbar-tag">${esc(reviewerSession?.label || "координатор")}</span>`;
@@ -1154,12 +1207,23 @@ function renderAppbar(screen) {
 
 // ---- onboarding screens ----
 function renderWelcome() {
+  const recovery = storageProblem ? `
+    <section class="card recovery-card" aria-labelledby="recoveryTitle">
+      <span class="mini-label">Відновлення даних</span>
+      <h2 id="recoveryTitle">Попередні дані не відкрилися</h2>
+      <p>${esc(storageProblem)}</p>
+      <p class="muted small">Якщо маєте резервну копію, відновіть її до створення нового профілю.</p>
+      <button type="button" id="chooseBackup" class="btn ghost">Відновити з файлу</button>
+      <input id="importBackup" class="visually-hidden" type="file" accept="application/json,.json" tabindex="-1">
+      <p id="backupStatus" class="backup-status" role="status" aria-live="polite" aria-atomic="true">${esc(dataNotice)}</p>
+    </section>` : "";
   return `
     <section class="screen-pad center">
       <div class="logo-dot" aria-hidden="true">${navIcon("play")}</div>
       <h1 tabindex="-1">Перший рік — спокійніше</h1>
       <p class="lead">Короткі спостереження, прості ігри та зрозумілі підказки для розмови з фахівцем.</p>
-      <button type="button" class="btn primary block" data-go="consent">Почати</button>
+      ${recovery}
+      <button type="button" class="btn primary block" data-go="consent" data-replace-route="1" ${storageProblem ? 'data-start-fresh="1"' : ""}>${storageProblem ? "Продовжити без відновлення" : "Почати"}</button>
       <p class="fineprint">Матеріали спираються на рекомендації CDC, AAP, WHO та Harvard. Це не діагностика і не скринінг.</p>
     </section>`;
 }
@@ -1177,7 +1241,8 @@ function renderConsent() {
 }
 
 function renderProfile() {
-  const c = profileEditing ? (cc() || {}) : {};
+  const editing = profileMode === "edit";
+  const c = editing ? (cc() || {}) : {};
   const profileCheck = c.dob ? validateProfileDates(c.dob, c.expectedDueDate || "") : { months: null, error: "" };
   const ageHint = profileAgeHint(profileCheck);
   return `
@@ -1194,7 +1259,7 @@ function renderProfile() {
       </details>
       <div id="ageHint" class="age-hint">${ageHint}</div>
       <div id="profileError" class="field-error" role="alert">${esc(profileCheck.error)}</div>
-      <button type="button" id="profileSave" class="btn primary block" ${profileCheck.error || !c.dob ? "disabled" : ""}>${profileEditing ? "Зберегти зміни" : "Зберегти і продовжити"}</button>
+      <button type="button" id="profileSave" class="btn primary block" ${profileCheck.error || !c.dob ? "disabled" : ""}>${editing ? "Зберегти зміни" : "Зберегти і продовжити"}</button>
     </section>`;
 }
 
@@ -1338,7 +1403,8 @@ function renderHome() {
       ${homeNextStepHtml(nextStep)}
       <div class="home-today-flow">
         ${weeklyRecapHtml(weekly)}
-        ${privateMomentsHtml(moments)}
+        <div id="privateMomentsSlot">${privateMomentsHtml(moments)}</div>
+        <p id="privateMomentsStatus" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
         ${parentMinuteHtml(age)}
       </div>
       ${homeSecondaryLinksHtml(tested)}
@@ -1376,6 +1442,7 @@ function renderHome() {
 
 // ---- concise sourced library (E4 pilot) ----
 let libraryUi = { query: "", topic: "all" };
+let librarySearchTimer = null;
 
 function libraryItems() {
   return typeof LIBRARY_MATERIALS !== "undefined" && Array.isArray(LIBRARY_MATERIALS) ? LIBRARY_MATERIALS : [];
@@ -1439,7 +1506,7 @@ function libraryCardHtml(item) {
     <div class="library-now"><strong>Що можна зробити зараз</strong><span>${esc(item.doNow)}</span></div>
     <div class="library-source-link">
       <span>Джерело</span>
-      <a href="${esc(item.source.url)}" target="_blank" rel="noreferrer">${esc(item.source.publisher)} · ${esc(item.source.title)}</a>
+      <a href="${esc(item.source.url)}" target="_blank" rel="noreferrer">${esc(item.source.publisher)} · ${esc(item.source.title)}<span class="visually-hidden"> (відкриється в новій вкладці)</span></a>
     </div>
     <details class="library-source">
       <summary>Статус і застереження</summary>
@@ -1451,7 +1518,7 @@ function libraryCardHtml(item) {
   </article>`;
 }
 
-function libraryResultsHtml() {
+function libraryResultState() {
   const items = filteredLibraryItems();
   const hasQuery = Boolean(normalizeLibrarySearch(libraryUi.query));
   const suggestions = hasQuery && !items.length ? suggestedLibraryItems() : [];
@@ -1460,12 +1527,20 @@ function libraryResultsHtml() {
     ? `Знайдено: ${items.length}`
     : `Точного збігу поки немає · показуємо ${suggestions.length} корисні матеріали`;
   const fallback = suggestions.length ? `<div class="library-fallback"><strong>Спробуйте інакше</strong><span>Напишіть коротко: «сон», «плач», «прогулянка» або «годування».</span><button type="button" data-clear-library-search>Показати всі матеріали</button></div>` : "";
-  return `<p id="libraryCount" class="library-count" role="status" aria-live="polite">${status}</p>
-    ${fallback}<div class="library-list">${visibleItems.map(libraryCardHtml).join("")}</div>`;
+  return { status, html: `${fallback}<div class="library-list">${visibleItems.map(libraryCardHtml).join("")}</div>` };
+}
+function libraryResultsHtml() { return libraryResultState().html; }
+function refreshLibraryResults() {
+  const next = libraryResultState();
+  const results = document.getElementById("libraryResults");
+  const count = document.getElementById("libraryCount");
+  if (results) results.innerHTML = next.html;
+  if (count && count.textContent !== next.status) count.textContent = next.status;
 }
 
 function renderLibrary() {
   const topics = typeof LIBRARY_TOPICS !== "undefined" && Array.isArray(LIBRARY_TOPICS) ? LIBRARY_TOPICS : [];
+  const initialResults = libraryResultState();
   return `<section class="screen-pad library-screen">
     <button type="button" class="pilot-back" data-go="home">${uiIcon("back")}<span>На головну</span></button>
     <span class="pilot-kicker">Пілот · ${libraryItems().length} матеріалів</span>
@@ -1473,7 +1548,8 @@ function renderLibrary() {
     <p class="muted">Одне питання — одна практична відповідь на 2–3 хвилини. Матеріали освітні й поки мають статус чернетки.</p>
     <label class="library-search"><span>Пошук</span><input id="librarySearch" type="search" value="${esc(libraryUi.query)}" placeholder="Наприклад: прогулянка, сон або плач" autocomplete="off"></label>
     <div class="library-topics" role="group" aria-label="Фільтр за темою">${topics.map((topic) => `<button type="button" data-library-topic="${topic.id}" class="${libraryUi.topic === topic.id ? "active" : ""}" aria-pressed="${libraryUi.topic === topic.id}">${esc(topic.label)}</button>`).join("")}</div>
-    <div id="libraryResults">${libraryResultsHtml()}</div>
+    <p id="libraryCount" class="library-count" role="status" aria-live="polite" aria-atomic="true">${initialResults.status}</p>
+    <div id="libraryResults">${initialResults.html}</div>
   </section>`;
 }
 
@@ -1818,32 +1894,37 @@ function playDurationText(entry) {
 }
 function playReflectionHtml(entry) {
   if (!entry || entry.saved) return "";
+  const entryId = esc(entry.id);
   const reactions = [["liked", "Приємно"], ["not_today", "Не сьогодні"], ["hard", "Було складно"]];
   const signals = [["voice", "Голос"], ["face", "Обличчя"], ["movement", "Рух"], ["object", "Предмет"], ["not_today", "Не зацікавило"]];
-  return `<section class="play-reflection" aria-labelledby="playReflectionTitle" data-play-entry="${entry.id}">
+  const reactionLabelId = `play-reaction-${entryId}`;
+  const signalLabelId = `play-signal-${entryId}`;
+  return `<section class="play-reflection" aria-labelledby="playReflectionTitle" data-play-entry="${entryId}">
     <div class="play-step-label"><span>2</span><strong id="playReflectionTitle">Коротко після гри</strong></div>
-    <div class="play-reflection-row"><span>Як було?</span><div>${reactions.map(([id, label]) => `<button type="button" data-diary-reaction="${id}" data-entry-id="${entry.id}" aria-pressed="${entry.reaction === id}" class="${entry.reaction === id ? "active" : ""}">${label}</button>`).join("")}</div></div>
-    <div class="play-reflection-row"><span>Що помітили?</span><div>${signals.map(([id, label]) => `<button type="button" data-diary-signal="${id}" data-entry-id="${entry.id}" aria-pressed="${entry.signal === id}" class="${entry.signal === id ? "active" : ""}">${label}</button>`).join("")}</div></div>
-    <details class="play-note"><summary>${uiIcon("plus")}<span>Додати коротку нотатку</span></summary><textarea data-diary-note="${entry.id}" maxlength="1000" rows="2" placeholder="Наприклад: усміхнулася на голос…">${esc(entry.note || "")}</textarea></details>
-    <button type="button" class="btn primary block" data-save-play-entry="${entry.id}">Зберегти в щоденник</button>
+    <div class="play-reflection-row"><span id="${reactionLabelId}">Як було?</span><div role="group" aria-labelledby="${reactionLabelId}">${reactions.map(([id, label]) => `<button type="button" data-diary-reaction="${id}" data-entry-id="${entryId}" aria-pressed="${entry.reaction === id}" class="${entry.reaction === id ? "active" : ""}">${label}</button>`).join("")}</div></div>
+    <div class="play-reflection-row"><span id="${signalLabelId}">Що помітили?</span><div role="group" aria-labelledby="${signalLabelId}">${signals.map(([id, label]) => `<button type="button" data-diary-signal="${id}" data-entry-id="${entryId}" aria-pressed="${entry.signal === id}" class="${entry.signal === id ? "active" : ""}">${label}</button>`).join("")}</div></div>
+    <details class="play-note"><summary>${uiIcon("plus")}<span>Додати коротку нотатку</span></summary><label class="visually-hidden" for="playDiaryNote-${entryId}">Коротка нотатка після гри</label><textarea id="playDiaryNote-${entryId}" data-diary-note="${entryId}" maxlength="1000" rows="2" placeholder="Наприклад: усміхнулася на голос…">${esc(entry.note || "")}</textarea></details>
+    <button type="button" class="btn primary block" data-save-play-entry="${entryId}">Зберегти в щоденник</button>
     <p class="muted small">Можна зберегти без відповіді. Це пам’ять про момент, не оцінка дитини.</p>
   </section>`;
 }
 function playScheduleHtml(entry) {
+  const entryId = esc(entry.id);
   return `<section class="play-schedule" aria-labelledby="playScheduleTitle">
     <strong id="playScheduleTitle">Коли нагадати?</strong>
     <div class="play-schedule-days" role="group" aria-label="День нагадування"><button type="button" data-reminder-day="today" aria-pressed="${reminderDraft.day === "today"}" class="${reminderDraft.day === "today" ? "active" : ""}">Сьогодні</button><button type="button" data-reminder-day="tomorrow" aria-pressed="${reminderDraft.day === "tomorrow"}" class="${reminderDraft.day === "tomorrow" ? "active" : ""}">Завтра</button></div>
     <label><span>Час</span><input id="playReminderTime" type="time" value="${esc(reminderDraft.time)}"></label>
-    <button type="button" class="btn primary" data-save-play-reminder="${entry.id}">Додати в календар</button>
+    <button type="button" class="btn primary" data-save-play-reminder="${entryId}">Додати в календар</button>
     <p id="playReminderStatus" role="status" aria-live="polite"></p>
   </section>`;
 }
 function playContinueHtml(entry) {
   if (!entry || !entry.saved) return "";
   const scheduling = entry.nextChoice === "later";
+  const entryId = esc(entry.id);
   return `<section class="play-continue" aria-labelledby="playContinueTitle">
     <div class="play-step-label"><span>3</span><strong id="playContinueTitle">Що далі?</strong></div>
-    <div class="play-continue-actions"><button type="button" class="btn primary" data-play-next="done" data-entry-id="${entry.id}">На сьогодні все</button><button type="button" class="btn ghost" data-play-next="now" data-entry-id="${entry.id}">Ще одна за бажанням</button><button type="button" class="linklike" data-play-next="later" data-entry-id="${entry.id}">Нагадати пізніше</button></div>
+    <div class="play-continue-actions"><button type="button" class="btn primary" data-play-next="done" data-entry-id="${entryId}">На сьогодні все</button><button type="button" class="btn ghost" data-play-next="now" data-entry-id="${entryId}">Ще одна за бажанням</button><button type="button" class="linklike" data-play-next="later" data-entry-id="${entryId}">Нагадати пізніше</button></div>
     ${scheduling ? playScheduleHtml(entry) : ""}
   </section>`;
 }
@@ -1879,9 +1960,10 @@ function updatePlayTimerDom() {
   const toggle = document.getElementById("playTimerToggle");
   if (clock) clock.textContent = timerClock(playTimer.remaining);
   if (toggle) toggle.textContent = playTimer.running ? "Пауза" : (playTimer.remaining < playTimer.duration && playTimer.remaining > 0 ? "Продовжити" : "Почати");
-  if (status) status.textContent = playTimer.remaining === 0
+  const nextStatus = playTimer.remaining === 0
     ? "Час минув. Можна завершити або продовжити, якщо всім комфортно."
     : (playTimer.running ? "Таймер лише підказує час — зупинитися можна будь-коли." : "Без сигналу тривоги й без обов’язкової тривалості.");
+  if (status && status.textContent !== nextStatus) status.textContent = nextStatus;
 }
 function startPlayTimer() {
   if (playTimer.remaining <= 0) playTimer.remaining = playTimer.duration;
@@ -2176,7 +2258,7 @@ function dayChoiceHtml(age, d, sel) {
 function dayBodyHtml(age, d) {
   const sel = programState.selected[d.day] || d.options[0];
   const showLowEnergy = d.day === programState.currentDay && programState.context === "low_energy";
-  return `${activityDetailHtml(age, sel, showLowEnergy)}${dayChoiceHtml(age, d, sel)}`;
+  return `${activityDetailHtml(age, sel, showLowEnergy, `day-${d.day}`)}${dayChoiceHtml(age, d, sel)}`;
 }
 
 function todayActivityHtml(age, d) {
@@ -2188,7 +2270,7 @@ function todayActivityHtml(age, d) {
         <span class="day-num">Сьогодні</span>
         <span class="chip">${DOMAIN_LABELS_SHORT[selectedDomain] || selectedDomain}</span>
       </div>
-      <div class="day-acc-body">${activityDetailHtml(age, sel, programState.context === "low_energy")}${playSessionControlsHtml(age, sel)}</div>
+      <div class="day-acc-body">${activityDetailHtml(age, sel, programState.context === "low_energy", `today-${d.day}`)}${playSessionControlsHtml(age, sel)}</div>
     </article>
     ${dailyPlayMenuHtml(age, d)}`;
 }
@@ -2236,7 +2318,7 @@ function activityObservationHtml(age, activityId) {
   const note = cc().activityNotes[key] || "";
   return `<div class="activity-observation">
     <label for="activityObservation"><strong>Що саме ви помітили?</strong><span>Не оцінюйте результат вправи — запишіть конкретний звук, рух, погляд, інтерес або втому.</span></label>
-    <textarea id="activityObservation" data-activity-note="${esc(key)}" rows="3" maxlength="1000" placeholder="Наприклад: двічі повернула голову на мій голос, потім відвернулася…">${esc(note)}</textarea>
+    <textarea id="activityObservation" data-activity-note="${esc(key)}" rows="3" maxlength="1000" aria-describedby="activityObservationStatus" placeholder="Наприклад: двічі повернула голову на мій голос, потім відвернулася…">${esc(note)}</textarea>
     <p id="activityObservationStatus" role="status" aria-live="polite">${note ? "Збережено лише в цьому профілі." : "Необов’язково."}</p>
   </div>`;
 }
@@ -2314,22 +2396,23 @@ function motionCarouselHtml(guide, cards) {
     </article>`;
   }).join("");
   const dots = cards.map((card, index) =>
-    `<button type="button" class="motion-dot${index === 0 ? " active" : ""}" data-motion-dot="${index}" aria-label="Перейти до кроку ${index + 1}"></button>`).join("");
+    `<button type="button" class="motion-dot${index === 0 ? " active" : ""}" data-motion-dot="${index}" aria-label="Перейти до кроку ${index + 1}" ${index === 0 ? 'aria-current="step"' : ""}></button>`).join("");
   return `<div class="motion-carousel" data-motion-carousel>
       <div class="motion-track">${slides}</div>
     </div>
     <div class="motion-dots">${dots}</div>`;
 }
 
-function activityVisualGuideHtml(id) {
+function activityVisualGuideHtml(id, instanceKey = "detail") {
   if (typeof activityVisualGuide !== "function" || typeof motionCardArt !== "function") return "";
   const guide = activityVisualGuide(id);
   if (!guide) return "";
   const cards = motionGuideCards(id, guide);
   if (!cards) return "";
-  return `<section class="motion-guide" aria-labelledby="motion-guide-${esc(id)}">
+  const labelId = `motion-guide-${esc(id)}-${esc(instanceKey)}`;
+  return `<section class="motion-guide" aria-labelledby="${labelId}">
     <div class="motion-guide-head">
-      <strong id="motion-guide-${esc(id)}">${esc(guide.title || "Як грати")}</strong>
+      <strong id="${labelId}">${esc(guide.title || "Як грати")}</strong>
       <span aria-label="Гортайте вбік, ${cards.length} кроки">Гортайте вбік ${uiIcon("chevron")}</span>
     </div>
     ${motionCarouselHtml(guide, cards)}
@@ -2337,29 +2420,30 @@ function activityVisualGuideHtml(id) {
   </section>`;
 }
 
-function activitySafetyStripHtml(activity) {
+function activitySafetyStripHtml(activity, instanceKey = "detail") {
   if (!activityHasMinimumSafety(activity)) {
     return `<aside class="activity-safety-strip activity-safety-missing" role="alert">
       <strong>Гра тимчасово недоступна</strong>
       <p>Перед початком бракує перевіреної умови безпеки.</p>
     </aside>`;
   }
-  return `<aside class="activity-safety-strip" aria-labelledby="activity-safety-${esc(activity.id)}">
-    <strong id="activity-safety-${esc(activity.id)}">Перед початком</strong>
+  const labelId = `activity-safety-${esc(activity.id)}-${esc(instanceKey)}`;
+  return `<aside class="activity-safety-strip" aria-labelledby="${labelId}">
+    <strong id="${labelId}">Перед початком</strong>
     <p><b>Підготуйте:</b> ${esc(activity.materials)}</p>
     <p><b>Перший крок:</b> ${esc(activity.steps[0])}</p>
     <p class="activity-safety-stop"><b>Зупиніться:</b> ${esc(activity.stop)}</p>
   </aside>`;
 }
 
-function activityDetailHtml(age, id, showLowEnergy = false) {
+function activityDetailHtml(age, id, showLowEnergy = false, instanceKey = "detail") {
   const a = activityById(age, id);
   if (!a) return "";
   if (!cc().triedActivities.includes(id)) { cc().triedActivities.push(id); save(); }
   const note = CONTENT_RELEASE.authorNotes && typeof authorNoteFor === "function" ? authorNoteFor(a.id) : null;
   const favorite = cc().favoriteActivities.includes(id);
   const lowEnergy = showLowEnergy && typeof ACTIVITY_LOW_ENERGY_UA !== "undefined" ? ACTIVITY_LOW_ENERGY_UA[id] : "";
-  const visualGuide = activityVisualGuideHtml(id);
+  const visualGuide = activityVisualGuideHtml(id, instanceKey);
   // Plain-language note: keep author + the actionable idea; the internal mechanism mapping
   // stays in data for traceability but is not shown as jargon to parents.
   const basis = a.why || a.evidence || note ? `<details class="evidence-details"><summary>Чому ця гра тут</summary>
@@ -2367,10 +2451,10 @@ function activityDetailHtml(age, id, showLowEnergy = false) {
     ${a.evidence ? `<p><strong>Основа:</strong> ${esc(evidenceFriendly(a.evidence))}. <strong>Джерело:</strong> ${esc(sourceFriendly(a.source))}.</p>` : ""}
     ${note ? `<p><strong>Ідея ${esc(note.author)}:</strong> ${esc(note.idea)}.</p>` : ""}
   </details>` : "";
-  const safety = activitySafetyStripHtml(a);
+  const safety = activitySafetyStripHtml(a, instanceKey);
   return `
     <div class="activity-title-row"><h2 class="activity-title">${esc(a.title)}</h2>
-      <button type="button" class="favorite-toggle ${favorite ? "active" : ""}" data-favorite-id="${id}" aria-pressed="${favorite}" aria-label="${favorite ? "Прибрати гру зі збережених" : "Зберегти гру"}">${favoriteIcon(favorite)}<span>${favorite ? "Збережено" : "Зберегти"}</span></button>
+      <button type="button" class="favorite-toggle ${favorite ? "active" : ""}" data-favorite-id="${id}" aria-pressed="${favorite}" aria-label="${favorite ? "Збережено. Прибрати гру зі збережених" : "Зберегти гру"}">${favoriteIcon(favorite)}<span>${favorite ? "Збережено" : "Зберегти"}</span></button>
     </div>
     <div class="tag-row activity-quick-meta"><span class="chip">${uiIcon("clock")}<span>${esc(a.time)}</span></span><span class="chip">${uiIcon("materials")}<span>${esc(a.materials)}</span></span></div>
     ${safety}
@@ -2656,10 +2740,19 @@ function downloadMotionReviewSession() {
 document.addEventListener("click", async (e) => {
   const go = e.target.closest("[data-go]");
   if (go) {
+    if (go.dataset.startFresh && storageProblem) {
+      const ok = confirm("Продовжити без відновлення? Після збереження нового профілю попередні локальні дані можуть бути замінені.");
+      if (!ok) return;
+    }
     if (go.dataset.restart) {
       const ok = confirm("Почати нове спостереження? Попередній підсумок, ігри та нотатки залишаться у ваших записах.");
       if (!ok) return;
       restartSurvey(currentAge());
+    }
+    if (go.dataset.replaceRoute) {
+      replaceHash(go.dataset.go);
+      route();
+      return;
     }
     setHash(go.dataset.go);
     return;
@@ -2669,9 +2762,22 @@ document.addEventListener("click", async (e) => {
     const key = deleteMoment.dataset.deleteMoment;
     if (!/^\d{4}-\d{2}-\d{2}:\d+$/.test(key) || !cc()?.activityNotes?.[key]) return;
     if (!confirm("Видалити цей приватний момент? Відновити його можна буде лише з раніше збереженої резервної копії.")) return;
+    const buttonsBefore = typeof document.querySelectorAll === "function"
+      ? Array.from(document.querySelectorAll("[data-delete-moment]"))
+      : [];
+    const deletedIndex = Math.max(0, buttonsBefore.indexOf(deleteMoment));
     delete cc().activityNotes[key];
     save();
-    route();
+    const slot = document.getElementById("privateMomentsSlot");
+    if (slot) slot.innerHTML = privateMomentsHtml(privateMoments());
+    const buttonsAfter = typeof document.querySelectorAll === "function"
+      ? Array.from(document.querySelectorAll("[data-delete-moment]"))
+      : [];
+    const nextButton = buttonsAfter[Math.min(deletedIndex, Math.max(0, buttonsAfter.length - 1))];
+    if (nextButton) nextButton.focus({ preventScroll: true });
+    else (document.getElementById("privateMomentsTitle") || document.querySelector("h1"))?.focus({ preventScroll: true });
+    const status = document.getElementById("privateMomentsStatus");
+    if (status) status.textContent = "Момент видалено.";
     return;
   }
 
@@ -2847,7 +2953,12 @@ document.addEventListener("click", async (e) => {
   }
 
   if (e.target.id === "consentContinue") {
-    store.consent = { accepted: true, date: new Date().toISOString() }; save(); setHash("profile"); return;
+    store.consent = { accepted: true, date: new Date().toISOString() };
+    profileMode = "add";
+    save();
+    replaceHash("profile");
+    route();
+    return;
   }
   if (e.target.id === "profileSave") {
     const name = document.getElementById("childName").value.trim();
@@ -2862,7 +2973,7 @@ document.addEventListener("click", async (e) => {
       return;
     }
     if (input) input.removeAttribute("aria-invalid");
-    if (profileEditing && cc()) {
+    if (profileMode === "edit" && cc()) {
       cc().name = name;
       cc().dob = dob;
       cc().expectedDueDate = expectedDueDate;
@@ -2871,11 +2982,14 @@ document.addEventListener("click", async (e) => {
       store.children.push(child);
       store.activeChildId = child.id;
     }
-    profileEditing = false;
-    save(); setHash("home"); return;
+    profileMode = null;
+    save();
+    replaceHash("home");
+    route();
+    return;
   }
   if (e.target.id === "editProfile") {
-    profileEditing = true;
+    profileMode = "edit";
     setHash("profile");
     return;
   }
@@ -2885,7 +2999,7 @@ document.addEventListener("click", async (e) => {
       store.children = store.children.filter((x) => x.id !== c.id);
       store.activeChildId = (store.children[0] && store.children[0].id) || null;
       save();
-      if (!store.children.length) { profileEditing = false; setHash("profile"); }
+      if (!store.children.length) { profileMode = "add"; setHash("profile"); }
       route();
     }
     return;
@@ -2906,19 +3020,21 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (e.target.id === "finishSurvey") { finishSurvey(); return; }
-  if (e.target.id === "startPlaySession") {
-    const activityId = e.target.dataset.activityId;
+  const startPlayButton = e.target.closest("#startPlaySession");
+  if (startPlayButton) {
+    const activityId = startPlayButton.dataset.activityId;
     if (startPlaySession(programState.age, activityId)) {
       renderProgramList();
       document.getElementById("finishPlaySession")?.focus({ preventScroll: true });
     }
     return;
   }
-  if (e.target.id === "finishPlaySession") {
-    const entry = finishPlaySession(programState.age, e.target.dataset.activityId);
+  const finishPlayButton = e.target.closest("#finishPlaySession");
+  if (finishPlayButton) {
+    const entry = finishPlaySession(programState.age, finishPlayButton.dataset.activityId);
     if (entry) {
       renderProgramList();
-      document.querySelector(`[data-play-entry="${entry.id}"]`)?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      document.querySelector(`[data-play-entry="${entry.id}"]`)?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" });
       document.querySelector(`[data-save-play-entry="${entry.id}"]`)?.focus({ preventScroll: true });
     }
     return;
@@ -3243,13 +3359,17 @@ document.addEventListener("input", (e) => {
     else delete cc().activityNotes[activityNoteKey];
     save();
     const status = document.getElementById("activityObservationStatus");
-    if (status) status.textContent = value.trim() ? "Збережено лише в цьому профілі." : "Необов’язково.";
+    const nextStatus = value.trim() ? "Збережено лише в цьому профілі." : "Необов’язково.";
+    if (status && status.textContent !== nextStatus) status.textContent = nextStatus;
     return;
   }
   if (e.target.id === "librarySearch") {
     libraryUi.query = e.target.value.slice(0, 120);
-    const results = document.getElementById("libraryResults");
-    if (results) results.innerHTML = libraryResultsHtml();
+    if (librarySearchTimer != null && typeof window.clearTimeout === "function") window.clearTimeout(librarySearchTimer);
+    librarySearchTimer = window.setTimeout(() => {
+      librarySearchTimer = null;
+      refreshLibraryResults();
+    }, 250);
     return;
   }
   const motionNoteId = e.target.dataset.motionReviewNote;
@@ -3263,7 +3383,7 @@ document.addEventListener("input", (e) => {
   }
   if (e.target.id === "childSwitch") {
     const v = e.target.value;
-    if (v === "__add") { profileEditing = false; setHash("profile"); return; }
+    if (v === "__add") { profileMode = "add"; setHash("profile"); return; }
     store.activeChildId = v; save(); route();
     return;
   }

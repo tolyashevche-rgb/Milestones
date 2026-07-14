@@ -43,15 +43,15 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.58", "audit scope must identify the current release");
-  assert.equal(auditScope.assetVersion, "20260714-p2-58-r1", "audit scope must identify the current asset version");
+  assert.equal(auditScope.release, "P2.59", "audit scope must identify the current release");
+  assert.equal(auditScope.assetVersion, "20260714-p2-59-r1", "audit scope must identify the current asset version");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.58"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.58"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.59"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.59"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -84,8 +84,8 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260714-p2-58-r1"), "Stage5 assets must use the P2.58 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-58-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-59-r1"), "Stage5 assets must use the P2.59 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-59-r1"'), "the sourced library must load before the app shell");
   assert.ok(stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation"') && !stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation-review"'), "the ordinary app must not enable internal reviewer routing");
   assert.ok(motionReviewHtml.includes('MILESTONES_BUILD_CHANNEL = "validation-review"') && motionReviewHtml.includes('name="robots" content="noindex,nofollow"'), "Motion review needs a separate noindex internal entry point");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
@@ -98,6 +98,10 @@ function testContentAndEngine() {
   assert.ok(!stage5App.includes("function initHomeDeck()") && !stage5App.includes("function activateHomeTab("), "retired home deck and tab controllers must not ship");
   assert.ok(stage5App.includes("function playFlowLocked(") && stage5App.includes('<details class="daily-play-menu">') && !stage5App.includes("3 ідеї на сьогодні"), "Game must protect the active flow and keep alternative activities optional");
   assert.ok(stage5App.includes('class="btn primary" data-play-next="done"') && stage5App.includes("Ще одна за бажанням"), "post-play completion must make stopping the primary choice");
+  assert.ok(stage5App.includes("const SCREEN_TITLES") && stage5App.includes("document.title = screenTitle(screen)"), "each route needs a concise document title");
+  assert.ok(stage5App.includes("function motionScrollBehavior()") && !stage5App.includes('behavior: "smooth"'), "scripted scrolling must honor reduced-motion preference");
+  assert.ok(stage5App.includes('e.target.closest("#startPlaySession")') && stage5App.includes('e.target.closest("#finishPlaySession")'), "nested icon and label clicks must activate the full play-session button");
+  assert.ok(stage5App.includes('if (location.hash === nextHash)') && stage5App.includes("replaceHash(\"home\")"), "same-route actions and stale onboarding history need an explicit rerender/canonical route");
   assert.ok(["--control-line:", "--surface-subtle:", "--surface-warm:", "--info-line:", "--success-line:", "--danger:", "--danger-soft:", "--danger-line:", "--focus:", "--radius-control:", "--radius-card:"].every((token) => stage5Styles.includes(token)), "the visual system needs semantic control, surface, state, focus, and radius tokens");
   const parentStyles = stage5Styles.split("/* stakeholder review screen")[0];
   const primaryRule = parentStyles.match(/\.btn\.primary\s*\{([^}]*)\}/)?.[1] || "";
@@ -110,6 +114,9 @@ function testContentAndEngine() {
   assert.match(stage5Styles, /\.library-fallback button\s*\{[^}]*min-height:\s*44px/s, "library fallback actions need a 44px touch target");
   assert.match(stage5Styles, /\.motion-dot\s*\{[^}]*width:\s*44px;[^}]*height:\s*44px/s, "carousel dots need a 44px hit area around the visible mark");
   assert.ok(stage5Styles.includes(".motion-dot::before"), "carousel dots need a distinct visible mark inside the touch target");
+  assert.match(stage5Styles, /\.library-source-link a\s*\{[^}]*min-height:\s*44px/s, "standalone source links need a touch-friendly target");
+  assert.ok(stage5Styles.includes("@media (max-width: 400px)") && stage5Styles.includes("--nav-h: 80px") && stage5Styles.includes("grid-template-columns: repeat(4, minmax(0, 1fr))"), "narrow and 400% reflow must reserve the real navigation height and avoid a calendar scroller");
+  assert.ok(stage5Styles.includes("env(safe-area-inset-top, 0px)") && stage5Styles.includes("env(safe-area-inset-left, 0px)") && stage5Styles.includes("env(safe-area-inset-right, 0px)"), "notch insets must be additive on every edge");
   assert.ok(stage5App.includes("const OUTLINE_ICON_PATHS") && stage5App.includes('function uiIcon(name)') && stage5Styles.includes(".ui-icon"), "parent controls must share one outline SVG icon family");
   assert.ok(!["⚙", "⏱", "◇", "▶", "■", "○", "△", "＋", "🙂", "↻", "▾", "▸"].some((glyph) => stage5App.includes(glyph)) && !stage5App.includes("+ Додати дитину"), "platform-dependent control glyphs must not remain in the app UI");
   assert.ok(contrastRatio(cssHexVariable(stage5Styles, "--teal"), cssHexVariable(stage5Styles, "--panel")) >= 4.5, "primary button text needs WCAG AA contrast");
@@ -132,15 +139,25 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-58-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-59-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes("const CORE_SHELL = ["), "PWA install must separate the functional core from optional visuals");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
-  motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
+  assert.ok(!serviceWorker.includes("./assets/motion_cards/") && !serviceWorker.includes("./activity-tummy-time-guide-v1.png"), "optional 20 MiB visuals must not make core PWA installation all-or-nothing");
+  const coreShellSource = serviceWorker.match(/const CORE_SHELL = \[([\s\S]*?)\];/)?.[1] || "";
+  const coreShellPaths = [...coreShellSource.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+  const coreShellBytes = coreShellPaths.filter((entry) => entry !== "./").reduce((total, entry) => {
+    const localPath = entry.split("?")[0];
+    return total + fs.statSync(path.resolve(root, "prototype_stage5_ua", localPath)).size;
+  }, 0);
+  assert.ok(coreShellBytes < 1024 * 1024, `core offline shell must stay below 1 MiB, got ${coreShellBytes}`);
+  assert.ok(serviceWorker.includes("event.waitUntil(") && serviceWorker.includes("rememberResponse"), "runtime cache writes must be best-effort background work");
   assert.ok(serviceWorker.includes('caches.match("./index.html")'), "offline navigation needs an app-shell fallback");
   assert.ok(pwaScript.includes('navigator.serviceWorker.register("./sw.js")'), "the app must register its service worker");
   assert.ok(pwaScript.includes('window.addEventListener("beforeinstallprompt"'), "supported browsers need a deferred native install action");
   assert.ok(pwaScript.includes('window.addEventListener("appinstalled"'), "installed mode must hide redundant install guidance");
   assert.ok(pwaScript.includes('navigator.serviceWorker.addEventListener("controllerchange"'), "accepted updates must reload only after controller change");
+  assert.ok(pwaScript.includes("swProblem") && pwaScript.includes("працює онлайн"), "blocked offline setup needs a calm visible recovery message");
   assert.ok(stage5Index.includes('id="offlineStatus"'), "the app shell needs a quiet offline status");
   assert.ok(stage5Index.includes('id="storageStatus"'), "storage failures need a persistent visible status");
   assert.ok(pagesWorkflow.includes("node tools/test_p1_qa.js"), "public preview must pass regression checks before deployment");
@@ -408,10 +425,16 @@ function appContext(options = {}) {
   let storageWriteFails = Boolean(options.storageWriteFails);
   let storageReadFails = Boolean(options.storageReadFails);
   const listeners = {};
+  const fakeLocation = { hash: "#/welcome", search: "", origin: "http://localhost:4175", pathname: options.buildChannel === "validation-review" ? "/internal_tools/motion_review.html" : "/prototype_stage5_ua/index.html" };
   const nodes = {
     screen: { innerHTML: "", querySelector: () => null },
     bottomNav: { innerHTML: "", style: {} },
     appbarChild: { innerHTML: "" },
+    appbarBack: {
+      disabled: false, tabIndex: 0, ariaHidden: "",
+      setAttribute(name, value) { if (name === "aria-hidden") this.ariaHidden = value; },
+      removeAttribute(name) { if (name === "aria-hidden") this.ariaHidden = ""; }
+    },
     storageStatus: {
       hidden: true, textContent: "", title: "", ariaLabel: "",
       setAttribute(name, value) { if (name === "aria-label") this.ariaLabel = value; },
@@ -426,12 +449,14 @@ function appContext(options = {}) {
       removeItem: (key) => storage.delete(key)
     },
     document: {
+      title: "",
       addEventListener: (type, handler) => { listeners[type] = handler; },
       getElementById: (id) => nodes[id] || null,
-      querySelector: () => null
+      querySelector: (selector) => selector === ".appbar-back" ? nodes.appbarBack : null
     },
     window: { MILESTONES_BUILD_CHANNEL: options.buildChannel || "validation", addEventListener: () => {}, scrollTo: () => {}, setTimeout: (callback) => callback() },
-    location: { hash: "#/welcome", search: "", origin: "http://localhost:4175", pathname: options.buildChannel === "validation-review" ? "/internal_tools/motion_review.html" : "/prototype_stage5_ua/index.html" },
+    location: fakeLocation,
+    history: { replaceState: (_state, _title, url) => { fakeLocation.hash = String(url); } },
     navigator: {},
     confirm: () => true,
     URL: { createObjectURL: () => "blob:test", revokeObjectURL: () => {} },
@@ -452,6 +477,17 @@ function appContext(options = {}) {
 }
 
 function testStorageFailureRecovery() {
+  const readContext = appContext({ storageReadFails: true });
+  const readFailure = vm.runInContext(`(() => ({
+    problem: storageProblem,
+    markup: document.getElementById("screen").innerHTML
+  }))()`, readContext);
+  assert.ok(readFailure.problem.includes("прочитати локальні дані"), "blocked or corrupt localStorage needs an explicit read failure");
+  assert.ok(readFailure.markup.includes('id="chooseBackup"')
+    && readFailure.markup.includes('id="importBackup"')
+    && readFailure.markup.includes('id="backupStatus"')
+    && readFailure.markup.includes("Продовжити без відновлення"), "Welcome must expose restore before a fresh profile can overwrite unread data");
+
   const context = appContext({ storageWriteFails: true });
   const failed = vm.runInContext(`(() => {
     store = freshStore();
@@ -474,6 +510,146 @@ function testStorageFailureRecovery() {
   assert.equal(recovered.saved, true, "storage must recover without restarting the app");
   assert.equal(recovered.problem, "", "successful save must clear the stale failure state");
   assert.equal(recovered.hidden, true, "recovered storage must hide the warning");
+}
+
+function testParentRouteAndControlRecovery() {
+  const context = appContext({ buildChannel: "validation" });
+  const result = vm.runInContext(`(() => {
+    const born = new Date();
+    born.setDate(1);
+    born.setMonth(born.getMonth() - 4);
+    const child = freshChild("Марко", localDateString(born));
+    store = { consent: { accepted: true, date: new Date().toISOString() }, children: [child], activeChildId: child.id };
+
+    const staleRoutesCanonical = ["welcome", "consent", "profile"].every((stale) => {
+      profileMode = null;
+      location.hash = "#/" + stale;
+      route();
+      return location.hash === "#/home"
+        && document.getElementById("screen").innerHTML.includes("Сьогодні")
+        && document.title === "Сьогодні · Milestones";
+    });
+    profileMode = "add";
+    location.hash = "#/profile";
+    route();
+    const explicitAddWorks = document.getElementById("screen").innerHTML.includes("Зберегти і продовжити");
+    profileMode = "edit";
+    route();
+    const explicitEditWorks = document.getElementById("screen").innerHTML.includes('value="Марко"');
+    profileMode = null;
+
+    renderAppbar("home");
+    const back = document.querySelector(".appbar-back");
+    const inactiveBackHidden = back.disabled && back.tabIndex === -1 && back.ariaHidden === "true";
+    renderAppbar("program");
+    const secondaryBackEnabled = !back.disabled && back.tabIndex === 0 && back.ariaHidden === "";
+
+    const age = currentAge();
+    const ids = questionIdsFor(age);
+    child.surveys[age] = {
+      questionIds: ids,
+      states: Object.fromEntries(ids.map((id) => [id, "yes"])),
+      variants: {},
+      date: new Date().toISOString()
+    };
+    location.hash = "#/survey";
+    route();
+    const restartNode = { dataset: { go: "survey", restart: "1" } };
+    __listeners.click({ target: { id: "", closest: (selector) => selector === "[data-go]" ? restartNode : null } });
+    const sameHashRestartWorks = location.hash === "#/survey"
+      && child.surveys[age].date === null
+      && document.getElementById("screen").innerHTML.includes('id="questionTitle"');
+
+    child.surveys[age].states = Object.fromEntries(ids.map((id) => [id, "yes"]));
+    child.surveys[age].date = new Date().toISOString();
+    child.playDiary = [];
+    child.activePlaySession = null;
+    location.hash = "#/program";
+    route();
+    const day = programState.program[programState.currentIndex];
+    const activityId = programState.selected[day.day] || day.options[0];
+    const startNode = { dataset: { activityId } };
+    __listeners.click({ target: { id: "", closest: (selector) => selector === "#startPlaySession" ? startNode : null } });
+    const nestedStartWorks = child.activePlaySession?.activityId === activityId;
+    const finishNode = { dataset: { activityId } };
+    __listeners.click({ target: { id: "", closest: (selector) => selector === "#finishPlaySession" ? finishNode : null } });
+    const nestedFinishWorks = !child.activePlaySession
+      && child.playDiary.length === 1
+      && /^play_\\d+_[a-z0-9]{4}$/.test(child.playDiary[0].id);
+
+    const reflectionMarkup = playReflectionHtml(child.playDiary[0]);
+    const reflectionSemantics = (reflectionMarkup.match(/role="group"/g) || []).length === 2
+      && reflectionMarkup.includes("Коротка нотатка після гри")
+      && reflectionMarkup.includes('aria-labelledby="play-reaction-')
+      && reflectionMarkup.includes('aria-labelledby="play-signal-');
+
+    const repeatedMarkup = activityDetailHtml(age, activityId, false, "today-1")
+      + activityDetailHtml(age, activityId, false, "day-4");
+    const renderedIds = [...repeatedMarkup.matchAll(/ id="([^"]+)"/g)].map((match) => match[1]);
+    const labelledRefs = [...repeatedMarkup.matchAll(/aria-labelledby="([^"]+)"/g)]
+      .flatMap((match) => match[1].split(/\\s+/));
+    const uniqueInstanceIds = new Set(renderedIds).size === renderedIds.length
+      && labelledRefs.every((ref) => renderedIds.includes(ref));
+
+    child.favoriteActivities = [activityId];
+    const favoriteMarkup = activityDetailHtml(age, activityId, false, "favorite-check");
+    const labelInNameOkay = favoriteMarkup.includes('aria-label="Збережено. Прибрати гру зі збережених"');
+
+    const validBackup = backupPayload();
+    const maliciousId = JSON.parse(JSON.stringify(validBackup));
+    maliciousId.data.children[0].playDiary[0].id = 'x" autofocus onfocus="alert(1)';
+    const spacedId = JSON.parse(JSON.stringify(validBackup));
+    spacedId.data.children[0].playDiary[0].id = "play 1 bad";
+    const duplicateId = JSON.parse(JSON.stringify(validBackup));
+    duplicateId.data.children[0].playDiary.push(JSON.parse(JSON.stringify(duplicateId.data.children[0].playDiary[0])));
+    const secureBackupIds = validateBackupPayload(validBackup).ok
+      && !validateBackupPayload(maliciousId).ok
+      && !validateBackupPayload(spacedId).ok
+      && !validateBackupPayload(duplicateId).ok;
+
+    window.matchMedia = (query) => ({ matches: query === "(prefers-reduced-motion: reduce)" });
+    const reducedMotionOkay = motionScrollBehavior() === "auto";
+
+    libraryUi = { query: "", topic: "all" };
+    librarySearchTimer = null;
+    const originalGetElementById = document.getElementById;
+    let countWrites = 0;
+    let resultWrites = 0;
+    let scheduledSearch = null;
+    let clearedSearches = 0;
+    const countNode = {
+      _text: libraryResultState().status,
+      get textContent() { return this._text; },
+      set textContent(value) { this._text = value; countWrites += 1; }
+    };
+    const resultsNode = {
+      _html: "",
+      get innerHTML() { return this._html; },
+      set innerHTML(value) { this._html = value; resultWrites += 1; }
+    };
+    document.getElementById = (id) => id === "libraryCount" ? countNode
+      : id === "libraryResults" ? resultsNode : originalGetElementById(id);
+    window.setTimeout = (callback) => { scheduledSearch = callback; return 1; };
+    window.clearTimeout = () => { clearedSearches += 1; };
+    ["с", "со", "сон"].forEach((value) => {
+      __listeners.input({ target: { id: "librarySearch", value, dataset: {} } });
+    });
+    scheduledSearch();
+    const libraryDebounceOkay = resultWrites === 1 && countWrites === 1 && clearedSearches === 2
+      && countNode === document.getElementById("libraryCount") && libraryUi.query === "сон";
+
+    return {
+      routeOkay: staleRoutesCanonical && explicitAddWorks && explicitEditWorks
+        && inactiveBackHidden && secondaryBackEnabled && sameHashRestartWorks,
+      nestedControlsOkay: nestedStartWorks && nestedFinishWorks,
+      semanticsOkay: reflectionSemantics && uniqueInstanceIds && labelInNameOkay && reducedMotionOkay && libraryDebounceOkay,
+      secureBackupIds
+    };
+  })()`, context);
+  assert.equal(result.routeOkay, true, "stale onboarding history must canonicalize while explicit Add/Edit and same-route restart remain functional");
+  assert.equal(result.nestedControlsOkay, true, "nested SVG and label targets must start and finish the selected game");
+  assert.equal(result.semanticsOkay, true, "dynamic play UI needs unique references, grouped controls, label-in-name, and reduced-motion behavior");
+  assert.equal(result.secureBackupIds, true, "backup diary ids must be generated, unique, known-activity records rather than attribute-injection input");
 }
 
 function testReviewBuildIsolation() {
@@ -503,20 +679,27 @@ async function testServiceWorker() {
   const storedRequests = [];
   let skipWaitingCalled = false;
   let clientsClaimed = false;
+  let failCachePut = false;
+  let fetchImpl = async () => { throw new Error("offline"); };
   const offlineDocument = { kind: "offline-index" };
+  const cachedResponses = new Map([["./index.html", offlineDocument]]);
   const cache = {
     addAll: async (paths) => { cachedShell.push(...paths); },
-    put: async (request) => { storedRequests.push(request); }
+    put: async (request, response) => {
+      storedRequests.push(request);
+      if (failCachePut) throw new Error("QuotaExceededError");
+      cachedResponses.set(request, response);
+    }
   };
   const context = vm.createContext({
     URL,
     Promise,
-    fetch: async () => { throw new Error("offline"); },
+    fetch: (request) => fetchImpl(request),
     caches: {
       open: async () => cache,
       keys: async () => ["milestones-stage5-p2-12", "milestones-stage5-p2-13", "milestones-stage5-p2-14", "milestones-stage5-p2-15", "milestones-stage5-p2-15-r1", "milestones-stage5-p2-16", "milestones-stage5-p2-16-r1", "unrelated-cache"],
       delete: async (key) => { deletedCaches.push(key); return true; },
-      match: async (request) => request === "./index.html" ? offlineDocument : null
+      match: async (request) => cachedResponses.get(request) || null
     },
     self: {
       location: { origin: "http://localhost:4175" },
@@ -533,10 +716,33 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-58-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-58-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-58-r1"), "the sourced library must be cached offline");
-  assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-59-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-59-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-59-r1"), "the sourced library must be cached offline");
+  assert.ok(!cachedShell.some((entry) => entry.includes("motion_cards") || entry.includes("activity-tummy-time")), "optional illustrations must not block core installation");
+
+  const failingInstallListeners = {};
+  const failingInstallContext = vm.createContext({
+    URL,
+    Promise,
+    fetch: async () => { throw new Error("offline"); },
+    caches: {
+      open: async () => ({ addAll: async () => { throw new Error("missing core asset"); } }),
+      keys: async () => [],
+      delete: async () => true,
+      match: async () => null
+    },
+    self: {
+      location: { origin: "http://localhost:4175" },
+      addEventListener: (type, handler) => { failingInstallListeners[type] = handler; },
+      skipWaiting: async () => {},
+      clients: { claim: async () => {} }
+    }
+  });
+  run(failingInstallContext, "prototype_stage5_ua/sw.js");
+  let failingInstallWork;
+  failingInstallListeners.install({ waitUntil: (promise) => { failingInstallWork = promise; } });
+  await assert.rejects(failingInstallWork, /missing core asset/, "a genuinely incomplete functional core must not install as offline-ready");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
   assert.equal(skipWaitingCalled, true, "approved update must tell the waiting worker to activate");
@@ -547,13 +753,39 @@ async function testServiceWorker() {
   assert.deepEqual(deletedCaches, ["milestones-stage5-p2-12", "milestones-stage5-p2-13", "milestones-stage5-p2-14", "milestones-stage5-p2-15", "milestones-stage5-p2-15-r1", "milestones-stage5-p2-16", "milestones-stage5-p2-16-r1"], "activation must delete only older Stage5 caches");
   assert.equal(clientsClaimed, true, "new service worker must claim the app after activation");
 
-  let navigationResponse;
-  listeners.fetch({
-    request: { method: "GET", mode: "navigate", url: "http://localhost:4175/prototype_stage5_ua/#/home" },
-    respondWith: (promise) => { navigationResponse = promise; }
-  });
-  assert.equal(await navigationResponse, offlineDocument, "offline navigation must return the cached app shell");
+  async function fetchThrough(request) {
+    let responseWork;
+    let backgroundWork = Promise.resolve();
+    listeners.fetch({
+      request,
+      respondWith: (promise) => { responseWork = promise; },
+      waitUntil: (promise) => { backgroundWork = promise; }
+    });
+    const response = await responseWork;
+    await backgroundWork;
+    return response;
+  }
+
+  const navigationRequest = { method: "GET", mode: "navigate", url: "http://localhost:4175/prototype_stage5_ua/#/home" };
+  assert.equal(await fetchThrough(navigationRequest), offlineDocument, "offline navigation must return the cached app shell");
   assert.deepEqual(storedRequests, [], "offline fallback must not attempt a cache write");
+
+  const assetRequest = { method: "GET", mode: "cors", url: "http://localhost:4175/prototype_stage5_ua/assets/motion_cards/act_002_social_001.jpg" };
+  const networkAsset = { kind: "network-asset", ok: true, clone: () => ({ kind: "cached-asset" }) };
+  fetchImpl = async () => networkAsset;
+  failCachePut = true;
+  assert.equal(await fetchThrough(assetRequest), networkAsset, "a full cache must not swallow a successful online asset response");
+  assert.ok(storedRequests.includes(assetRequest), "viewed optional art should attempt a runtime cache write");
+
+  failCachePut = false;
+  await fetchThrough(assetRequest);
+  fetchImpl = async () => { throw new Error("offline"); };
+  assert.equal((await fetchThrough(assetRequest)).kind, "cached-asset", "a viewed Motion Card must remain available offline after a successful runtime cache write");
+
+  const networkDocument = { kind: "network-document", ok: true, clone: () => ({ kind: "cached-document" }) };
+  fetchImpl = async () => networkDocument;
+  failCachePut = true;
+  assert.equal(await fetchThrough(navigationRequest), networkDocument, "navigation must return its online response even when cache refresh fails");
 }
 
 async function testPwaInstallUi() {
@@ -643,6 +875,44 @@ async function testPwaInstallUi() {
   serviceWorkerListeners.controllerchange();
   serviceWorkerListeners.controllerchange();
   assert.equal(reloads, 1, "controller change must reload exactly once");
+
+  const failedWindowListeners = {};
+  const failedNodes = {
+    offlineStatus: { hidden: false, textContent: "" },
+    installApp: { hidden: true, disabled: false },
+    installHelp: { hidden: false, textContent: "" },
+    installStatus: { textContent: "" },
+    updateControls: { hidden: true },
+    screen: {}
+  };
+  const failedContext = vm.createContext({
+    Promise,
+    MutationObserver: FakeMutationObserver,
+    location: { protocol: "http:" },
+    navigator: {
+      onLine: true,
+      standalone: false,
+      serviceWorker: {
+        controller: null,
+        addEventListener: () => {},
+        register: async () => { throw new Error("registration blocked"); }
+      }
+    },
+    window: {
+      MutationObserver: FakeMutationObserver,
+      matchMedia: () => ({ matches: false }),
+      location: { reload: () => {} },
+      addEventListener: (type, handler) => { failedWindowListeners[type] = handler; }
+    },
+    document: {
+      getElementById: (id) => failedNodes[id] || null,
+      addEventListener: () => {}
+    }
+  });
+  run(failedContext, "prototype_stage5_ua/pwa.js");
+  await failedWindowListeners.load();
+  assert.ok(failedNodes.installStatus.textContent.includes("працює онлайн")
+    && failedNodes.installStatus.textContent.includes("офлайн-режим"), "service-worker rejection must explain that the online app still works");
 }
 
 function testAppState() {
@@ -1135,14 +1405,15 @@ function testAppState() {
       return filteredLibraryItems().some((item) => item.id === "walk-hot-weather");
     });
     libraryUi = { query: "підгузки", topic: "all" };
-    const libraryFallbackMarkup = libraryResultsHtml();
+    const libraryFallback = libraryResultState();
+    const libraryFallbackMarkup = libraryFallback.html;
     libraryUi = { query: "", topic: "safety" };
     const libraryMarkup = renderLibrary();
     const libraryOkay = librarySearchResults.some((item) => item.id === "sleep-routine")
       && librarySafetyResults.length === 3
       && librarySafetyResults.every((item) => item.topic === "safety")
       && outdoorSearchesWork
-      && libraryFallbackMarkup.includes("Точного збігу поки немає")
+      && libraryFallback.status.includes("Точного збігу поки немає")
       && libraryFallbackMarkup.includes("Показати всі матеріали")
       && !libraryFallbackMarkup.includes("Нічого не знайшлося")
       && libraryMarkup.includes('id="librarySearch"')
@@ -1490,6 +1761,7 @@ function testAppState() {
   testContentAndEngine();
   testAppState();
   testStorageFailureRecovery();
+  testParentRouteAndControlRecovery();
   testReviewBuildIsolation();
   await testServiceWorker();
   await testPwaInstallUi();

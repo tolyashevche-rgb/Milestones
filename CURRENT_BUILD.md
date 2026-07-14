@@ -1,6 +1,6 @@
 # Current build — read before running or auditing
 
-**Current product UI:** Stage 5 UA, release **P2.58**.
+**Current product UI:** Stage 5 UA, release **P2.59**.
 
 **Canonical entry point:** `prototype_stage5_ua/index.html`
 
@@ -49,7 +49,7 @@ Before reporting findings, record:
 
 1. the output of `git rev-parse HEAD`;
 2. the entry point inspected — it must be `prototype_stage5_ua/index.html`;
-3. the visible release/cache marker — currently `P2.58` / `20260714-p2-58-r1`;
+3. the visible release/cache marker — currently `P2.59` / `20260714-p2-59-r1`;
 4. whether the regression suite passed;
 5. the exact route(s) inspected.
 

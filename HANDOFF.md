@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.58.** Read
+> **Current product baseline: Stage 5 UA / P2.59.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -126,8 +126,10 @@ bottom navigation with Today → Observation → Game → Records. P2.57 then ma
 activity the Game focus, moves alternatives behind an optional disclosure, locks route-changing
 controls during active/unsaved play and makes stopping the primary post-play choice. P2.58
 consolidates semantic colors, solid controls, restraint in elevation and one shared outline-SVG
-family across parent-facing actions. The visible asset baseline is `20260714-p2-58-r1`; these additions do not change
-the product's safety rules or make draft content expert-validated.
+family across parent-facing actions. P2.59 then hardens route/focus semantics, narrow reflow,
+recovery and a 442 KiB functional offline core. The visible asset baseline is
+`20260714-p2-59-r1`; neither release changes the product's safety rules or makes draft content
+expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
 and teal remains the action/trust color. A derived seven-day recap appears only after at least
@@ -176,8 +178,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 > completed author-card backlog, simulate feedback, or call draft content validated.
 
 1. **Automated quality rebuild** — currently active. Follow
-   `docs/product_quality_rebuild_tracker_ua.md`; the next implementation step is accessibility,
-   responsive behavior, recovery states and PWA hardening.
+   `docs/product_quality_rebuild_tracker_ua.md`; the next implementation step is the final automated
+   regression/audit report and an explicit inventory of manual browser, expert, parent and commercial gates.
 2. **Motion Cards review** — use the isolated reviewer flow and collection dashboard already in
    Stage 5; collect real reviewer decisions for the 59 cards and retain their provenance. The
    production inventory is `docs/motion_cards_production_manifest_ua.md`.
@@ -214,6 +216,24 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — P2.59 accessibility, reflow, recovery and lean PWA core
+- Fixed two interaction defects found after the SVG pass: clicks on nested Start/Finish contents now
+  activate the full button, and re-observation rerenders even when the hash is already `#/survey`.
+  Accepted profiles canonicalize stale onboarding history while explicit Add/Edit remains available.
+- Added per-route document titles, reduced-motion-aware scrolling, grouped reflection controls,
+  stable/debounced library announcements, unique ARIA references, label-in-name fixes and focused
+  non-global private-moment deletion. Imported diary IDs are now strict, unique and known-activity
+  bound, closing an attribute-injection path from a malicious backup.
+- Added additive safe-area insets and a ≤400 px reflow: the real nav height is reserved, fixed thumb
+  actions become in-flow, the seven-day summary wraps 4+3 and dense rows stack without page-level
+  horizontal scrolling. This remains source/DOM verified; live 320 px, 400% zoom and device testing
+  is still open because the runtime exposes no browser.
+- Reduced mandatory offline installation from roughly 20.49 MiB / 76 files to 17 functional files
+  / 452,488 bytes. Optional illustrations cache after first use; Cache Storage quota errors no longer
+  swallow successful network responses, and blocked service-worker setup gets a calm online fallback.
+- Bumped the current build/cache marker to P2.59 / `20260714-p2-59-r1`; syntax, regression and diff
+  checks pass.
 
 ### 2026-07-14 — P2.58 restrained visual system and objective UI guards
 - Consolidated parent-facing colors into semantic action, surface, advisory, danger and focus
