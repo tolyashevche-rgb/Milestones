@@ -24,6 +24,16 @@ const OBSERVATION_LABELS = {
   not_yet: "Ще не помічаю"
 };
 
+const BUILD_CHANNEL = window.MILESTONES_BUILD_CHANNEL || "validation";
+const IS_MOTION_REVIEW_BUILD = BUILD_CHANNEL === "validation-review";
+// No expert approvals are fabricated in code. Draft prompt variants and author notes stay
+// unavailable in the ordinary validation app until an attributable release tracker exists.
+const CONTENT_RELEASE = Object.freeze({
+  alternateQuestionPhrasings: false,
+  authorNotes: false,
+  expertApproved: false
+});
+
 const PLAY_CONTEXTS = [
   { id: "any", label: "Будь-яка" },
   { id: "quick", label: "До 3 хв" },
@@ -68,8 +78,8 @@ const MOTION_REVIEW_AGE_FILTERS = ["all", "2", "4", "6", "9", "12"];
 const MOTION_REVIEW_SESSION_SCHEMA = "milestones.motion-review-session.ua";
 const MOTION_REVIEW_SESSION_VERSION = 2;
 const MOTION_REVIEW_STORE_VERSION = 2;
-const MOTION_REVIEW_CONTENT_VERSION = "motion-cards-2026-07-02-r1";
-const MOTION_REVIEW_ORDER_VERSION = "balanced-session-order-v1";
+const MOTION_REVIEW_CONTENT_VERSION = "motion-cards-2026-07-14-r2";
+const MOTION_REVIEW_ORDER_VERSION = "balanced-session-order-v2";
 const MOTION_REVIEW_CHECKPOINT_SIZE = 10;
 const MAX_MOTION_REVIEW_SESSION_BYTES = 512 * 1024;
 const BACKUP_SCHEMA = "milestones.stage5.ua.backup";
@@ -118,6 +128,7 @@ function queryParam(name) {
   return "";
 }
 function motionReviewReviewerSession() {
+  if (!IS_MOTION_REVIEW_BUILD) return null;
   const requested = queryParam("reviewSession");
   return MOTION_REVIEW_SESSIONS.find((session) => session.id === requested) || null;
 }
@@ -144,7 +155,7 @@ function motionReviewInvitationText(sessionId) {
     "1. Відкрийте персональне посилання на телефоні.",
     "2. Спочатку дивіться на кожну картку 5–8 секунд, а потім відкривайте критерії.",
     "3. Прогрес зберігається на цьому пристрої; після кожних 10 карток можна зробити паузу.",
-    "4. Після 59 карток натисніть «Зберегти сесію» та поверніть координатору JSON-файл.",
+    `4. Після ${motionReviewCardIds().length} карток натисніть «Зберегти сесію» та поверніть координатору JSON-файл.`,
     "",
     `Персональне посилання: ${motionReviewReviewerUrl(meta.id)}`,
     "Будь ласка, не пересилайте це посилання іншому учаснику."
@@ -180,7 +191,15 @@ function motionReviewProgressText() {
   return `Перевірено ${stats.reviewed} із ${stats.total}`;
 }
 function motionReviewCardIds() {
-  return typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES) : [];
+  const ids = new Set();
+  if (typeof ACTIVITY_RASTER_GUIDES === "object") Object.keys(ACTIVITY_RASTER_GUIDES).forEach((id) => ids.add(id));
+  if (typeof ACTIVITY_VISUAL_GUIDES === "object") Object.keys(ACTIVITY_VISUAL_GUIDES).forEach((id) => ids.add(id));
+  return [...ids];
+}
+function motionReviewGuideFor(id) {
+  if (typeof ACTIVITY_RASTER_GUIDES === "object" && ACTIVITY_RASTER_GUIDES[id]) return ACTIVITY_RASTER_GUIDES[id];
+  if (typeof ACTIVITY_VISUAL_GUIDES === "object" && ACTIVITY_VISUAL_GUIDES[id]) return ACTIVITY_VISUAL_GUIDES[id];
+  return null;
 }
 function motionReviewShuffledIds(ids, seedText) {
   let state = 2166136261;
@@ -294,13 +313,13 @@ function motionReviewEntries(meta, data) {
   const stale = data.contentVersion !== MOTION_REVIEW_CONTENT_VERSION;
   const reviewerSession = motionReviewReviewerSession();
   const ids = reviewerSession?.id === meta.id ? motionReviewSessionCardIds(meta) : motionReviewCardIds();
-  return ids.map((id) => [id, ACTIVITY_RASTER_GUIDES[id]]).filter(([id]) => {
+  return ids.map((id) => [id, motionReviewGuideFor(id)]).filter(([id, guide]) => guide && (() => {
     if (view.age !== "all" && Number(id.slice(4, 7)) !== Number(view.age)) return false;
     const card = data.cards[id] || {};
     if (view.status === "pending") return stale || !motionReviewCardComplete(card, criteria);
     if (view.status === "issues") return criteria.some((criterion) => card[criterion.id] === "no");
     return true;
-  });
+  })());
 }
 function motionReviewStatusCounts(meta, data) {
   const criteria = MOTION_REVIEW_CRITERIA[meta.type];
@@ -757,7 +776,9 @@ function milestoneById(age, id) { return (MILESTONES_BY_AGE[age] || []).find((m)
 // Answers stay keyed by milestone id, so a different phrasing still compares like-for-like.
 function variantPoolFor(age, id) {
   const m = milestoneById(age, id);
-  const alts = (typeof QUESTION_VARIANTS_UA !== "undefined" && QUESTION_VARIANTS_UA[id]) || [];
+  const alts = CONTENT_RELEASE.alternateQuestionPhrasings
+    ? ((typeof QUESTION_VARIANTS_UA !== "undefined" && QUESTION_VARIANTS_UA[id]) || [])
+    : [];
   return [m ? m.text : ""].concat(alts).filter(Boolean);
 }
 
@@ -1020,23 +1041,24 @@ function currentRoute() { return (location.hash.replace(/^#\//, "") || "home").s
 
 function route() {
   const r = currentRoute();
-  if (motionReviewReviewerSession()) return show("visual-pilot");
+  if (IS_MOTION_REVIEW_BUILD) return show("visual-pilot");
   // Onboarding gate: welcome first, then consent, then child profile.
   if (!store.consent || !store.consent.accepted) return show(r === "consent" ? "consent" : "welcome");
   if (!store.children.length) return show("profile");
-  const known = ["home", "survey", "results", "program", "progress", "ask", "library", "visual-pilot", "profile", "consent", "welcome"];
+  const known = ["home", "survey", "results", "program", "progress", "ask", "library", "profile", "consent", "welcome"];
   show(known.includes(r) ? r : "home");
 }
 
 function show(screen) {
+  if (screen === "visual-pilot" && !IS_MOTION_REVIEW_BUILD) screen = "home";
   if (screen !== "program" && playTimer.running) pausePlayTimer();
   const root = document.getElementById("screen");
   const renderers = {
     welcome: renderWelcome, consent: renderConsent, profile: renderProfile,
     home: renderHome, survey: renderSurvey, results: renderResults,
-    program: renderProgram, progress: renderProgress, ask: renderAsk, library: renderLibrary,
-    "visual-pilot": renderVisualPilot
+    program: renderProgram, progress: renderProgress, ask: renderAsk, library: renderLibrary
   };
+  if (IS_MOTION_REVIEW_BUILD) renderers["visual-pilot"] = renderVisualPilot;
   root.innerHTML = (renderers[screen] || renderHome)();
   renderNav(screen);
   renderAppbar(screen);
@@ -1129,7 +1151,7 @@ function activateHomeTab(tabId, focus = false) {
 
 function renderNav(active) {
   const nav = document.getElementById("bottomNav");
-  const onboarding = ["welcome", "consent", "profile"].includes(active) || Boolean(motionReviewReviewerSession());
+  const onboarding = ["welcome", "consent", "profile"].includes(active) || IS_MOTION_REVIEW_BUILD;
   nav.style.display = onboarding ? "none" : "flex";
   nav.innerHTML = NAV.map((n) => {
     const survey = cc() && cc().surveys[currentAge()];
@@ -1147,13 +1169,13 @@ function renderAppbar(screen) {
   const slot = document.getElementById("appbarChild");
   if (!slot) return;
   const reviewerSession = motionReviewReviewerSession();
-  if (reviewerSession) {
-    slot.innerHTML = `<strong>Перевірка Motion Cards</strong><span class="appbar-tag">${esc(reviewerSession.label)}</span>`;
+  if (IS_MOTION_REVIEW_BUILD) {
+    slot.innerHTML = `<strong>Перевірка Motion Cards</strong><span class="appbar-tag">${esc(reviewerSession?.label || "координатор")}</span>`;
     return;
   }
   const onboarding = ["welcome", "consent", "profile"].includes(screen);
   if (onboarding || !store.children.length) {
-    slot.innerHTML = `<strong>Карта розвитку</strong><span class="appbar-tag">0–12 міс</span>`;
+    slot.innerHTML = `<strong>Карта розвитку · прототип</strong><span class="appbar-tag">0–12 міс</span>`;
     return;
   }
   const active = cc();
@@ -1806,8 +1828,15 @@ function playDiaryEntry(entryId, child = cc()) { return child?.playDiary.find((e
 function latestPlayDiaryEntry(age, activityId, child = cc()) {
   return child?.playDiary.find((entry) => Number(entry.age) === Number(age) && entry.activityId === activityId && String(entry.endedAt).slice(0, 10) === localDateString()) || null;
 }
+function activityHasMinimumSafety(activity) {
+  return Boolean(activity
+    && String(activity.materials || "").trim()
+    && Array.isArray(activity.steps) && String(activity.steps[0] || "").trim()
+    && String(activity.stop || "").trim());
+}
 function startPlaySession(age, activityId) {
-  if (!activityById(age, activityId)) return false;
+  const activity = activityById(age, activityId);
+  if (!activityHasMinimumSafety(activity)) return false;
   if (cc().activePlaySession) return false;
   if (!activityCompletedToday(age, activityId) && completedActivityIdsToday(age).length >= 3) return false;
   cc().activePlaySession = { activityId, age, startedAt: new Date().toISOString() };
@@ -1881,6 +1910,9 @@ function playSessionControlsHtml(age, activityId) {
   if (entry && !entry.saved) return playReflectionHtml(entry);
   if (entry && entry.saved && !entry.nextChoice) return playContinueHtml(entry);
   if (entry && entry.saved && entry.nextChoice === "later") return playContinueHtml(entry);
+  if (!activityHasMinimumSafety(activityById(age, activityId))) {
+    return `<section class="play-session-start play-session-blocked"><strong>Початок гри заблоковано</strong><p class="muted small">Спершу команда має додати й перевірити повну умову безпеки.</p></section>`;
+  }
   return `<section class="play-session-start"><div class="play-step-label"><span>1</span><strong>Готові?</strong></div><button type="button" id="startPlaySession" class="btn primary block" data-activity-id="${activityId}">▶ Почати гру</button><small>Після початку можна додати таймер — за бажанням.</small></section>`;
 }
 
@@ -2020,7 +2052,7 @@ function renderVisualPilot() {
   }
   const reviewerStats = motionReviewSessionStats(reviewMeta);
   const reviewSessionStale = reviewerStats.stale;
-  const visualCount = typeof ACTIVITY_RASTER_GUIDES === "object" ? Object.keys(ACTIVITY_RASTER_GUIDES).length : 0;
+  const visualCount = motionReviewCardIds().length;
   // Hero: the tummy-time pilot sequence as a one-scene-at-a-time carousel (its authored
   // captions ride along inside each slide), falling back to the whole image if data is absent.
   const heroCards = typeof ACTIVITY_VISUAL_GUIDES === "object" && ACTIVITY_VISUAL_GUIDES.act_002_movement_001
@@ -2029,13 +2061,13 @@ function renderVisualPilot() {
     ? `<div class="motion-guide motion-guide-embed" role="group" aria-label="Чотири послідовні сцени гри на животику">${motionCarouselHtml({ image: "activity-tummy-time-guide-v1.png" }, heroCards)}</div>`
     : `<img src="activity-tummy-time-guide-v1.png" alt="Чотири послідовні сцени гри на животику: підготовка килимка, положення дитини під наглядом, спокійна взаємодія на рівні очей та завершення гри при втомі.">`;
   const matchingEntries = motionReviewEntries(reviewMeta, reviewData);
-  const revisitId = reviewerMode && ACTIVITY_RASTER_GUIDES[reviewData.revisitId] ? reviewData.revisitId : "";
-  const revisitEntry = revisitId ? [revisitId, ACTIVITY_RASTER_GUIDES[revisitId]] : null;
+  const revisitId = reviewerMode && motionReviewGuideFor(reviewData.revisitId) ? reviewData.revisitId : "";
+  const revisitEntry = revisitId ? [revisitId, motionReviewGuideFor(revisitId)] : null;
   const reviewCheckpoint = motionReviewCheckpoint(reviewMeta, reviewData);
   const checkpointDue = reviewerMode && !revisitId && reviewCheckpoint.due;
   const filteredEntries = reviewerMode ? (checkpointDue ? [] : revisitEntry ? [revisitEntry] : matchingEntries.slice(0, 1)) : matchingEntries;
   const filterCounts = motionReviewStatusCounts(reviewMeta, reviewData);
-  const lastReviewedId = reviewerMode && ACTIVITY_RASTER_GUIDES[reviewData.lastReviewedId] ? reviewData.lastReviewedId : "";
+  const lastReviewedId = reviewerMode && motionReviewGuideFor(reviewData.lastReviewedId) ? reviewData.lastReviewedId : "";
   const lastReviewedAge = lastReviewedId ? Number(lastReviewedId.slice(4, 7)) : 0;
   const lastReviewedActivity = lastReviewedId ? activityById(lastReviewedAge, lastReviewedId) : null;
   const reviewerHistoryHtml = reviewerMode && !reviewSessionStale && (revisitId || lastReviewedId)
@@ -2052,7 +2084,7 @@ function renderVisualPilot() {
   const overviewHtml = reviewerMode ? "" : `<div class="motion-review-overview" aria-label="Зведення перевірки">
     <div><strong>Зведення всіх сесій</strong><span>Завершено сесій: ${reviewOverview.completeSessions} із ${MOTION_REVIEW_SESSIONS.length} · Відповідей «Ні»: ${reviewOverview.issues}</span></div>
     <div class="motion-collection-stats" aria-label="Стан збору файлів">
-      <div><b>${reviewOverview.collectionComplete}</b><span>отримано 59/59</span></div>
+      <div><b>${reviewOverview.collectionComplete}</b><span>отримано ${motionReviewCardIds().length}/${motionReviewCardIds().length}</span></div>
       <div><b>${reviewOverview.collectionDrafts}</b><span>чернетки</span></div>
       <div><b>${reviewOverview.collectionWaiting}</b><span>очікуємо</span></div>
       <div><b>${reviewOverview.collectionStale}</b><span>повторити</span></div>
@@ -2070,7 +2102,7 @@ function renderVisualPilot() {
   </details>`;
   const transferHtml = `<section class="motion-session-transfer" aria-labelledby="motionSessionTransferTitle">
     <div><strong id="motionSessionTransferTitle">${reviewerMode ? "Завершити й передати сесію" : "Передати окрему сесію"}</strong><span>Зараз обрано: ${esc(reviewMeta.label)}</span></div>
-    <p>Файл містить лише відповіді та нотатки цієї review-сесії — без профілю дитини й інших учасників. Завершена сесія має містити 59 із 59 перевірених карток; неповний файл імпортується лише як чернетка.</p>
+    <p>Файл містить лише відповіді та нотатки цієї review-сесії — без профілю дитини й інших учасників. Завершена сесія має містити ${motionReviewCardIds().length} із ${motionReviewCardIds().length} перевірених карток; неповний файл імпортується лише як чернетка.</p>
     ${reviewerMode ? `<div class="motion-session-readiness ${reviewSessionStale ? "stale" : reviewerStats.reviewed === reviewerStats.total ? "complete" : ""}"><strong>${reviewSessionStale ? "Сесія застаріла" : reviewerStats.reviewed === reviewerStats.total ? "Сесію завершено" : `${reviewerStats.reviewed} із ${reviewerStats.total} карток`}</strong><span>${reviewSessionStale ? "Ці відповіді не можна передавати як рев’ю поточної версії." : reviewerStats.reviewed === reviewerStats.total ? "Файл готовий до передачі координатору." : "Збережений файл буде чернеткою; до перевірки можна повернутися на цьому пристрої."}</span></div>` : ""}
     <div>
       <button type="button" id="exportMotionSession" class="btn ghost">${reviewSessionStale ? "Зберегти стару копію" : reviewerMode && reviewerStats.reviewed < reviewerStats.total ? "Зберегти чернетку" : "Зберегти сесію"}</button>
@@ -2360,11 +2392,26 @@ function activityVisualGuideHtml(id) {
   </section>`;
 }
 
+function activitySafetyStripHtml(activity) {
+  if (!activityHasMinimumSafety(activity)) {
+    return `<aside class="activity-safety-strip activity-safety-missing" role="alert">
+      <strong>Гра тимчасово недоступна</strong>
+      <p>Перед початком бракує перевіреної умови безпеки.</p>
+    </aside>`;
+  }
+  return `<aside class="activity-safety-strip" aria-labelledby="activity-safety-${esc(activity.id)}">
+    <strong id="activity-safety-${esc(activity.id)}">Перед початком</strong>
+    <p><b>Підготуйте:</b> ${esc(activity.materials)}</p>
+    <p><b>Перший крок:</b> ${esc(activity.steps[0])}</p>
+    <p class="activity-safety-stop"><b>Зупиніться:</b> ${esc(activity.stop)}</p>
+  </aside>`;
+}
+
 function activityDetailHtml(age, id, showLowEnergy = false) {
   const a = activityById(age, id);
   if (!a) return "";
   if (!cc().triedActivities.includes(id)) { cc().triedActivities.push(id); save(); }
-  const note = (typeof authorNoteFor === "function") ? authorNoteFor(a.id) : null;
+  const note = CONTENT_RELEASE.authorNotes && typeof authorNoteFor === "function" ? authorNoteFor(a.id) : null;
   const favorite = cc().favoriteActivities.includes(id);
   const lowEnergy = showLowEnergy && typeof ACTIVITY_LOW_ENERGY_UA !== "undefined" ? ACTIVITY_LOW_ENERGY_UA[id] : "";
   const visualGuide = activityVisualGuideHtml(id);
@@ -2375,11 +2422,13 @@ function activityDetailHtml(age, id, showLowEnergy = false) {
     ${a.evidence ? `<p><strong>Основа:</strong> ${esc(evidenceFriendly(a.evidence))}. <strong>Джерело:</strong> ${esc(sourceFriendly(a.source))}.</p>` : ""}
     ${note ? `<p><strong>Ідея ${esc(note.author)}:</strong> ${esc(note.idea)}.</p>` : ""}
   </details>` : "";
+  const safety = activitySafetyStripHtml(a);
   return `
     <div class="activity-title-row"><h2 class="activity-title">${esc(a.title)}</h2>
       <button type="button" class="favorite-toggle ${favorite ? "active" : ""}" data-favorite-id="${id}" aria-pressed="${favorite}" aria-label="${favorite ? "Прибрати гру зі збережених" : "Зберегти гру"}">${favoriteIcon(favorite)}<span>${favorite ? "Збережено" : "Зберегти"}</span></button>
     </div>
     <div class="tag-row activity-quick-meta"><span class="chip">⏱ ${esc(a.time)}</span><span class="chip">◇ ${esc(a.materials)}</span></div>
+    ${safety}
     ${lowEnergy ? `<div class="low-energy-option"><strong>Коли сил мало</strong><span>${esc(lowEnergy)}</span><small>Повні кроки й умова зупинки залишаються нижче.</small></div>` : ""}
     ${visualGuide}
     <details class="activity-more"><summary>Деталі й безпека</summary>
@@ -2812,7 +2861,7 @@ document.addEventListener("click", async (e) => {
     const value = motionReviewButton.dataset.reviewValue;
     const { meta, data } = activeMotionReviewSession();
     const criteria = MOTION_REVIEW_CRITERIA[meta.type];
-    if (data.contentVersion !== MOTION_REVIEW_CONTENT_VERSION || !ACTIVITY_RASTER_GUIDES[id]
+    if (data.contentVersion !== MOTION_REVIEW_CONTENT_VERSION || !motionReviewGuideFor(id)
       || !criteria.some((item) => item.id === criterion) || !["yes", "no"].includes(value)) return;
     data.cards[id] = data.cards[id] || {};
     if (data.cards[id][criterion] === value) delete data.cards[id][criterion];
@@ -3275,7 +3324,7 @@ document.addEventListener("input", (e) => {
     return;
   }
   const motionNoteId = e.target.dataset.motionReviewNote;
-  if (motionNoteId && typeof ACTIVITY_RASTER_GUIDES === "object" && ACTIVITY_RASTER_GUIDES[motionNoteId]) {
+  if (motionNoteId && motionReviewGuideFor(motionNoteId)) {
     const { data } = activeMotionReviewSession();
     if (data.contentVersion !== MOTION_REVIEW_CONTENT_VERSION) return;
     data.cards[motionNoteId] = data.cards[motionNoteId] || {};

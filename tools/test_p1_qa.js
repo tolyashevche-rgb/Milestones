@@ -27,14 +27,14 @@ function testCurrentBuildBoundary() {
   const stage4Legacy = read("prototype_stage4/legacy-reference.html");
   const stage4UaLegacy = read("prototype_stage4_ua/legacy-reference.html");
 
-  assert.equal(auditScope.release, "P2.54", "audit scope must identify the current release");
+  assert.equal(auditScope.release, "P2.55", "audit scope must identify the current release");
   assert.equal(auditScope.primaryEntryPoint, "prototype_stage5_ua/index.html", "Stage 5 UA must be the sole current UI entry point");
   assert.deepEqual(auditScope.runtimeDependencies, [
     "prototype_stage4_ua/data_ua.js",
     "prototype_stage4_ua/engine.js"
   ], "only Stage 4 UA data and engine may be current runtime dependencies");
-  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.54"), "current-build instructions must name the exact entry point and release");
-  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.54"), "README must lead with the current build boundary");
+  assert.ok(currentBuild.includes("prototype_stage5_ua/index.html") && currentBuild.includes("P2.55"), "current-build instructions must name the exact entry point and release");
+  assert.ok(readme.includes("CURRENT BUILD: Stage 5 UA / P2.55"), "README must lead with the current build boundary");
   assert.ok(agentGuide.includes("Audit only `prototype_stage5_ua/index.html`"), "agent instructions must reject legacy UI audits");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4/index.html")), false, "legacy EN UI must not look like a current entry point");
   assert.equal(fs.existsSync(path.join(root, "prototype_stage4_ua/index.html")), false, "legacy UA UI must not look like a current entry point");
@@ -44,6 +44,7 @@ function testCurrentBuildBoundary() {
 
 function testContentAndEngine() {
   const stage5Index = read("prototype_stage5_ua/index.html");
+  const motionReviewHtml = read("internal_tools/motion_review.html");
   const stage5Styles = read("prototype_stage5_ua/styles5.css");
   const stage5App = read("prototype_stage5_ua/app5.js");
   const stage5Authors = read("prototype_stage5_ua/authors_ua.js");
@@ -66,8 +67,10 @@ function testContentAndEngine() {
   const manifest = JSON.parse(read("prototype_stage5_ua/manifest.webmanifest"));
   const icon192 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-192.png"));
   const icon512 = fs.readFileSync(path.join(root, "prototype_stage5_ua/app-icon-512.png"));
-  assert.ok(stage5Index.includes("20260714-p2-54-r1"), "Stage5 assets must use the P2.54 cache key");
-  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-54-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes("20260714-p2-55-r1"), "Stage5 assets must use the P2.55 cache key");
+  assert.ok(stage5Index.includes('src="library_ua.js?v=20260714-p2-55-r1"'), "the sourced library must load before the app shell");
+  assert.ok(stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation"') && !stage5Index.includes('MILESTONES_BUILD_CHANNEL = "validation-review"'), "the ordinary app must not enable internal reviewer routing");
+  assert.ok(motionReviewHtml.includes('MILESTONES_BUILD_CHANNEL = "validation-review"') && motionReviewHtml.includes('name="robots" content="noindex,nofollow"'), "Motion review needs a separate noindex internal entry point");
   assert.ok(stage5Index.includes('<main id="screen"></main>'), "route changes must not announce the entire main region");
   assert.ok(stage5Index.includes('class="brand-mark"') && stage5Index.includes('<svg viewBox="0 0 20 20"'), "app shell needs the original kite brand mark");
   assert.ok(stage5Styles.includes("--apricot-soft:") && stage5Styles.includes(".week-recap"), "warm visual layer and weekly recap styles must ship together");
@@ -92,7 +95,7 @@ function testContentAndEngine() {
   assert.equal(icon192.readUInt32BE(20), 192, "192px icon height");
   assert.equal(icon512.readUInt32BE(16), 512, "512px icon width");
   assert.equal(icon512.readUInt32BE(20), 512, "512px icon height");
-  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-54-r1"'), "service worker cache must be versioned");
+  assert.ok(serviceWorker.includes('const CACHE_NAME = "milestones-stage5-p2-55-r1"'), "service worker cache must be versioned");
   const motionCardFiles = fs.readdirSync(path.join(root, "prototype_stage5_ua/assets/motion_cards")).filter((name) => name.endsWith(".jpg"));
   assert.equal(motionCardFiles.length, 59, "the complete Motion Cards library must contain exactly 59 optimized illustrations");
   motionCardFiles.forEach((name) => assert.ok(serviceWorker.includes(`./assets/motion_cards/${name}`), `${name} must be available offline`));
@@ -390,8 +393,8 @@ function appContext(options = {}) {
       getElementById: (id) => nodes[id] || null,
       querySelector: () => null
     },
-    window: { addEventListener: () => {}, scrollTo: () => {}, setTimeout: (callback) => callback() },
-    location: { hash: "#/welcome" },
+    window: { MILESTONES_BUILD_CHANNEL: options.buildChannel || "validation", addEventListener: () => {}, scrollTo: () => {}, setTimeout: (callback) => callback() },
+    location: { hash: "#/welcome", search: "", origin: "http://localhost:4175", pathname: options.buildChannel === "validation-review" ? "/internal_tools/motion_review.html" : "/prototype_stage5_ua/index.html" },
     navigator: {},
     confirm: () => true,
     URL: { createObjectURL: () => "blob:test", revokeObjectURL: () => {} },
@@ -404,6 +407,7 @@ function appContext(options = {}) {
   run(context, "prototype_stage4_ua/engine.js");
   run(context, "prototype_stage5_ua/questions_ua.js");
   run(context, "prototype_stage5_ua/illustrations.js");
+  run(context, "prototype_stage5_ua/authors_ua.js");
   run(context, "prototype_stage5_ua/activity_context_ua.js");
   run(context, "prototype_stage5_ua/library_ua.js");
   run(context, "prototype_stage5_ua/app5.js");
@@ -433,6 +437,26 @@ function testStorageFailureRecovery() {
   assert.equal(recovered.saved, true, "storage must recover without restarting the app");
   assert.equal(recovered.problem, "", "successful save must clear the stale failure state");
   assert.equal(recovered.hidden, true, "recovered storage must hide the warning");
+}
+
+function testReviewBuildIsolation() {
+  const normalContext = appContext({ buildChannel: "validation" });
+  const result = vm.runInContext(`(() => {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setDate(1);
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const child = freshChild("Тест", localDateString(oneMonthAgo));
+    store = { consent: { accepted: true }, children: [child], activeChildId: child.id };
+    location.search = "?reviewSession=parent_1";
+    location.hash = "#/visual-pilot";
+    const reviewerBlocked = motionReviewReviewerSession() === null;
+    renderAppbar("home");
+    const appbar = document.getElementById("appbarChild").innerHTML;
+    show("visual-pilot");
+    const markup = document.getElementById("screen").innerHTML;
+    return reviewerBlocked && appbar.includes("До 2 міс") && markup.includes("Перший чекліст ще попереду") && !markup.includes("Перевірка Motion Cards");
+  })()`, normalContext);
+  assert.equal(result, true, "the ordinary app must not expose or activate the internal Motion review route");
 }
 
 async function testServiceWorker() {
@@ -472,9 +496,9 @@ async function testServiceWorker() {
   assert.equal(skipWaitingCalled, false, "service worker updates must wait for an explicit user action");
   assert.ok(cachedShell.includes("./index.html"), "offline shell must cache index.html");
   assert.ok(cachedShell.includes("./app-icon-512.png"), "offline shell must cache install icons");
-  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-54-r1"), "offline shell must cache canonical content");
-  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-54-r1"), "offline shell must cache authored activity context variants");
-  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-54-r1"), "the sourced library must be cached offline");
+  assert.ok(cachedShell.includes("../prototype_stage4_ua/data_ua.js?v=20260714-p2-55-r1"), "offline shell must cache canonical content");
+  assert.ok(cachedShell.includes("./activity_context_ua.js?v=20260714-p2-55-r1"), "offline shell must cache authored activity context variants");
+  assert.ok(cachedShell.includes("./library_ua.js?v=20260714-p2-55-r1"), "the sourced library must be cached offline");
   assert.ok(cachedShell.includes("./activity-tummy-time-guide-v1.png"), "offline shell must cache the visual pilot asset");
 
   listeners.message({ data: { type: "SKIP_WAITING" } });
@@ -585,7 +609,7 @@ async function testPwaInstallUi() {
 }
 
 function testAppState() {
-  const context = appContext();
+  const context = appContext({ buildChannel: "validation-review" });
   const result = vm.runInContext(`(() => {
     const fourMonthsAgo = new Date();
     fourMonthsAgo.setDate(1);
@@ -627,7 +651,7 @@ function testAppState() {
       && beforeFirstHome.includes("Перший чекліст ще попереду")
       && beforeFirstSurvey.includes("Поверніться у 2 місяці")
       && !beforeFirstSurvey.includes('class="state-controls"')
-      && beforeFirstAppbar.includes("До 2 міс")
+      && (IS_MOTION_REVIEW_BUILD ? beforeFirstAppbar.includes("Перевірка Motion Cards") : beforeFirstAppbar.includes("До 2 міс"))
       && !beforeFirstAppbar.includes("undefined")
       && !Object.prototype.hasOwnProperty.call(beforeFirst.surveys, "null")
       && !Object.prototype.hasOwnProperty.call(beforeFirst.surveys, "2");
@@ -653,6 +677,19 @@ function testAppState() {
       && !navMarkup.includes("⌂") && !navMarkup.includes("◎") && !navMarkup.includes("◇") && !navMarkup.includes("✎");
 
     const ids = questionIdsFor(4);
+    const canonicalPromptsOnly = AGES.every((age) => (MILESTONES_BY_AGE[age] || []).every((milestone) => {
+      const pool = variantPoolFor(age, milestone.id);
+      return pool.length === 1 && pool[0] === milestone.text;
+    }));
+    const authoredActivityId = Object.keys(ACTIVITY_AUTHOR_NOTES).find((id) => activityById(Number(id.slice(4, 7)), id));
+    const authoredActivityAge = Number(authoredActivityId.slice(4, 7));
+    const authoredActivityMarkup = activityDetailHtml(authoredActivityAge, authoredActivityId);
+    const draftAuthorHidden = !authoredActivityMarkup.includes("<strong>Ідея ");
+    const escapedSafety = activitySafetyStripHtml({ id: 'unsafe<id', materials: '<b>test</b>', steps: ['<img>'], stop: '<script>' });
+    const safetyEscapesHtml = escapedSafety.includes('unsafe&lt;id')
+      && escapedSafety.includes('&lt;b&gt;test&lt;/b&gt;')
+      && escapedSafety.includes('&lt;img&gt;')
+      && escapedSafety.includes('&lt;script&gt;');
     const startStep = homeNextStep(4);
     const startMarkup = renderHome();
     const surveyMarkup = renderSurvey();
@@ -784,12 +821,15 @@ function testAppState() {
       const hasFourVisuals = markup.includes(expectedImage)
         && (markup.match(/<article class="motion-slide(?: |")/g) || []).length === 4;
       return hasFourVisuals
+        && markup.includes('class="activity-safety-strip"')
+        && markup.indexOf('class="activity-safety-strip"') < markup.indexOf('class="motion-guide"')
         && markup.includes("Підготуйте")
         && markup.includes("Спостерігайте")
         && markup.includes("Деталі й безпека")
         && markup.includes("Без «правильної» реакції")
         && markup.includes("Зупиніться:");
     }) && rasterVisualIds.length === 59 && visualPilotIds.length === 60 && activityVisualGuideHtml("act_012_cognitive_003").includes("act_012_cognitive_003.jpg");
+    const reviewVisualIds = motionReviewCardIds();
     motionReview.active = "parent_1";
     motionReview.sessions.parent_1 = {
       cards: { [rasterVisualIds[0]]: { action: "yes", hands: "yes", stop: "yes", note: "зрозуміло" } },
@@ -805,7 +845,7 @@ function testAppState() {
     const invitationsOkay = new Set(invitationUrls).size === MOTION_REVIEW_SESSIONS.length
       && parentInvitation.includes("Ваша окрема сесія: Мама 1")
       && parentInvitation.includes("після кожних 10 карток")
-      && parentInvitation.includes("Після 59 карток")
+      && parentInvitation.includes("Після 60 карток")
       && parentInvitation.includes("JSON-файл")
       && parentInvitation.includes("reviewSession=parent_1")
       && expertInvitation.includes("відповідність віку")
@@ -814,10 +854,10 @@ function testAppState() {
     const parentOneOrder = motionReviewSessionCardIds(MOTION_REVIEW_SESSIONS[0]);
     const parentTwoOrder = motionReviewSessionCardIds(MOTION_REVIEW_SESSIONS[1]);
     const parentThreeOrder = motionReviewSessionCardIds(MOTION_REVIEW_SESSIONS[2]);
-    const reviewOrderOkay = parentOneOrder.length === rasterVisualIds.length
+    const reviewOrderOkay = parentOneOrder.length === reviewVisualIds.length
       && JSON.stringify(parentOneOrder) === JSON.stringify(motionReviewSessionCardIds(MOTION_REVIEW_SESSIONS[0]))
       && JSON.stringify(parentOneOrder) !== JSON.stringify(parentTwoOrder)
-      && JSON.stringify([...parentOneOrder].sort()) === JSON.stringify([...rasterVisualIds].sort())
+      && JSON.stringify([...parentOneOrder].sort()) === JSON.stringify([...reviewVisualIds].sort())
       && new Set(parentOneOrder.slice(0, 5).map((id) => Number(id.slice(4, 7)))).size === 5;
     const coordinatorStore = store;
     location.search = "?v=p2-52-r1&reviewSession=parent_3";
@@ -836,12 +876,12 @@ function testAppState() {
       && reviewerMarkup.includes("disabled")
       && reviewerMarkup.includes('id="exportMotionSession"')
       && reviewerMarkup.includes("Картка у фокусі")
-      && reviewerMarkup.includes("У черзі 59")
+      && reviewerMarkup.includes("У черзі 60")
       && reviewerMarkup.includes("Зберегти чернетку")
       && reviewerMarkup.includes("віки чергуються")
       && reviewerMarkup.includes("до паузи 10")
       && reviewerMarkup.includes("порядок збережеться")
-      && reviewerMarkup.includes('src="' + ACTIVITY_RASTER_GUIDES[parentThreeOrder[0]].image + '"')
+      && reviewerMarkup.includes('src="' + motionReviewGuideFor(parentThreeOrder[0]).image + '"')
       && reviewerMarkup.includes("Що зрозуміло з ілюстрації?")
       && reviewerMarkup.includes("5–8 секунд")
       && reviewerMarkup.includes("Не шукайте «правильну» відповідь")
@@ -850,9 +890,8 @@ function testAppState() {
       && reviewerMarkup.includes("Показати критерії після першого погляду")
       && reviewerMarkup.includes('alt="Ілюстрація Motion Card для незалежної перевірки"')
       && !reviewerMarkup.includes(firstReviewerTitle)
-      && !reviewerMarkup.includes("activity-tummy-time-guide-v1.png")
       && !reviewerMarkup.includes("pilot-legend")
-      && !reviewerMarkup.includes("Бібліотека з 59 карток")
+      && !reviewerMarkup.includes("Бібліотека з 60 карток")
       && reviewerMarkup.indexOf('class="pilot-gallery reviewer-focus"') < reviewerMarkup.indexOf('class="motion-session-transfer"')
       && !reviewerMarkup.includes("data-review-age-filter")
       && !reviewerMarkup.includes("data-review-status-filter")
@@ -891,10 +930,10 @@ function testAppState() {
       && checkpointMarkup.includes("10 карток готово — час перепочити")
       && checkpointMarkup.includes('id="continueMotionReviewCheckpoint"')
       && !checkpointMarkup.includes('class="pilot-figure pilot-gallery-card')
-      && continuedReviewerMarkup.includes('src="' + ACTIVITY_RASTER_GUIDES[parentThreeOrder[MOTION_REVIEW_CHECKPOINT_SIZE]].image + '"')
+      && continuedReviewerMarkup.includes('src="' + motionReviewGuideFor(parentThreeOrder[MOTION_REVIEW_CHECKPOINT_SIZE]).image + '"')
       && continuedReviewerMarkup.includes("до паузи 10");
     motionReview.sessions.parent_3 = { contentVersion: MOTION_REVIEW_CONTENT_VERSION, cards: {} };
-    rasterVisualIds.forEach((id) => {
+    reviewVisualIds.forEach((id) => {
       motionReview.sessions.parent_3.cards[id] = {};
       MOTION_REVIEW_CRITERIA.parent.forEach((criterion) => { motionReview.sessions.parent_3.cards[id][criterion.id] = "yes"; });
     });
@@ -916,7 +955,7 @@ function testAppState() {
     const motionSessionPayload = motionReviewSessionPayload("parent_1");
     const motionSessionRoundTrip = validateMotionReviewSessionPayload(motionSessionPayload);
     const completeMotionSession = JSON.parse(JSON.stringify(motionSessionPayload));
-    rasterVisualIds.forEach((id) => {
+    reviewVisualIds.forEach((id) => {
       completeMotionSession.cards[id] = {};
       MOTION_REVIEW_CRITERIA.parent.forEach((criterion) => { completeMotionSession.cards[id][criterion.id] = "yes"; });
     });
@@ -933,7 +972,7 @@ function testAppState() {
     const fullerExistingCards = JSON.parse(JSON.stringify(motionSessionPayload.cards));
     fullerExistingCards[rasterVisualIds[1]] = { action: "yes", hands: "yes", stop: "yes" };
     const downgradeWarnings = motionReviewImportWarnings(MOTION_REVIEW_SESSIONS[0], motionSessionRoundTrip, fullerExistingCards);
-    const ageFourReviewIds = rasterVisualIds.filter((id) => id.startsWith("act_004_"));
+    const ageFourReviewIds = reviewVisualIds.filter((id) => id.startsWith("act_004_"));
     motionReview.view = { status: "pending", age: "4" };
     const ageBatchMarkup = renderVisualPilot();
     motionReview.sessions.parent_1.cards[ageFourReviewIds[0]] = { action: "no" };
@@ -944,24 +983,24 @@ function testAppState() {
       && freshMotionReview().storeVersion === MOTION_REVIEW_STORE_VERSION
       && (ageBatchMarkup.match(/class="pilot-review"/g) || []).length === ageFourReviewIds.length
       && ageBatchMarkup.includes("Коротка review-партія")
-      && ageBatchMarkup.includes("Показано " + ageFourReviewIds.length + " із 59")
+      && ageBatchMarkup.includes("Показано " + ageFourReviewIds.length + " із 60")
       && (ageBatchMarkup.match(/data-review-age-filter=/g) || []).length === 6
       && (ageBatchMarkup.match(/data-review-status-filter=/g) || []).length === 3
       && (issueBatchMarkup.match(/class="pilot-review"/g) || []).length === 1
       && issueBatchMarkup.includes("Є «Ні» <b>1</b>");
     const collectionDashboardOkay = motionReviewMarkup.includes('aria-label="Стан збору файлів"')
-      && motionReviewMarkup.includes("Отримано чернетку 1/59")
+      && motionReviewMarkup.includes("Отримано чернетку 1/60")
       && motionReviewMarkup.includes("Очікуємо файл")
       && motionReviewMarkup.includes("Файл від") && motionReviewMarkup.includes("імпортовано")
       && motionReviewSummary.collectionComplete === 0 && motionReviewSummary.collectionDrafts === 1
       && motionReviewSummary.collectionWaiting === 5 && motionReviewSummary.collectionStale === 0;
-    const motionReviewBaseOkay = motionReviewProgressText() === "Перевірено 1 із 59"
+    const motionReviewBaseOkay = motionReviewProgressText() === "Перевірено 1 із 60"
       && (motionReviewMarkup.match(/data-review-session=/g) || []).length === 6
       && (motionReviewMarkup.match(/data-copy-review-link=/g) || []).length === 6
       && (motionReviewMarkup.match(/Копіювати запрошення/g) || []).length === 6
-      && (motionReviewMarkup.match(/class="pilot-review"/g) || []).length === 59
+      && (motionReviewMarkup.match(/class="pilot-review"/g) || []).length === 60
       && motionReviewMarkup.includes("activity-tummy-time-guide-v1.png")
-      && motionReviewMarkup.includes("Бібліотека з 59 карток")
+      && motionReviewMarkup.includes("Бібліотека з 60 карток")
       && motionReviewMarkup.includes(firstReviewerTitle)
       && motionReviewMarkup.includes('data-motion-review="' + rasterVisualIds[0] + '"')
       && motionReviewMarkup.includes("Відповіді зберігаються лише в цьому браузері")
@@ -970,14 +1009,14 @@ function testAppState() {
       && motionReviewMarkup.includes('id="exportMotionSession"')
       && motionReviewMarkup.includes('id="importMotionSession"')
       && motionReviewMarkup.includes("Передати окрему сесію")
-      && motionReviewMarkup.includes("59 із 59 перевірених карток")
+      && motionReviewMarkup.includes("60 із 60 перевірених карток")
       && motionReviewMarkup.includes("Запуск рев’ю: посилання та запрошення")
       && expertReviewerUrl.includes("reviewSession=expert") && expertReviewerUrl.endsWith("#/visual-pilot")
       && invitationsOkay
       && reviewerRouteBypassOkay && reviewerHistoryOkay && checkpointOkay && reviewerCompletionOkay
       && reviewOrderOkay
       && motionReviewMarkup.includes("Gate публікації")
-      && initialReleaseGate.pending === 59 && initialReleaseGate.ready === 0 && initialReleaseGate.issues === 0
+      && initialReleaseGate.pending === 60 && initialReleaseGate.ready === 0 && initialReleaseGate.issues === 0
       && motionReviewMarkup.includes("Завершено сесій: 0 із 6")
       && collectionDashboardOkay
       && motionReviewExport.startsWith("\uFEFF")
@@ -993,10 +1032,10 @@ function testAppState() {
       && !JSON.stringify(motionSessionPayload).includes("children")
       && motionSessionRoundTrip.ok && motionSessionRoundTrip.cards[rasterVisualIds[0]].action === "yes"
       && motionSessionRoundTrip.exportedAt === motionSessionPayload.exportedAt
-      && motionSessionRoundTrip.reviewed === 1 && motionSessionRoundTrip.total === 59 && !motionSessionRoundTrip.complete
-      && completeMotionSessionRoundTrip.ok && completeMotionSessionRoundTrip.reviewed === 59 && completeMotionSessionRoundTrip.complete
+      && motionSessionRoundTrip.reviewed === 1 && motionSessionRoundTrip.total === 60 && !motionSessionRoundTrip.complete
+      && completeMotionSessionRoundTrip.ok && completeMotionSessionRoundTrip.reviewed === 60 && completeMotionSessionRoundTrip.complete
       && !rejectedMotionSession.ok && !rejectedStaleMotionSession.ok && !rejectedUndatedMotionSession.ok
-      && downgradeWarnings.some((warning) => warning.includes("повніша версія: 2 із 59"))
+      && downgradeWarnings.some((warning) => warning.includes("повніша версія: 2 із 60"))
       && motionReviewFiltersOkay
       && MOTION_REVIEW_CRITERIA.parent.length === 3
       && MOTION_REVIEW_CRITERIA.expert.length === 4;
@@ -1020,8 +1059,8 @@ function testAppState() {
     motionReview.sessions.expert.contentVersion = MOTION_REVIEW_CONTENT_VERSION;
     motionReview.active = "parent_1";
     const motionReviewOkay = motionReviewBaseOkay
-      && releaseGate.ready === 1 && releaseGate.issues === 1 && releaseGate.pending === 57
-      && staleReleaseGate.ready === 0 && staleReleaseGate.issues === 1 && staleReleaseGate.pending === 58
+      && releaseGate.ready === 1 && releaseGate.issues === 1 && releaseGate.pending === 58
+      && staleReleaseGate.ready === 0 && staleReleaseGate.issues === 1 && staleReleaseGate.pending === 59
       && staleReleaseGate.staleSessions === 1
       && staleReviewMarkup.includes("Картки змінилися після цієї перевірки")
       && staleReviewMarkup.includes('id="restartMotionReviewVersion"')
@@ -1107,12 +1146,25 @@ function testAppState() {
     const diaryMarkup = playDiaryHtml(first);
     first.playDiary = [];
     first.activePlaySession = null;
+    const selectedActivity = activityById(4, selectedPlayId);
+    const selectedStop = selectedActivity.stop;
+    selectedActivity.stop = "";
+    const unsafeStartBlocked = !startPlaySession(4, selectedPlayId)
+      && playSessionControlsHtml(4, selectedPlayId).includes("Початок гри заблоковано")
+      && !playSessionControlsHtml(4, selectedPlayId).includes('id="startPlaySession"');
+    selectedActivity.stop = selectedStop;
     const sessionStarted = startPlaySession(4, selectedPlayId);
     const otherPlayId = dailyPlayChoiceIds(4, currentProgramDay).find((id) => id !== selectedPlayId);
     const parallelSessionBlocked = otherPlayId ? !startPlaySession(4, otherPlayId) : true;
     const finishedSession = finishPlaySession(4, selectedPlayId);
     const sessionLifecycleOkay = sessionStarted && parallelSessionBlocked && finishedSession && !first.activePlaySession
       && first.playDiary[0].id === finishedSession.id && first.playDiary[0].saved === false;
+    const releaseGateOkay = canonicalPromptsOnly
+      && draftAuthorHidden
+      && safetyEscapesHtml
+      && unsafeStartBlocked
+      && todayMarkup.indexOf('class="activity-safety-strip"') < todayMarkup.indexOf('id="startPlaySession"')
+      && !CONTENT_RELEASE.expertApproved;
     first.playDiary = [];
     const gentleEngagementOkay = todayMarkup.includes('data-favorite-id="' + playStep.task.act.id + '"')
       && todayMarkup.includes("Збережено")
@@ -1291,7 +1343,7 @@ function testAppState() {
       && changes.newlyObserved.length === 2
       && changes.changed.length === 1;
 
-    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, livelyDayOkay: livelyDayOkay && multiDailyOkay && sessionLifecycleOkay, compactResultsOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, gentleEngagementOkay, weeklyRecapOkay, privateMomentsOkay, contextFilterOkay, visualGuideOkay, collectionDashboardOkay, motionReviewOkay, libraryOkay, followUpRoutingOkay };
+    return { restartOkay, finishIsIdempotent, childrenIsolated, migrationOkay, historyOkay, homeNextStepOkay, programUiOkay, livelyDayOkay: livelyDayOkay && multiDailyOkay && sessionLifecycleOkay, compactResultsOkay, specialistPrepOkay, oneThumbSurveyOkay, emotionalCopyOkay, navIconsOkay, accessibilityOkay: accessibilityOkay && homeProgressAccessibilityOkay, dataBackupOkay, correctedAgeOkay, releaseGateOkay, gentleEngagementOkay, weeklyRecapOkay, privateMomentsOkay, contextFilterOkay, visualGuideOkay, collectionDashboardOkay, motionReviewOkay, libraryOkay, followUpRoutingOkay };
   })()`, context);
 
   assert.equal(result.restartOkay, true, "re-test must reset only the survey draft and preserve all play records");
@@ -1301,7 +1353,7 @@ function testAppState() {
   assert.equal(result.historyOkay, true, "history comparison must support old snapshots and describe answer changes");
   assert.equal(result.homeNextStepOkay, true, "home must expose a swipeable action deck, persistent two-tab content area, and calm safety nudges");
   assert.equal(result.programUiOkay, true, "program must keep today's game open and future days secondary");
-  assert.equal(result.livelyDayOkay, true, "P2.54 must preserve the compact play lifecycle");
+  assert.equal(result.livelyDayOkay, true, "P2.55 must preserve the compact play lifecycle");
   assert.equal(result.compactResultsOkay, true, "results must lead with one next step and keep detailed answers collapsed");
   assert.equal(result.specialistPrepOkay, true, "specialist prep must keep one overview, three structured notes, and a copyable summary");
   assert.equal(result.oneThumbSurveyOkay, true, "survey answers must save and advance without a separate next button");
@@ -1310,6 +1362,7 @@ function testAppState() {
   assert.equal(result.accessibilityOkay, true, "survey and home must expose focused, concise accessibility semantics");
   assert.equal(result.dataBackupOkay, true, "local backup must round-trip valid data and reject malformed answers");
   assert.equal(result.correctedAgeOkay, true, "age routing must use the youngest completed window and keep pre-2-month profiles out of older checklists");
+  assert.equal(result.releaseGateOkay, true, "ordinary content must keep draft variants and author notes gated while safety stays visible before play");
   assert.equal(result.gentleEngagementOkay, true, "favorites and optional post-play feedback must stay calm and local per child");
   assert.equal(result.weeklyRecapOkay, true, "weekly recap must describe recent play without a streak, progress bar, or competing action");
   assert.equal(result.privateMomentsOkay, true, "private moments must reuse local notes, show at most three, and support individual deletion without social mechanics");
@@ -1326,6 +1379,7 @@ function testAppState() {
   testContentAndEngine();
   testAppState();
   testStorageFailureRecovery();
+  testReviewBuildIsolation();
   await testServiceWorker();
   await testPwaInstallUi();
   console.log("P1/P2/E4 QA passed: centered vertical depth deck and persistent two-tab Home content, compact Game and one-glance Results, explicit play sessions, optional timer, diary and reminders, preserved specialist routing, 60 visual guides with safety details, 5 ages, content integrity, guarded local storage, offline shell, backup/restore, migration, and multi-child isolation.");

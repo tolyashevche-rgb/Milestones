@@ -25,9 +25,9 @@ free + subscription.
 |---:|:---:|---|---|---|
 | 0 | ✅ | Зафіксувати baseline і робочий трекер | Baseline QA проходить; план збережено в repo | `060175a` |
 | 1 | ✅ | Виправити вікову маршрутизацію | Між CDC-вікнами завжди молодший checklist; до 2 міс окремий стан; тести 0–12 + corrected age | P2.53 · `a51b4b8` |
-| 2 | ✅ | Усунути втрату даних при повторному спостереженні | Нове спостереження не стирає play diary, reactions, notes або completions | P2.54 · `fix: preserve play records on re-observation` |
-| 3 | 🔄 | Додати release gates і видиму safety-смугу | Draft-вміст не видається за approved; safety/stop видно до Start | — |
-| 4 | ⬜ | Спростити Home і маршрути | Один контекстний next step; без deck/nested scroll; стабільна навігація | — |
+| 2 | ✅ | Усунути втрату даних при повторному спостереженні | Нове спостереження не стирає play diary, reactions, notes або completions | P2.54 · `eaef86f` |
+| 3 | ✅ | Додати release gates і видиму safety-смугу | Draft-вміст не видається за approved; safety/stop видно до Start | P2.55 · `fix: gate draft content and surface play safety` |
+| 4 | 🔄 | Спростити Home і маршрути | Один контекстний next step; без deck/nested scroll; стабільна навігація | — |
 | 5 | ⬜ | Спростити Game і дизайн-систему | Одна основна гра; одна primary action; узгоджені кнопки, іконки, кольори, градієнти | — |
 | 6 | ⬜ | Accessibility, responsive, recovery і PWA | Touch/contrast/zoom/keyboard; tablet layout; recovery states; lean safe cache | — |
 | 7 | ⬜ | Повна регресія і UI-перевірка | QA/syntax/diff/E2E; ключові маршрути на mobile/tablet/desktop; фінальний список залишку | — |
@@ -53,6 +53,8 @@ free + subscription.
 - `git diff --check`: ✅ before tracker changes.
 - P2.53 age matrix `-1…12`, corrected-age routing and pre-2 render/storage gate: ✅.
 - P2.54 repeated survey reset with byte-for-byte preserved play state: ✅.
+- P2.55 canonical-only prompts, hidden draft author notes, isolated 60-card review and
+  pre-Start safety ordering/blocking: ✅.
 - Live browser/device pass: ⬜ 2026-07-14 runtime не надав жодного доступного браузера;
   автоматизований code/DOM QA пройдено, але pixel-perfect pass не заявляється.
 

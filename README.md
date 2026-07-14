@@ -1,6 +1,6 @@
 # Milestones — personalized child-development assistant
 
-> **CURRENT BUILD: Stage 5 UA / P2.54.** Before running or auditing the product, read
+> **CURRENT BUILD: Stage 5 UA / P2.55.** Before running or auditing the product, read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md). The only current UI entry point is
 > `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references, not valid
 > evidence for a current UI/UX audit.
@@ -18,7 +18,7 @@ scoring, or replacing a professional.
 
 > **Active quality rebuild (2026-07-14):** feature expansion is frozen. Implementation proceeds
 > one verified commit at a time through
-> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.54 is the
+> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.55 is the
 > current completed safety baseline in that sequence.
 
 ---
@@ -36,7 +36,7 @@ Milestones/
 │   └── app.js                 ← UI wiring
 ├── prototype_stage4_ua/       ← runtime data/engine; UI is a LEGACY reference
 │   └── data_ua.js  engine.js  app.js  legacy-reference.html
-├── prototype_stage5_ua/       ← CURRENT guided UA app (P2.54)
+├── prototype_stage5_ua/       ← CURRENT guided UA app (P2.55)
 │   └── index.html app5.js styles5.css questions_ua.js illustrations.js authors_ua.js (reuses stage4 data+engine)
 ├── docs/                      ← project documentation
 │   ├── safety_rules.md        ← SINGLE SOURCE OF TRUTH for claims/guardrails
@@ -117,7 +117,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 
 ## Current state (works today)
 
-> Release **P2.54** is the current product baseline. The P2.16 material below is retained
+> Release **P2.55** is the current product baseline. The P2.16 material below is retained
 > as historical implementation context, not as the current audit target. See
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) for the exact entry point and audit preflight.
 
@@ -125,6 +125,10 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
   GitHub Pages remains disabled by owner decision. If public review is approved later, the workflow
   will run the full Stage 5 QA suite and deploy only Stage 5 UA plus the two canonical Stage 4 UA
   engine/data files it imports; it cannot run on an ordinary push.
+- **P2.55 explicit draft/safety gates:** the ordinary validation app uses only canonical
+  checklist wording and hides draft author notes. Motion review moved to a separate internal,
+  noindex entry and now covers all 60 visuals including tummy time. Every game shows materials,
+  first setup step and the full stop condition before Start; missing safety blocks Start.
 - **P2.54 lossless re-observation:** starting a fresh observation now resets only the current
   survey draft. Existing play selections, completions, reactions, notes, attention signals,
   active sessions and diary entries remain untouched and the confirmation states this plainly.

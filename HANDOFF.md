@@ -1,6 +1,6 @@
 # HANDOFF — read this first to continue
 
-> **Current product baseline: Stage 5 UA / P2.54.** Read
+> **Current product baseline: Stage 5 UA / P2.55.** Read
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) before running or auditing. The sole current UI
 > entry point is `prototype_stage5_ua/index.html`; Stage 4 interfaces are legacy references.
 
@@ -121,7 +121,7 @@ Home into a four-action hub and gives every game an explicit Start → Finish �
 → continue/remind flow, with the timer hidden until Start. P2.47 exposes
 three curated play choices while saying one is enough, adds a calm timer, one-time calendar
 reminders, a low-effort post-play cue, and a sourced parent minute. The visible asset baseline is
-`20260714-p2-54-r1`; these additions do not change
+`20260714-p2-55-r1`; these additions do not change
 the product's safety rules or make draft content expert-validated.
 P2.15 makes the calm shell more ownable without adding navigation or content density: the
 original kite is now the visible brand mark, restrained apricot/blush accents warm the paper,
@@ -171,8 +171,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 > completed author-card backlog, simulate feedback, or call draft content validated.
 
 1. **Automated quality rebuild** — currently active. Follow
-   `docs/product_quality_rebuild_tracker_ua.md`; the first implementation step is correct
-   younger-window age routing plus a separate pre-2-month state and exhaustive tests.
+   `docs/product_quality_rebuild_tracker_ua.md`; the next implementation step is replacing
+   Home’s deck/tabs with the already-implemented contextual next step and stable secondary links.
 2. **Motion Cards review** — use the isolated reviewer flow and collection dashboard already in
    Stage 5; collect real reviewer decisions for the 59 cards and retain their provenance. The
    production inventory is `docs/motion_cards_production_manifest_ua.md`.
@@ -209,6 +209,18 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — P2.55 explicit draft gates and pre-play safety
+- The ordinary validation app now uses canonical milestone wording only and hides draft author
+  notes. No expert approval is invented: `CONTENT_RELEASE.expertApproved` remains false and the
+  library retains its visible draft status.
+- Removed `visual-pilot` from ordinary routing and added a separate noindex internal entry at
+  `internal_tools/motion_review.html`. Review sessions now cover all 60 visuals, including the
+  tummy-time guide; the content/order version changed so older 59-card sessions are stale.
+- Added a visible pre-play safety strip using the activity’s existing materials, first authored
+  step and full stop condition. It always precedes Start; missing safety blocks both the UI and
+  `startPlaySession()`. Tests cover ordering, HTML escaping, all ages and direct-start rejection.
+- Bumped the current build/cache marker to P2.55 / `20260714-p2-55-r1`.
 
 ### 2026-07-14 — P2.54 lossless re-observation
 - Reduced `restartSurvey()` to resetting only the working answers, prompt variants and completion

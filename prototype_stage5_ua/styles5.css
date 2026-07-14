@@ -392,6 +392,12 @@ main {
 .favorite-toggle.active { border-color: #e0a974; background: #fff4e8; color: #8a4c18; }
 .favorite-icon { width: 18px; height: 18px; display: block; }
 .activity-quick-meta { margin-bottom: 12px; }
+.activity-safety-strip { display: grid; gap: 7px; margin: 0 0 14px; padding: 13px; border: 1px solid #b9d8d1; border-radius: 12px; background: #f2f8f6; color: var(--ink); }
+.activity-safety-strip > strong { color: var(--teal-dark); font-size: 15px; }
+.activity-safety-strip p { margin: 0; font-size: 14px; line-height: 1.45; }
+.activity-safety-stop { margin-top: 2px !important; padding: 9px 10px; border-left: 3px solid var(--apricot-dark); border-radius: 8px; background: #fff7ed; color: #5f3f25; }
+.activity-safety-missing { border-color: #d9a09a; background: #fdecea; }
+.activity-safety-missing > strong { color: #8f2d25; }
 .low-energy-option { display: grid; gap: 3px; margin: 0 0 12px; padding: 11px 12px; border: 1px solid #ecd6bf; border-radius: 11px; background: var(--apricot-soft); }
 .low-energy-option strong { color: var(--apricot-dark); font-size: 13px; }
 .low-energy-option span { color: #5f554d; font-size: 14px; }
