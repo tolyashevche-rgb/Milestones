@@ -16,6 +16,11 @@ scoring, or replacing a professional.
 > **Resuming work or switching assistants?** Start with [HANDOFF.md](HANDOFF.md) — current
 > state, decisions, what's next, and how to run/verify, in one place.
 
+> **Active quality rebuild (2026-07-14):** feature expansion is frozen. Implementation proceeds
+> one verified commit at a time through
+> [the product-quality tracker](docs/product_quality_rebuild_tracker_ua.md); P2.52 remains the
+> runnable baseline until the first code step is complete.
+
 ---
 
 ## Folder structure

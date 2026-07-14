@@ -140,6 +140,12 @@ successful recovery clears it, and erase/restore cannot report false persistence
 
 ## Key decisions & findings (do NOT re-litigate)
 
+- **2026-07-14 quality-rebuild course:** owner authorized a commit-per-step product-quality
+  rebuild after an independent audit. New feature expansion is frozen. Work proceeds through
+  the tracked P0/P1 sequence in `docs/product_quality_rebuild_tracker_ua.md`: age routing and
+  data preservation first, then release gates/safety, Home/navigation simplification, Game/design
+  system, accessibility/responsive/recovery/PWA, and full regression. Real expert and parent
+  validation remain mandatory and cannot be simulated.
 - **CDC does not rank milestones.** The 2021/22 framework treats every age milestone as
   equal; "act early" = *any* unmet milestone / lost skill / concern. So a "must-have vs
   secondary" importance tier **cannot be sourced** and must not be fabricated. The only sourced
@@ -158,31 +164,27 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ## What's next (prioritized)
 
 > **Assistant told only "continue" / "давай продовжимо"? Do this:** do not enable GitHub Pages;
-> public preview is paused. Start from [CURRENT_BUILD.md](CURRENT_BUILD.md), verify P2.52, and
-> continue the human validation gates below. Do not build another parallel UI, reopen the completed
-> author-card backlog, simulate feedback, or call draft content validated.
+> public preview is paused. Continue the first unfinished step in
+> [the quality rebuild tracker](docs/product_quality_rebuild_tracker_ua.md), make one logical
+> commit, record its checks, then advance the tracker. Do not build a parallel UI, reopen the
+> completed author-card backlog, simulate feedback, or call draft content validated.
 
-1. **Motion Cards review** — use the isolated reviewer flow and collection dashboard already in
+1. **Automated quality rebuild** — currently active. Follow
+   `docs/product_quality_rebuild_tracker_ua.md`; the first implementation step is correct
+   younger-window age routing plus a separate pre-2-month state and exhaustive tests.
+2. **Motion Cards review** — use the isolated reviewer flow and collection dashboard already in
    Stage 5; collect real reviewer decisions for the 59 cards and retain their provenance. The
    production inventory is `docs/motion_cards_production_manifest_ua.md`.
-2. **Core expert review** (gate before real users) — fully prepped. Hand a clinician
+3. **Core expert review** (gate before real users) — fully prepped. Hand a clinician
    `docs/expert_review_packet_ua.md`; they review against `docs/expert_review_checklist.md`;
    record in `docs/expert_review_tracker.md`. P2.14 adds a cross-cutting review item for the
    corrected-age input/routing and its Ukrainian wording. Outreach, scope, follow-up, and sign-off workflow:
    `docs/validation_launch_kit_ua.md`. **Needs live reviewers — an assistant cannot do this.**
-3. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
+4. **Parent test, 5 parents** (second gate) — ready-to-run Ukrainian facilitator pack,
    short consent, observation sheet, severity rubric, and five-session synthesis are in
    `docs/parent_test_facilitator_pack_ua.md`. **Prepared; needs expert approval + real parents.**
-4. **Library and feeding pilots** — keep both behind their explicit expert gates:
+5. **Library and feeding pilots** — keep both behind their explicit expert gates:
    `docs/library_expert_review_packet_ua.md` and `docs/feeding_expert_review_packet_ua.md`.
-5. **Author cards** — 26/26 done; the planned set is complete. Michelle Macias and Jennifer Poon
-   complete the no-caution clinical boundary set; Jill Stamm, Maria Montessori, Lise Eliot, John Medina, and the
-   joint Daniel Siegel/Tina Payne Bryson record are moderate-caution review-only cards; A. R.
-   Luria and N. A. Bernstein are historical internal-only guardrails with no activities;
-   Margaret Sassé, Shinichi Suzuki, Gordon Neufeld, Gabor Maté, William Sears, Makoto Shichida,
-   Glenn Doman, and Masaru Ibuka are high-caution review-only with no activity IDs. All records
-   have explicit claim limits; moderate/high-caution content still requires expert review before
-   any parent-facing use.
 6. **Owner decision:** author-base scope beyond 0–12 mo (tantrums / screens / separation)?
 7. **Deferred / low-value:** IndexedDB backend; EN parity for WHO windows + coverage fix;
    designer-made illustrations (interim inline-SVG in place).
@@ -206,6 +208,13 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-14 — independent audit converted into an executable quality rebuild
+- Owner authorized implementation with one commit per logical step and explicit done/remaining
+  marks. Added `docs/product_quality_rebuild_tracker_ua.md` with the P0→P3 sequence, acceptance
+  criteria, verification rules, free/subscription guardrails, and human validation blockers.
+- Froze feature expansion. The next code step fixes CDC younger-window routing and introduces a
+  truthful pre-2-month state before any visual redesign. Baseline P2.52 QA and syntax checks pass.
 
 ### 2026-07-08 — P2.52 persistent Home tabs
 - Replaced the two independent horizontal shelves with one semantic two-tab component. “Для вас
