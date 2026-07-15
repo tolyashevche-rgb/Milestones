@@ -4,6 +4,11 @@
 
 **Canonical entry point:** `prototype_stage5_ua/index.html`
 
+**Owner-authorized validation preview:**
+`https://tolyashevche-rgb.github.io/Milestones/prototype_stage5_ua/`
+
+The hosted URL is a draft validation preview, not an expert-approved public Free release.
+
 This is the only UI that may be used for product, UI/UX, accessibility, content-placement,
 or feature audits. An audit that opens a Stage 4 HTML file is invalid for the current build.
 

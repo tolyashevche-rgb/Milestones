@@ -121,10 +121,11 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 > as historical implementation context, not as the current audit target. See
 > [CURRENT_BUILD.md](CURRENT_BUILD.md) for the exact entry point and audit preflight.
 
-- **Validation preview delivery is paused:** `.github/workflows/pages.yml` is manual-only and
-  GitHub Pages remains disabled by owner decision. If public review is approved later, the workflow
-  will run the full Stage 5 QA suite and deploy only Stage 5 UA plus the two canonical Stage 4 UA
-  engine/data files it imports; it cannot run on an ordinary push.
+- **Validation preview is live by owner decision (2026-07-15):**
+  `https://tolyashevche-rgb.github.io/Milestones/prototype_stage5_ua/`. The manual-only
+  `.github/workflows/pages.yml` runs the full Stage 5 QA suite and deploys only Stage 5 UA plus
+  the two canonical Stage 4 UA engine/data files it imports; an ordinary push cannot publish.
+  This is a draft validation preview, not an expert-approved public Free release.
 - **P2.64 fail-closed content boundary:** the ordinary validation app can recommend only the 33
   structurally complete authored drafts; the 27 CSV rows containing `NEEDS_REVIEW` remain
   available only in isolated review. A future release channel exposes zero activities until real,
@@ -424,7 +425,7 @@ copied from books or competitor apps (codified in [safety_rules.md](docs/safety_
 | 22 | P2.14 corrected-age routing + calm favorites | **done** — optional expected due date, expert-gated corrected-age block selection, per-child saved games and optional post-play reflection, migration/backup/offline QA |
 | 23 | P2.15 warm identity + weekly recap | **done** — original kite brand mark, restrained warm accent system, seven-day local play memory without counts/streaks/targets, responsive and regression QA |
 | 24 | P2.16 context-aware game choice | **done** — compact quick/no-material/low-energy modes, personalized-plan-only matching, 33 authored low-energy variants, per-child persistence, completion lock, offline and regression QA |
-| 25 | Public validation preview | **paused by owner** — workflow retained as manual-only, Pages disabled, no automatic deployment on push |
+| 25 | Public validation preview | **live by owner decision** — P2.64 deployed 2026-07-15 through the green manual-only Pages workflow; no automatic deployment on push |
 
 Stage5 status: working guided flow (welcome → consent → child profile → contextual home/cabinet →
 survey → calm descriptive summary → today-first game → descriptive history with same-age changes → visit-ready specialist prep), local-first storage with **multi-child**

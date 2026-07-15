@@ -48,10 +48,11 @@ you must never cross".)
   `node tools/build_review_packet.js` (writes `docs/expert_review_packet_ua.md`).
 - **Git:** solo repo; commit to **main** directly (no feature branches — owner's choice).
   `sources/`, `Book and Articals/`, `Apps/`, `archive/` are gitignored (copyright) — never commit them.
-- **Public validation preview is paused by owner decision (2026-06-30):** GitHub Pages remains
-  disabled and `.github/workflows/pages.yml` is `workflow_dispatch` only, so a push cannot publish
-  the app. If the owner re-authorizes public review later, it runs `tools/test_p1_qa.js` and uploads
-  only `prototype_stage5_ua/` plus the two required Stage 4 UA runtime files.
+- **Public validation preview is live by owner decision (2026-07-15):**
+  `https://tolyashevche-rgb.github.io/Milestones/prototype_stage5_ua/`. The deployment remains
+  `workflow_dispatch` only, runs `tools/test_p1_qa.js`, and uploads only `prototype_stage5_ua/`
+  plus the two required Stage 4 UA runtime files. A normal push still cannot publish. This is a
+  draft validation preview, not expert approval or production Free release readiness.
 
 ## Current state (what works now)
 
@@ -177,8 +178,8 @@ successful recovery clears it, and erase/restore cannot report false persistence
 
 ## What's next (prioritized)
 
-> **Assistant told only "continue" / "давай продовжимо"? Do this:** do not enable GitHub Pages;
-> public preview is paused. The automated P2.53–P2.64 baseline and source audit are complete.
+> **Assistant told only "continue" / "давай продовжимо"? Do this:** keep GitHub Pages manual-only;
+> the P2.64 validation preview is live, while the automated baseline and source audit are complete.
 > Read [the audit](docs/product_quality_audit_ua.md) and
 > [the quality rebuild tracker](docs/product_quality_rebuild_tracker_ua.md). The next gates require
 > a live browser/device, real experts or real parents; report that dependency unless the user supplies
@@ -222,6 +223,14 @@ successful recovery clears it, and erase/restore cannot report false persistence
 ---
 
 ## Work log (newest first)
+
+### 2026-07-15 — public P2.64 validation preview re-authorized and deployed
+- Pushed the 14 audited P2.53–P2.64 commits to `main` and enabled Pages with GitHub Actions as
+  its source after explicit owner authorization.
+- Manual workflow run `29399471497` passed Stage 5 QA, artifact assembly and Pages deployment;
+  both the root redirect and direct Stage 5 URL returned HTTP 200 with P2.64 assets.
+- The workflow remains manual-only and allowlisted. Public availability does not convert the 33
+  authored drafts into expert-approved content or close device/a11y, parent, privacy or Free gates.
 
 ### 2026-07-14 — independent product-quality audit finalized
 - Published `docs/product_quality_audit_ua.md`: product, routes, UI/UX, colors, controls, icons,

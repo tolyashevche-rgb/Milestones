@@ -13,7 +13,8 @@ free + subscription.
 - Після кожного кроку оновлюються статус, перевірки, виконане й залишок.
 - Нові можливості заморожені, доки не закриті P0/P1 нижче.
 - Parent-facing developmental content залишається чернеткою до реального expert sign-off.
-- Публічний preview не вмикається без окремого рішення власника.
+- Публічний validation preview увімкнено окремим рішенням власника 2026-07-15; він лишається
+  manual-only і не закриває expert, device/a11y, parent, privacy або public Free gates.
 - Після кожної зміни коду мінімум: syntax check, `node tools/test_p1_qa.js`,
   `git diff --check`; UI-кроки додатково потребують browser/device smoke.
 
@@ -81,6 +82,8 @@ free + subscription.
 - P2.64 CSV-verified 33/27 activity gate, fail-closed future release, safe stale-data handling and
   age-scoped Library defaults/search/suggestions with an explicit all-ages action: ✅.
 - Незалежний source-аудит усіх заявлених параметрів і пріоритетний реєстр рекомендацій: ✅.
+- Owner-authorized P2.64 validation preview: ✅ manual workflow `29399471497`, HTTP 200;
+  це не expert approval і не production Free GO.
 - Live browser/device pass: ⛔ 2026-07-14 runtime не надав жодного доступного браузера;
   автоматизований code/DOM QA пройдено, але pixel-perfect pass не заявляється.
 

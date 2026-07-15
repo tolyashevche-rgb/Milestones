@@ -503,6 +503,8 @@ Acceptance:
 - **4–8 тижнів retention + поведінковий WTP + backend/legal design** → лише тоді
   вирішувати, чи потрібна підписка взагалі.
 
-Публічний preview залишається вимкненим до окремого рішення власника. Поточний код не
-повинен отримувати фіктивні «expert approved», «clinically validated» або «subscription
-ready» позначки.
+Після завершення цього аудиту власник окремо дозволив публічний validation preview, який
+було розгорнуто 2026-07-15 через manual-only GitHub Pages workflow. Це рішення не змінює
+вердикт **NO-GO для production Free release** і не закриває expert, device/a11y, parent або
+privacy gates. Поточний код не повинен отримувати фіктивні «expert approved», «clinically
+validated» або «subscription ready» позначки.
